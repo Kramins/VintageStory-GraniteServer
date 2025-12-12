@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Vintagestory" HintPath="$(VINTAGE_STORY)/Vintagestory.dll" Private="false" />
+    <Reference Include="VintagestoryAPI">
+      <HintPath>$(VINTAGE_STORY)/VintagestoryAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VintagestoryLib" HintPath="$(VINTAGE_STORY)/VintagestoryLib.dll" Private="false" />
+    <Reference Include="VintagestoryServer" HintPath="$(VINTAGE_STORY)/VintagestoryServer.dll" Private="false" />
+    <Reference Include="Newtonsoft.Json" HintPath="$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll" Private="false" />
+    <!-- <FrameworkReference Include="Microsoft.AspNetCore.App" /> -->
+    <None Include="resources/**" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="">
+      <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="GenHTTP.Api" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Core" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.ApiBrowsing" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.Controllers" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.DependencyInjection" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.StaticWebsites" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.Webservices" Version="10.2.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+  </ItemGroup>
+  <Target Name="PreClean" BeforeTargets="PreBuildEvent">
+    <RemoveDir Directories="bin/mods" />
+    <CallTarget Targets="Clean" />
+  </Target>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <MakeDir Directories="bin/mods" />
+    <ZipDirectory DestinationFile="bin/mods/$(TargetName)-$(ConfigurationName).zip" SourceDirectory="$(TargetDir)" Overwrite="true" />
+  </Target>
+  <Target Name="BuildWebApp" BeforeTargets="Build">
+    <RemoveDir Directories="resources/wwwroot" />
+    <Exec WorkingDirectory="ClientApp" Command="npm install" />
+    <Exec WorkingDirectory="ClientApp" Command="npm run build" />
+  </Target>
+</Project>

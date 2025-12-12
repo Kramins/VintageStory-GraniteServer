@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  vintage-mod-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../..:/workspaces:cached
+    command: sleep infinity
+    environment:
+      - VINTAGE_STORY=/app
+      - RCON_PORT=42425
+      - RCON_PASSWORD=development
+    ports:
+      - "42425:42425"
+      - "42420:42420"
+      - "5000:5000"
+      - "3000:3000"
+    user: vintagestory

@@ -1,0 +1,57 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Server Only",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "/app/VintagestoryServer.dll",
+            "preLaunchTask": "build-server",
+            "args": [
+                "--tracelog",
+                "--addModPath",
+                "${workspaceFolder}/bin/mods"
+            ],
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "CakeBuild",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build (Cake)",
+            "program": "${workspaceFolder}/CakeBuild/bin/Debug/net8.0/CakeBuild.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/CakeBuild",
+            "stopAtEntry": false,
+            "console": "internalConsole"
+        },
+        {
+            "name": "Launch Server with UI Dev",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "/app/VintagestoryServer.dll",
+            "preLaunchTask": "build-server",
+            "args": [
+                "--tracelog",
+                "--addModPath",
+                "${workspaceFolder}/bin/mods"
+            ],
+            "console": "internalConsole",
+            "stopAtEntry": false
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Full Dev Environment",
+            "configurations": [
+                "Launch Server with UI Dev"
+            ],
+            "preLaunchTask": "npm run dev",
+            "stopAll": true
+        }
+    ]
+}

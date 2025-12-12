@@ -1,0 +1,26 @@
+meta {
+  name: AddToWhitelist
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://{{HOST}}/api/players/add-to-whitelist/
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "playerName": "Dalraz"
+  }
+}
+
+body:multipart-form {
+  playerName: Dalraz
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

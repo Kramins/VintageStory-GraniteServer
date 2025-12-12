@@ -1,0 +1,5 @@
+{
+    "terminal.integrated.env.linux": {
+        "VINTAGE_STORY": "/app"
+    }
+}

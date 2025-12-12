@@ -1,0 +1,29 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
+{
+	"name": "Ubuntu",
+	// Use Docker Compose file
+	"dockerComposeFile": "docker-compose.yml",
+	"service": "vintage-mod-dev",
+	"workspaceFolder": "/workspaces/VintageStory-GraniteServer",
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [
+		42425
+	],
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "uname -a",
+	// Configure tool-specific properties.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-dotnettools.csdevkit",
+				"ms-dotnettools.csharp",
+				"fernandoescolar.vscode-solution-explorer"
+			]
+		}
+	},
+	// Set the default user for the container to 'vintagestory' (non-root best practice)
+	"remoteUser": "vintagestory"
+}
