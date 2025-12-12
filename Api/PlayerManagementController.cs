@@ -31,10 +31,39 @@ public class PlayerManagementController
         var allServerPlayers = _api.Server.Players.ToList();
         return allServerPlayers.Select(p => new PlayerDTO
         {
-            Name = p.PlayerName,
             Id = p.PlayerUID,
+            Name = p.PlayerName,
+            IpAddress = p.IpAddress,
+            LanguageCode = p.LanguageCode,
+            Ping = p.Ping,
+            RolesCode = p.Role.Code,
+            FirstJoinDate = p.ServerData.FirstJoinDate,
+            LastJoinDate = p.ServerData.LastJoinDate,
+            Privileges = p.Privileges.ToArray(),
             IsAdmin = false
         }).ToList();
+    }
+
+
+    [ControllerAction(RequestMethod.Post)]
+    public void Kick(KickRequestDTO request)
+    {
+        var player = _api.Server.Players.Where(p => p.PlayerUID == request.PlayerId).FirstOrDefault();
+        if (player == null)
+        {
+            // Find way to return 404
+            return;
+        }
+        var reason = string.IsNullOrWhiteSpace(request.Reason) ? "Kicked by an administrator." : request.Reason;
+        try
+        {
+            player.Disconnect(reason);
+        }
+        catch (Exception ex)
+        {
+            // Do nothing for now
+            // Possible bug in VS where disconnecting a player immediately after they join causes an exception
+        }
     }
 
     public record WhitelistRequestDTO(string PlayerName);
@@ -46,52 +75,4 @@ public class PlayerManagementController
     }
 
 
-    /// <summary>
-    /// Kick a player from the server
-    /// </summary>
-    [ControllerAction(GenHTTP.Api.Protocol.RequestMethod.Post)]
-    public object KickPlayer(string playerName, string? reason = null)
-    {
-        throw new NotImplementedException();
-    }
-
-
-    /// <summary>
-    /// Ban a player from the server
-    /// </summary>
-    [ControllerAction(GenHTTP.Api.Protocol.RequestMethod.Post)]
-    public object BanPlayer(string playerName, string duration, string reason)
-    {
-        throw new NotImplementedException();
-    }
-
-
-    /// <summary>
-    /// Remove a player ban
-    /// </summary>
-    [ControllerAction(GenHTTP.Api.Protocol.RequestMethod.Delete)]
-    public object UnbanPlayer(string playerName)
-    {
-        throw new NotImplementedException();
-    }
-
-
-    /// <summary>
-    /// Give a player admin status
-    /// </summary>
-    [ControllerAction(GenHTTP.Api.Protocol.RequestMethod.Post)]
-    public object PromoteToOp(string playerName)
-    {
-        throw new NotImplementedException();
-    }
-
-
-    /// <summary>
-    /// Set a player's game mode
-    /// </summary>
-    [ControllerAction(GenHTTP.Api.Protocol.RequestMethod.Put)]
-    public object SetGameMode(string playerName, string mode)
-    {
-        throw new NotImplementedException();
-    }
 }

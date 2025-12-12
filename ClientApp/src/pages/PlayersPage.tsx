@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Box,
     Card,
@@ -19,15 +19,52 @@ import {
     Block as BlockIcon,
 } from '@mui/icons-material';
 
-const mockPlayers = [
-    { id: 1, name: 'Steve', status: 'online', role: 'admin', playtime: '120h', lastSeen: 'Now' },
-    { id: 2, name: 'Alex', status: 'online', role: 'player', playtime: '85h', lastSeen: 'Now' },
-    { id: 3, name: 'Herobrine', status: 'offline', role: 'player', playtime: '45h', lastSeen: '2h ago' },
-    { id: 4, name: 'Notch', status: 'online', role: 'moderator', playtime: '200h', lastSeen: 'Now' },
-    { id: 5, name: 'Enderman', status: 'offline', role: 'player', playtime: '12h', lastSeen: '1d ago' },
-];
+import { PlayerManagementService } from '../services/PlayerManagementService';
+import type { PlayerDTO } from '../types/PlayerDTO';
+
+// Temporary mapping for demo, since server DTO only has Id, Name, IsAdmin
+// Map PlayerDTO to table row data for display
+function mapPlayerDTOtoTable(player: PlayerDTO) {
+    return {
+        id: player.id,
+        name: String(player.name),
+        isAdmin: player.isAdmin,
+        ipAddress: player.ipAddress,
+        languageCode: player.languageCode,
+        ping: player.ping,
+        firstJoinDate: player.firstJoinDate,
+        lastJoinDate: player.lastJoinDate,
+        privileges: player.privileges,
+    };
+}
 
 const PlayersPage: React.FC = () => {
+    const [players, setPlayers] = useState<PlayerDTO[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        PlayerManagementService.getPlayers()
+            .then(setPlayers)
+            .finally(() => setLoading(false));
+    }, []);
+
+    const handleKick = async (playerId: string) => {
+        const reason = window.prompt('Enter a reason for kicking this player:', 'Kicked by an administrator.');
+        try {
+            await PlayerManagementService.kickPlayer(playerId, reason || undefined);
+            // Refresh player list after kick
+            setLoading(true);
+            const updated = await PlayerManagementService.getPlayers();
+            setPlayers(updated);
+        } catch (err) {
+            alert('Failed to kick player.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const tablePlayers = players.map(mapPlayerDTOtoTable);
+
     return (
         <Box>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -45,7 +82,8 @@ const PlayersPage: React.FC = () => {
                         <Box display="flex" alignItems="center" justifyContent="space-between">
                             <Box>
                                 <Typography variant="h4" component="div" color="success.main">
-                                    {mockPlayers.filter(p => p.status === 'online').length}
+                                    {/* No online status in DTO */}
+                                    -
                                 </Typography>
                                 <Typography variant="subtitle1" color="text.secondary">
                                     Online Players
@@ -61,7 +99,7 @@ const PlayersPage: React.FC = () => {
                         <Box display="flex" alignItems="center" justifyContent="space-between">
                             <Box>
                                 <Typography variant="h4" component="div" color="primary.main">
-                                    {mockPlayers.length}
+                                    {players.length}
                                 </Typography>
                                 <Typography variant="subtitle1" color="text.secondary">
                                     Total Players
@@ -77,7 +115,7 @@ const PlayersPage: React.FC = () => {
                         <Box display="flex" alignItems="center" justifyContent="space-between">
                             <Box>
                                 <Typography variant="h4" component="div" color="warning.main">
-                                    {mockPlayers.filter(p => p.role === 'admin' || p.role === 'moderator').length}
+                                    {players.filter(p => p.isAdmin).length}
                                 </Typography>
                                 <Typography variant="subtitle1" color="text.secondary">
                                     Staff Members
@@ -98,55 +136,58 @@ const PlayersPage: React.FC = () => {
                         <TableHead>
                             <TableRow>
                                 <TableCell>Player</TableCell>
-                                <TableCell>Status</TableCell>
-                                <TableCell>Role</TableCell>
-                                <TableCell>Playtime</TableCell>
-                                <TableCell>Last Seen</TableCell>
+                                <TableCell>Admin</TableCell>
+                                <TableCell>IP Address</TableCell>
+                                <TableCell>Language</TableCell>
+                                <TableCell>Ping</TableCell>
+                                <TableCell>First Join</TableCell>
+                                <TableCell>Last Join</TableCell>
+                                <TableCell>Privileges</TableCell>
                                 <TableCell>Actions</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {mockPlayers.map((player) => (
-                                <TableRow key={player.id}>
-                                    <TableCell>
-                                        <Box display="flex" alignItems="center" gap={1}>
-                                            <Avatar sx={{ width: 24, height: 24 }}>
-                                                {player.name[0]}
-                                            </Avatar>
-                                            {player.name}
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={player.status}
-                                            color={player.status === 'online' ? 'success' : 'default'}
-                                            size="small"
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={player.role}
-                                            color={
-                                                player.role === 'admin' ? 'error' :
-                                                    player.role === 'moderator' ? 'warning' : 'default'
-                                            }
-                                            size="small"
-                                        />
-                                    </TableCell>
-                                    <TableCell>{player.playtime}</TableCell>
-                                    <TableCell>{player.lastSeen}</TableCell>
-                                    <TableCell>
-                                        <Box display="flex" gap={1}>
-                                            <Button size="small" variant="outlined">
-                                                Kick
-                                            </Button>
-                                            <Button size="small" variant="outlined" color="error">
-                                                <BlockIcon fontSize="small" />
-                                            </Button>
-                                        </Box>
-                                    </TableCell>
+                            {loading ? (
+                                <TableRow>
+                                    <TableCell colSpan={9} align="center">Loading...</TableCell>
                                 </TableRow>
-                            ))}
+                            ) : (
+                                tablePlayers.map((player) => (
+                                    <TableRow key={player.id}>
+                                        <TableCell>
+                                            <Box display="flex" alignItems="center" gap={1}>
+                                                <Avatar sx={{ width: 24, height: 24 }}>
+                                                    {player.name[0]}
+                                                </Avatar>
+                                                {player.name}
+                                            </Box>
+                                        </TableCell>
+                                        <TableCell>
+                                            {player.isAdmin ? (
+                                                <Chip label="Admin" color="error" size="small" />
+                                            ) : (
+                                                <Chip label="Player" size="small" />
+                                            )}
+                                        </TableCell>
+                                        <TableCell>{player.ipAddress}</TableCell>
+                                        <TableCell>{player.languageCode}</TableCell>
+                                        <TableCell>{player.ping}</TableCell>
+                                        <TableCell>{player.firstJoinDate}</TableCell>
+                                        <TableCell>{player.lastJoinDate}</TableCell>
+                                        <TableCell>{player.privileges?.length ?? 0}</TableCell>
+                                        <TableCell>
+                                            <Box display="flex" gap={1}>
+                                                <Button size="small" variant="outlined" onClick={() => handleKick(player.id)}>
+                                                    Kick
+                                                </Button>
+                                                <Button size="small" variant="outlined" color="error">
+                                                    <BlockIcon fontSize="small" />
+                                                </Button>
+                                            </Box>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
