@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using GraniteServer.Api;
-using GraniteServer.Rcon;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 
@@ -17,8 +16,6 @@ namespace GraniteServer
     {
         internal const string ConfigFile = "vsrcon.json";
         internal ICoreServerAPI Api = null!;
-        internal static VintageStoryRconConfig Config { get; set; } = null!;
-        public static VintageStoryRconServer? VRCon { get; private set; }
         private WebApi? _webApi;
 
         public override bool ShouldLoad(EnumAppSide side)
@@ -37,10 +34,6 @@ namespace GraniteServer
 
         public override void Dispose()
         {
-
-
-            VRCon?.Dispose();
-            VRCon = null;
         }
     }
 }
