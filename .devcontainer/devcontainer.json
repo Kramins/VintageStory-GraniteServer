@@ -20,7 +20,8 @@
 			"extensions": [
 				"ms-dotnettools.csdevkit",
 				"ms-dotnettools.csharp",
-				"fernandoescolar.vscode-solution-explorer"
+				"fernandoescolar.vscode-solution-explorer",
+				"streetsidesoftware.code-spell-checker"
 			]
 		}
 	},
