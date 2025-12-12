@@ -37,7 +37,7 @@
     <MakeDir Directories="bin/mods" />
     <ZipDirectory DestinationFile="bin/mods/$(TargetName)-$(ConfigurationName).zip" SourceDirectory="$(TargetDir)" Overwrite="true" />
   </Target>
-  <Target Name="BuildWebApp" BeforeTargets="Build">
+  <Target Name="BuildWebApp" BeforeTargets="Build" Condition=" '$(BuildWebApp)' == 'true' ">
     <RemoveDir Directories="resources/wwwroot" />
     <Exec WorkingDirectory="ClientApp" Command="npm install" />
     <Exec WorkingDirectory="ClientApp" Command="npm run build" />
