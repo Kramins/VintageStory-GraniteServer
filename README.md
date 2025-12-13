@@ -19,4 +19,4 @@ This project is intended to be used alongside the `kramins/vintagestory` Docker 
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+GPLv3
