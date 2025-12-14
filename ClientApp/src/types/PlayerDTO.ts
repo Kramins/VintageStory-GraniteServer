@@ -10,4 +10,5 @@ export interface PlayerDTO {
     firstJoinDate: string;
     lastJoinDate: string;
     privileges: string[];
+    connectionState: string;
 }

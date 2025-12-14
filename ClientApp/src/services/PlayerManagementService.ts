@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { PlayerDTO } from '../types/ServerStatusDTO';
+import type { PlayerDTO } from '../types/PlayerDTO';
 
 const API_BASE = '/api/players';
 
