@@ -81,6 +81,7 @@ public class WebApi
             var services = new ServiceCollection();
             services.AddSingleton<ICoreServerAPI>(_api);
             services.AddSingleton<ServerCommandService>();
+            services.AddSingleton<PlayerService>();
 
             _host = Host.Create()
                 .AddDependencyInjection(services.BuildServiceProvider())

@@ -6,6 +6,7 @@ using GenHTTP.Modules.Controllers;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 using GraniteServer.Api.Models;
+using GraniteServer.Api.Services;
 using Vintagestory.API.Server;
 
 namespace GraniteServer.Api;
@@ -15,11 +16,11 @@ namespace GraniteServer.Api;
 /// </summary>
 public class PlayerManagementController
 {
-    private readonly ICoreServerAPI _api;
+    private readonly PlayerService _playerService;
 
-    public PlayerManagementController(ICoreServerAPI api)
+    public PlayerManagementController(PlayerService playerService)
     {
-        _api = api ?? throw new ArgumentNullException(nameof(api));
+        _playerService = playerService ?? throw new ArgumentNullException(nameof(playerService));
     }
 
     /// <summary>
@@ -28,42 +29,14 @@ public class PlayerManagementController
     [ControllerAction(GenHTTP.Api.Protocol.RequestMethod.Get)]
     public IList<PlayerDTO> ListPlayers()
     {
-        var allServerPlayers = _api.Server.Players.ToList();
-        return allServerPlayers.Select(p => new PlayerDTO
-        {
-            Id = p.PlayerUID,
-            Name = p.PlayerName,
-            IpAddress = p.IpAddress,
-            LanguageCode = p.LanguageCode,
-            Ping = p.Ping,
-            RolesCode = p.Role.Code,
-            FirstJoinDate = p.ServerData.FirstJoinDate,
-            LastJoinDate = p.ServerData.LastJoinDate,
-            Privileges = p.Privileges.ToArray(),
-            IsAdmin = false
-        }).ToList();
+        return _playerService.GetAllPlayers();
     }
 
 
     [ControllerAction(RequestMethod.Post)]
     public void Kick(KickRequestDTO request)
     {
-        var player = _api.Server.Players.Where(p => p.PlayerUID == request.PlayerId).FirstOrDefault();
-        if (player == null)
-        {
-            // Find way to return 404
-            return;
-        }
-        var reason = string.IsNullOrWhiteSpace(request.Reason) ? "Kicked by an administrator." : request.Reason;
-        try
-        {
-            player.Disconnect(reason);
-        }
-        catch (Exception ex)
-        {
-            // Do nothing for now
-            // Possible bug in VS where disconnecting a player immediately after they join causes an exception
-        }
+        _playerService.KickPlayer(request.PlayerId, request.Reason ?? "Kicked by an administrator.");
     }
 
     public record WhitelistRequestDTO(string PlayerName);
