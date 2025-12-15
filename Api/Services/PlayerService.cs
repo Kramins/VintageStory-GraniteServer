@@ -12,6 +12,7 @@ namespace GraniteServer.Api.Services;
 public class PlayerService
 {
     private readonly ICoreServerAPI _api;
+
     public PlayerService(ICoreServerAPI api)
     {
         _api = api ?? throw new ArgumentNullException(nameof(api));
@@ -30,19 +31,25 @@ public class PlayerService
         var allBannedPlayers = PlayerDataManager.BannedPlayers;
         var allWhitelistedPlayers = PlayerDataManager.WhitelistedPlayers;
 
-        var fullList = from pd in allPlayerData
-                       join sp in allServerPlayers on pd.PlayerUID equals sp.PlayerUID into ps
-                       from sp in ps.DefaultIfEmpty()
-                       join bp in allBannedPlayers on pd.PlayerUID equals bp.PlayerUID into bps
-                       from bp in bps.DefaultIfEmpty()
-                       join wp in allWhitelistedPlayers on pd.PlayerUID equals wp.PlayerUID into wps
-                       from wp in wps.DefaultIfEmpty()
-                       select MapToPlayerDTO(pd, sp, bp, wp);
+        var fullList =
+            from pd in allPlayerData
+            join sp in allServerPlayers on pd.PlayerUID equals sp.PlayerUID into ps
+            from sp in ps.DefaultIfEmpty()
+            join bp in allBannedPlayers on pd.PlayerUID equals bp.PlayerUID into bps
+            from bp in bps.DefaultIfEmpty()
+            join wp in allWhitelistedPlayers on pd.PlayerUID equals wp.PlayerUID into wps
+            from wp in wps.DefaultIfEmpty()
+            select MapToPlayerDTO(pd, sp, bp, wp);
 
         return await Task.FromResult(fullList.ToList());
     }
 
-    private PlayerDTO MapToPlayerDTO(IServerPlayerData pd, IServerPlayer sp, PlayerEntry bp, PlayerEntry wp)
+    private PlayerDTO MapToPlayerDTO(
+        IServerPlayerData pd,
+        IServerPlayer sp,
+        PlayerEntry bp,
+        PlayerEntry wp
+    )
     {
         var playerDto = new PlayerDTO
         {
@@ -64,7 +71,7 @@ public class PlayerService
             IsWhitelisted = wp != null,
             WhitelistedReason = wp?.Reason,
             WhitelistedBy = wp?.IssuedByPlayerName,
-            WhitelistedUntil = wp?.UntilDate
+            WhitelistedUntil = wp?.UntilDate,
         };
 
         return playerDto;
@@ -165,13 +172,16 @@ public class PlayerService
         // For players the server has never seen
         var playerResponseTask = new TaskCompletionSource<string>();
         // TODO: Investigate why this returns the correct name but will cause a `System.Threading.Tasks.Task' does not contain a definition for 'Result'` to be thrown by the caller
-        PlayerDataManager.ResolvePlayerUid(id, (response, data) =>
-        {
-            if (response == EnumServerResponse.Good)
+        PlayerDataManager.ResolvePlayerUid(
+            id,
+            (response, data) =>
             {
-                playerResponseTask.TrySetResult(data);
+                if (response == EnumServerResponse.Good)
+                {
+                    playerResponseTask.TrySetResult(data);
+                }
             }
-        });
+        );
         var playerName = await playerResponseTask.Task;
         return playerName;
     }
@@ -179,7 +189,8 @@ public class PlayerService
     private async Task<string> ResolvePlayerIdByName(string name)
     {
         var player = _api.Server.Players.FirstOrDefault(p =>
-            p.PlayerName.Equals(name, StringComparison.OrdinalIgnoreCase));
+            p.PlayerName.Equals(name, StringComparison.OrdinalIgnoreCase)
+        );
         if (player != null)
         {
             return player.PlayerUID;
@@ -187,10 +198,13 @@ public class PlayerService
 
         // For players the server has never seen
         var playerResponseTask = new TaskCompletionSource<string>();
-        PlayerDataManager.ResolvePlayerName(name, (response, data) =>
-        {
-            playerResponseTask.TrySetResult(data);
-        });
+        PlayerDataManager.ResolvePlayerName(
+            name,
+            (response, data) =>
+            {
+                playerResponseTask.TrySetResult(data);
+            }
+        );
         var playerId = await playerResponseTask.Task;
         return playerId;
     }
@@ -198,10 +212,6 @@ public class PlayerService
     public async Task<PlayerNameIdDTO> FindPlayerByNameAsync(string name)
     {
         var playerId = await ResolvePlayerIdByName(name);
-        return new PlayerNameIdDTO
-        {
-            Id = playerId,
-            Name = name
-        };
+        return new PlayerNameIdDTO { Id = playerId, Name = name };
     }
 }

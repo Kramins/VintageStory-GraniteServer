@@ -1,25 +1,23 @@
 using System;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using GenHTTP.Api.Infrastructure;
 using GenHTTP.Engine.Internal;
 using GenHTTP.Modules.ApiBrowsing;
 using GenHTTP.Modules.Controllers;
+using GenHTTP.Modules.DependencyInjection;
+using GenHTTP.Modules.IO;
 using GenHTTP.Modules.Layouting;
 using GenHTTP.Modules.Practices;
 using GenHTTP.Modules.Security;
+using GenHTTP.Modules.StaticWebsites;
 using GenHTTP.Modules.Webservices;
+using GraniteServer.Api.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
-
-using Microsoft.Extensions.DependencyInjection;
-using GenHTTP.Modules.DependencyInjection;
-using GraniteServer.Api.Services;
-using System.Linq;
 using Vintagestory.Common;
-using System.IO;
-using GenHTTP.Modules.IO;
-using GenHTTP.Modules.StaticWebsites;
-
 
 namespace GraniteServer.Api;
 
@@ -51,7 +49,9 @@ public class WebApi
     {
         try
         {
-            var graniteServerMod = _api.ModLoader.Mods.FirstOrDefault(m => m.Info.ModID == "graniteserver") as ModContainer;
+            var graniteServerMod =
+                _api.ModLoader.Mods.FirstOrDefault(m => m.Info.ModID == "graniteserver")
+                as ModContainer;
             if (graniteServerMod == null)
             {
                 _api.Logger.Error("[WebAPI] Could not find GraniteServer mod container.");
@@ -62,8 +62,8 @@ public class WebApi
             _api.Logger.Notification("[WebAPI] Starting server...");
             _api.Logger.Notification($"[WebAPI] Serving web client from: {webClientPath}");
 
-            var controllers = Layout.Create()
-
+            var controllers = Layout
+                .Create()
                 .AddDependentController<ServerController>("server")
                 .AddDependentService<PlayerManagementController>("players")
                 .Add(CorsPolicy.Permissive())
@@ -74,7 +74,8 @@ public class WebApi
             var tree = ResourceTree.FromDirectory(webClientPath);
             var clientApp = StaticWebsite.From(tree);
 
-            var app = Layout.Create()
+            var app = Layout
+                .Create()
                 // .Add(["client"], clientApp)
                 .Add(["api"], controllers);
 

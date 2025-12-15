@@ -25,4 +25,3 @@ public class PlayerDTO
     public string? WhitelistedBy { get; set; }
     public DateTime? WhitelistedUntil { get; set; }
 }
-

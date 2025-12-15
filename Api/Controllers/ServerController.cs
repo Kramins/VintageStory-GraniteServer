@@ -19,13 +19,16 @@ public class ServerController
     {
         _api = api ?? throw new ArgumentNullException(nameof(api));
     }
+
     public ServerStatusDTO Status()
     {
         var response = new ServerStatusDTO
         {
             ServerIp = _api.Server.ServerIp,
             UpTime = _api.Server.ServerUptimeSeconds,
-            CurrentPlayers = _api.Server.Players.Count(p => p.ConnectionState == EnumClientState.Connected),
+            CurrentPlayers = _api.Server.Players.Count(p =>
+                p.ConnectionState == EnumClientState.Connected
+            ),
             MaxPlayers = _api.Server.Config.MaxClients,
             ServerName = _api.Server.Config.ServerName,
             GameVersion = "na",
@@ -33,19 +36,22 @@ public class ServerController
             WorldName = _api.World.WorldName,
             WorldSeed = _api.World.Seed,
             MemoryUsageBytes = System.Diagnostics.Process.GetCurrentProcess().WorkingSet64,
-            IsOnline = _api.Server != null
+            IsOnline = _api.Server != null,
         };
 
         return response;
     }
 
     public record SetWhitelistModeRequestDTO(bool Enabled);
+
     [ControllerAction(RequestMethod.Post)]
     public void setWhitelistMode(SetWhitelistModeRequestDTO request)
     {
-        _api.Server.Config.WhitelistMode = request.Enabled ? EnumWhitelistMode.On : EnumWhitelistMode.Off;
-
+        _api.Server.Config.WhitelistMode = request.Enabled
+            ? EnumWhitelistMode.On
+            : EnumWhitelistMode.Off;
     }
+
     /// <summary>
     /// Announce a message to all players
     /// </summary>

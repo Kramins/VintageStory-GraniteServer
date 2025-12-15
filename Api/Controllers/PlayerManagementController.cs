@@ -91,6 +91,4 @@ public class PlayerManagementController
     {
         await _playerService.RemovePlayerFromWhitelistAsync(id);
     }
-
-
 }
