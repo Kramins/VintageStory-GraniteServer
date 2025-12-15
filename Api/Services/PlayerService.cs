@@ -21,6 +21,39 @@ public class PlayerService
     private PlayerDataManager PlayerDataManager => (PlayerDataManager)_api.PlayerData;
 
     /// <summary>
+    /// Adds a player to the ban list.
+    /// </summary>
+    /// <param name="id">The unique ID of the player to add to the ban list.</param>
+    /// <param name="reason">The reason for banning the player.</param>
+    public async Task AddPlayerToBanListAsync(
+        string id,
+        string reason,
+        string issuedBy = "API",
+        DateTime? untilDate = null
+    )
+    {
+        var currentBannedPlayers = await GetBannedPlayersAsync();
+        if (currentBannedPlayers.Any(p => p.Id == id))
+        {
+            return;
+        }
+        var playerName = await ResolvePlayerNameById(id);
+        // TODO: revisit if PlayerDataManager.BanPlayer method changes from internal to public
+        PlayerDataManager.BannedPlayers.Add(
+            new PlayerEntry
+            {
+                PlayerUID = id,
+                PlayerName = playerName,
+                Reason = reason,
+                IssuedByPlayerName = issuedBy,
+                UntilDate = untilDate ?? DateTime.MaxValue,
+            }
+        );
+
+        PlayerDataManager.bannedListDirty = true;
+    }
+
+    /// <summary>
     /// Adds a player to the whitelist.
     /// </summary>
     /// <param name="id">The unique ID of the player to add to the whitelist.</param>
@@ -116,6 +149,24 @@ public class PlayerService
                 // Handle exception
             }
         }
+    }
+
+    /// <summary>
+    /// Removes a player from the ban list.
+    /// </summary>
+    /// <param name="id">The unique ID of the player to remove from the ban list.</param>
+    public async Task RemovePlayerFromBanListAsync(string id)
+    {
+        var currentBannedPlayers = await GetBannedPlayersAsync();
+        if (!currentBannedPlayers.Any(p => p.Id == id))
+        {
+            return;
+        }
+        var playerName = await ResolvePlayerNameById(id);
+
+        // TODO: revisit if PlayerDataManager.UnBanPlayer method changes from internal to public
+        PlayerDataManager.BannedPlayers.RemoveAll(pe => pe.PlayerUID == id);
+        PlayerDataManager.bannedListDirty = true;
     }
 
     /// <summary>

@@ -35,6 +35,17 @@ public class PlayerManagementController
         await _playerService.AddPlayerToWhitelistAsync(id);
     }
 
+    [ResourceMethod(RequestMethod.Post, "/:id/ban")]
+    public async Task BanPlayer(string id, BanRequestDTO request)
+    {
+        await _playerService.AddPlayerToBanListAsync(
+            id,
+            request.Reason ?? "Banned by an administrator.",
+            request.IssuedBy ?? "API",
+            request.UntilDate
+        );
+    }
+
     [ResourceMethod(RequestMethod.Get, "/find")]
     public async Task<PlayerNameIdDTO> FindPlayerByName(string name)
     {
@@ -80,6 +91,12 @@ public class PlayerManagementController
     public async Task<IList<PlayerDTO>> ListWhitelistedPlayers()
     {
         return await _playerService.GetWhitelistedPlayersAsync();
+    }
+
+    [ResourceMethod(RequestMethod.Delete, "/:id/ban")]
+    public async Task RemoveFromBanList(string id)
+    {
+        await _playerService.RemovePlayerFromBanListAsync(id);
     }
 
     /// <summary>
