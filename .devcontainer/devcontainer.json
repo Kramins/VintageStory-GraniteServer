@@ -21,7 +21,9 @@
 				"ms-dotnettools.csdevkit",
 				"ms-dotnettools.csharp",
 				"fernandoescolar.vscode-solution-explorer",
-				"streetsidesoftware.code-spell-checker"
+				"streetsidesoftware.code-spell-checker",
+				"csharpier.csharpier-vscode",
+				"prettier.prettier-vscode"
 			]
 		}
 	},

@@ -14,7 +14,8 @@ USER vintagestory
 SHELL ["/bin/bash", "-c"]
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash && \
     source "$HOME/.nvm/nvm.sh" && \
-    nvm install 24
+    nvm install 24 \
+    && dotnet tool install csharpier --global
 ENV NVM_DIR="/root/.nvm"
 ENV PATH="$NVM_DIR/versions/node/v24.0.0/bin/:${PATH}"
 
