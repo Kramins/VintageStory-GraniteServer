@@ -1,0 +1,84 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "8.x"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "22"
+
+      - name: Install frontend dependencies
+        working-directory: ClientApp
+        run: npm install
+
+      - name: Restore .NET dependencies
+        run: dotnet restore GraniteServer.sln
+
+      - name: Build Debug version
+        run: dotnet build -c Debug GraniteServer.csproj /p:BuildWebApp=true
+
+      - name: Build Release version
+        run: dotnet build -c Release GraniteServer.csproj /p:BuildWebApp=true
+
+      - name: Run .NET tests
+        if: github.event_name == 'pull_request'
+        run: dotnet test GraniteServer.sln
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "8.x"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "22"
+
+      - name: Install frontend dependencies
+        working-directory: ClientApp
+        run: npm install
+
+      - name: Restore .NET dependencies
+        run: dotnet restore GraniteServer.sln
+
+      - name: Build Release version
+        run: dotnet build -c Release GraniteServer.csproj /p:BuildWebApp=true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: bin/mods/*
+          draft: false
+          prerelease: ${{ contains(github.ref, '-RC') || contains(github.ref, '-rc') }}
+          generate_release_notes: true
