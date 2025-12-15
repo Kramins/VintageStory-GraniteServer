@@ -130,7 +130,7 @@ public class PlayerService
             return;
         }
         var playerName = await ResolvePlayerNameById(id);
-        await Task.Run(() => PlayerDataManager.UnWhitelistPlayer(id, playerName));
+        PlayerDataManager.UnWhitelistPlayer(playerName, id);
     }
 
     private PlayerDTO MapToPlayerDTO(
