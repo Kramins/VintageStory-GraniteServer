@@ -1,11 +1,11 @@
 meta {
-  name: ListPlayers
+  name: ListPlayersWhitelisted
   type: http
-  seq: 3
+  seq: 4
 }
 
 get {
-  url: http://{{HOST}}/api/players
+  url: http://{{HOST}}/api/players/whitelisted
   body: json
   auth: inherit
 }

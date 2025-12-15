@@ -1,0 +1,20 @@
+meta {
+  name: RemoveFromWhitelist
+  type: http
+  seq: 7
+}
+
+delete {
+  url: http://{{HOST}}/api/players/:playerId/whitelist
+  body: json
+  auth: inherit
+}
+
+body:multipart-form {
+  playerId: ExamplePlayerId
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

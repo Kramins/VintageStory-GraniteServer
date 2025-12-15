@@ -5,19 +5,23 @@ meta {
 }
 
 post {
-  url: http://{{HOST}}/api/players/add-to-whitelist/
+  url: http://{{HOST}}/api/players/{{playerId}}/whitelist
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "playerName": "Dalraz"
+    
   }
 }
 
 body:multipart-form {
-  playerName: Dalraz
+  playername: Dalraz
+}
+
+vars:pre-request {
+  playerId: dNUwpFMGY1vs+ty2iZo3F+Nz
 }
 
 settings {

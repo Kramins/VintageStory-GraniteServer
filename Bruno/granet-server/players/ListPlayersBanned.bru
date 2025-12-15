@@ -1,11 +1,11 @@
 meta {
-  name: ListPlayers
+  name: ListPlayersBanned
   type: http
-  seq: 3
+  seq: 5
 }
 
 get {
-  url: http://{{HOST}}/api/players
+  url: http://{{HOST}}/api/players/banned
   body: json
   auth: inherit
 }
