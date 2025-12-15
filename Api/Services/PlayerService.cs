@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using GraniteServer.Api.Models;
+using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 using Vintagestory.Server;
 
@@ -15,18 +17,18 @@ public class PlayerService
         _api = api ?? throw new ArgumentNullException(nameof(api));
     }
 
-    public List<PlayerDTO> GetAllPlayers()
+    private PlayerDataManager PlayerDataManager => (PlayerDataManager)_api.PlayerData;
+
+    /// <summary>
+    /// Retrieves a list of all players, including their details such as connection state, roles, and privileges.
+    /// </summary>
+    /// <returns>A list of PlayerDTO objects representing all players.</returns>
+    public async Task<List<PlayerDTO>> GetAllPlayersAsync()
     {
-        // All players that have ever connected
         var allPlayerData = _api.PlayerData.PlayerDataByUid.Values.ToList();
-
-        // All players that have connected since server start
         var allServerPlayers = _api.Server.Players.ToList();
-
-        // All banned and whitelisted players
-        var allBannedPlayers = ((Vintagestory.Server.PlayerDataManager)_api.PlayerData).BannedPlayers;
-        var allWhitelistedPlayers = ((Vintagestory.Server.PlayerDataManager)_api.PlayerData).WhitelistedPlayers;
-
+        var allBannedPlayers = PlayerDataManager.BannedPlayers;
+        var allWhitelistedPlayers = PlayerDataManager.WhitelistedPlayers;
 
         var fullList = from pd in allPlayerData
                        join sp in allServerPlayers on pd.PlayerUID equals sp.PlayerUID into ps
@@ -37,8 +39,7 @@ public class PlayerService
                        from wp in wps.DefaultIfEmpty()
                        select MapToPlayerDTO(pd, sp, bp, wp);
 
-        return fullList.ToList();
-
+        return await Task.FromResult(fullList.ToList());
     }
 
     private PlayerDTO MapToPlayerDTO(IServerPlayerData pd, IServerPlayer sp, PlayerEntry bp, PlayerEntry wp)
@@ -69,46 +70,138 @@ public class PlayerService
         return playerDto;
     }
 
-    public PlayerDTO? GetPlayerById(string playerId)
+    /// <summary>
+    /// Retrieves a player's details by their unique player ID.
+    /// </summary>
+    /// <param name="playerId">The unique ID of the player.</param>
+    /// <returns>A PlayerDTO object representing the player, or null if not found.</returns>
+    public async Task<PlayerDTO?> GetPlayerByIdAsync(string playerId)
     {
-        var player = GetAllPlayers().Where(p => p.Id == playerId).FirstOrDefault();
-
-
-        if (player == null)
-        {
-            return null;
-        }
-
+        var players = await GetAllPlayersAsync();
+        var player = players.Where(p => p.Id == playerId).FirstOrDefault();
         return player;
     }
 
-    public void WhitelistPlayer(string playerId, string reason, string issuedBy)
-    {
-        var playerData = _api.PlayerData.GetPlayerDataByUid(playerId);
-        if (playerData != null)
-        {
-            //((Vintagestory.Server.PlayerDataManager)_api.PlayerData).WhitelistPlayer()
-
-        }
-
-        return;
-    }
-
-    public void KickPlayer(string playerId, string reason)
+    /// <summary>
+    /// Disconnects a player from the server with a specified reason.
+    /// </summary>
+    /// <param name="playerId">The unique ID of the player to disconnect.</param>
+    /// <param name="reason">The reason for disconnecting the player.</param>
+    public async Task KickPlayerAsync(string playerId, string reason)
     {
         var player = _api.Server.Players.Where(p => p.PlayerUID == playerId).FirstOrDefault();
         if (player != null)
         {
             try
             {
-                player.Disconnect(reason);
+                await Task.Run(() => player.Disconnect(reason));
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // There is a bug
+                // Handle exception
             }
         }
     }
 
+    /// <summary>
+    /// Retrieves a list of all players who are whitelisted on the server.
+    /// </summary>
+    /// <returns>A list of PlayerDTO objects representing whitelisted players.</returns>
+    public async Task<IList<PlayerDTO>> GetWhitelistedPlayersAsync()
+    {
+        var players = await GetAllPlayersAsync();
+        return players.Where(p => p.IsWhitelisted).ToList();
+    }
 
+    /// <summary>
+    /// Retrieves a list of all players who are banned from the server.
+    /// </summary>
+    /// <returns>A list of PlayerDTO objects representing banned players.</returns>
+    public async Task<IList<PlayerDTO>> GetBannedPlayersAsync()
+    {
+        var players = await GetAllPlayersAsync();
+        return players.Where(p => p.IsBanned).ToList();
+    }
+
+    /// <summary>
+    /// Adds a player to the whitelist.
+    /// </summary>
+    /// <param name="id">The unique ID of the player to add to the whitelist.</param>
+    public async Task AddPlayerToWhitelistAsync(string id)
+    {
+        var currentWhitelistedPlayers = await GetWhitelistedPlayersAsync();
+        if (currentWhitelistedPlayers.Any(p => p.Id == id))
+        {
+            return;
+        }
+        var playerName = await ResolvePlayerNameById(id);
+        PlayerDataManager.WhitelistPlayer(playerName, id, "Added via API");
+    }
+
+    /// <summary>
+    /// Removes a player from the whitelist.
+    /// </summary>
+    /// <param name="id">The unique ID of the player to remove from the whitelist.</param>
+    public async Task RemovePlayerFromWhitelistAsync(string id)
+    {
+        var currentWhitelistedPlayers = await GetWhitelistedPlayersAsync();
+        if (!currentWhitelistedPlayers.Any(p => p.Id == id))
+        {
+            return;
+        }
+        var playerName = await ResolvePlayerNameById(id);
+        await Task.Run(() => PlayerDataManager.UnWhitelistPlayer(id, playerName));
+    }
+
+    private async Task<string> ResolvePlayerNameById(string id)
+    {
+        // Check if the server has data on the player first
+        var player = (await GetAllPlayersAsync()).FirstOrDefault(p => p.Id == id);
+        if (player != null)
+        {
+            return player.Name;
+        }
+
+        // For players the server has never seen
+        var playerResponseTask = new TaskCompletionSource<string>();
+        // TODO: Investigate why this returns the correct name but will cause a `System.Threading.Tasks.Task' does not contain a definition for 'Result'` to be thrown by the caller
+        PlayerDataManager.ResolvePlayerUid(id, (response, data) =>
+        {
+            if (response == EnumServerResponse.Good)
+            {
+                playerResponseTask.TrySetResult(data);
+            }
+        });
+        var playerName = await playerResponseTask.Task;
+        return playerName;
+    }
+
+    private async Task<string> ResolvePlayerIdByName(string name)
+    {
+        var player = _api.Server.Players.FirstOrDefault(p =>
+            p.PlayerName.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (player != null)
+        {
+            return player.PlayerUID;
+        }
+
+        // For players the server has never seen
+        var playerResponseTask = new TaskCompletionSource<string>();
+        PlayerDataManager.ResolvePlayerName(name, (response, data) =>
+        {
+            playerResponseTask.TrySetResult(data);
+        });
+        var playerId = await playerResponseTask.Task;
+        return playerId;
+    }
+
+    public async Task<PlayerNameIdDTO> FindPlayerByNameAsync(string name)
+    {
+        var playerId = await ResolvePlayerIdByName(name);
+        return new PlayerNameIdDTO
+        {
+            Id = playerId,
+            Name = name
+        };
+    }
 }

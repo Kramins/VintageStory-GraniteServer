@@ -65,7 +65,7 @@ public class WebApi
             var controllers = Layout.Create()
 
                 .AddDependentController<ServerController>("server")
-                .AddDependentController<PlayerManagementController>("players")
+                .AddDependentService<PlayerManagementController>("players")
                 .Add(CorsPolicy.Permissive())
                 .AddSwaggerUi()
                 .AddScalar()

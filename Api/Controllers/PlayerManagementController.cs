@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using GenHTTP.Api.Protocol;
 using GenHTTP.Modules.Controllers;
 using GenHTTP.Modules.Reflection;
@@ -13,6 +14,7 @@ namespace GraniteServer.Api;
 
 /// <summary>
 /// Player control and administration controller
+/// Base URL: /api/players
 /// </summary>
 public class PlayerManagementController
 {
@@ -24,27 +26,70 @@ public class PlayerManagementController
     }
 
     /// <summary>
-    /// List all connected players
+    /// Lists all connected players.
     /// </summary>
-    [ControllerAction(GenHTTP.Api.Protocol.RequestMethod.Get)]
-    public IList<PlayerDTO> ListPlayers()
+    /// <returns>A list of all connected players.</returns>
+    [ResourceMethod(RequestMethod.Get)]
+    public async Task<IList<PlayerDTO>> ListPlayers()
     {
-        return _playerService.GetAllPlayers();
+        return await _playerService.GetAllPlayersAsync();
     }
 
-
-    [ControllerAction(RequestMethod.Post)]
-    public void Kick(KickRequestDTO request)
+    [ResourceMethod(RequestMethod.Get, "/find")]
+    public async Task<PlayerNameIdDTO> FindPlayerByName(string name)
     {
-        _playerService.KickPlayer(request.PlayerId, request.Reason ?? "Kicked by an administrator.");
+        return await _playerService.FindPlayerByNameAsync(name);
     }
 
-    public record WhitelistRequestDTO(string PlayerName);
-    [ControllerAction(RequestMethod.Post)]
-    public void AddToWhitelist(WhitelistRequestDTO request)
+    /// <summary>
+    /// Lists all whitelisted players.
+    /// </summary>
+    /// <returns>A list of all whitelisted players.</returns>
+    [ResourceMethod(RequestMethod.Get, "/whitelisted")]
+    public async Task<IList<PlayerDTO>> ListWhitelistedPlayers()
     {
-        return;
+        return await _playerService.GetWhitelistedPlayersAsync();
+    }
 
+    /// <summary>
+    /// Lists all banned players.
+    /// </summary>
+    /// <returns>A list of all banned players.</returns>
+    [ResourceMethod(RequestMethod.Get, "/banned")]
+    public async Task<IList<PlayerDTO>> ListBannedPlayers()
+    {
+        return await _playerService.GetBannedPlayersAsync();
+    }
+
+    /// <summary>
+    /// Kicks a player by their ID.
+    /// </summary>
+    /// <param name="id">The ID of the player to kick.</param>
+    /// <param name="request">The kick request containing the reason.</param>
+    [ResourceMethod(RequestMethod.Post, "/:id/kick")]
+    public async Task Kick(string id, KickRequestDTO request)
+    {
+        await _playerService.KickPlayerAsync(id, request.Reason ?? "Kicked by an administrator.");
+    }
+
+    /// <summary>
+    /// Adds a player to the whitelist by their ID.
+    /// </summary>
+    /// <param name="id">The ID of the player to whitelist.</param>
+    [ResourceMethod(RequestMethod.Post, "/:id/whitelist")]
+    public async Task AddToWhitelist(string id)
+    {
+        await _playerService.AddPlayerToWhitelistAsync(id);
+    }
+
+    /// <summary>
+    /// Removes a player from the whitelist by their ID.
+    /// </summary>
+    /// <param name="id">The ID of the player to remove from the whitelist.</param>
+    [ResourceMethod(RequestMethod.Delete, "/:id/whitelist")]
+    public async Task RemoveFromWhitelist(string id)
+    {
+        await _playerService.RemovePlayerFromWhitelistAsync(id);
     }
 
 
