@@ -10,15 +10,6 @@ namespace GraniteServer.Api;
 public class LandRightsController
 {
     /// <summary>
-    /// List all land claims
-    /// Linked to: /land command
-    /// </summary>
-    public object ListLandClaims()
-    {
-        throw new NotImplementedException();
-    }
-
-    /// <summary>
     /// Create a new land claim
     /// Linked to: /land command
     /// </summary>
@@ -28,10 +19,10 @@ public class LandRightsController
     }
 
     /// <summary>
-    /// Manage privileges for a land claim
-    /// Linked to: /land command and /bre, /gbre commands
+    /// List all land claims
+    /// Linked to: /land command
     /// </summary>
-    public object ManageLandPrivileges(string position, string playerName, string privilege)
+    public object ListLandClaims()
     {
         throw new NotImplementedException();
     }
@@ -41,6 +32,15 @@ public class LandRightsController
     /// Linked to: /bre (player owned) and /gbre (group owned) commands
     /// </summary>
     public object ManageBlockReinforcement(string position, string owner, string action)
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Manage privileges for a land claim
+    /// Linked to: /land command and /bre, /gbre commands
+    /// </summary>
+    public object ManageLandPrivileges(string position, string playerName, string privilege)
     {
         throw new NotImplementedException();
     }

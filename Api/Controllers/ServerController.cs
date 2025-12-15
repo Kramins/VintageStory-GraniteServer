@@ -20,6 +20,30 @@ public class ServerController
         _api = api ?? throw new ArgumentNullException(nameof(api));
     }
 
+    /// <summary>
+    /// Announce a message to all players
+    /// </summary>
+    public object Announce(string message)
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Reload server configuration
+    /// </summary>
+    public object ReloadConfiguration()
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Trigger an immediate autosave
+    /// </summary>
+    public object SaveNow()
+    {
+        throw new NotImplementedException();
+    }
+
     public ServerStatusDTO Status()
     {
         var response = new ServerStatusDTO
@@ -42,7 +66,13 @@ public class ServerController
         return response;
     }
 
-    public record SetWhitelistModeRequestDTO(bool Enabled);
+    /// <summary>
+    /// Stop the server
+    /// </summary>
+    public object StopServer(int? exitCode = null)
+    {
+        throw new NotImplementedException();
+    }
 
     [ControllerAction(RequestMethod.Post)]
     public void setWhitelistMode(SetWhitelistModeRequestDTO request)
@@ -52,35 +82,5 @@ public class ServerController
             : EnumWhitelistMode.Off;
     }
 
-    /// <summary>
-    /// Announce a message to all players
-    /// </summary>
-    public object Announce(string message)
-    {
-        throw new NotImplementedException();
-    }
-
-    /// <summary>
-    /// Trigger an immediate autosave
-    /// </summary>
-    public object SaveNow()
-    {
-        throw new NotImplementedException();
-    }
-
-    /// <summary>
-    /// Stop the server
-    /// </summary>
-    public object StopServer(int? exitCode = null)
-    {
-        throw new NotImplementedException();
-    }
-
-    /// <summary>
-    /// Reload server configuration
-    /// </summary>
-    public object ReloadConfiguration()
-    {
-        throw new NotImplementedException();
-    }
+    public record SetWhitelistModeRequestDTO(bool Enabled);
 }

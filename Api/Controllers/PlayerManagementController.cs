@@ -26,39 +26,19 @@ public class PlayerManagementController
     }
 
     /// <summary>
-    /// Lists all connected players.
+    /// Adds a player to the whitelist by their ID.
     /// </summary>
-    /// <returns>A list of all connected players.</returns>
-    [ResourceMethod(RequestMethod.Get)]
-    public async Task<IList<PlayerDTO>> ListPlayers()
+    /// <param name="id">The ID of the player to whitelist.</param>
+    [ResourceMethod(RequestMethod.Post, "/:id/whitelist")]
+    public async Task AddToWhitelist(string id)
     {
-        return await _playerService.GetAllPlayersAsync();
+        await _playerService.AddPlayerToWhitelistAsync(id);
     }
 
     [ResourceMethod(RequestMethod.Get, "/find")]
     public async Task<PlayerNameIdDTO> FindPlayerByName(string name)
     {
         return await _playerService.FindPlayerByNameAsync(name);
-    }
-
-    /// <summary>
-    /// Lists all whitelisted players.
-    /// </summary>
-    /// <returns>A list of all whitelisted players.</returns>
-    [ResourceMethod(RequestMethod.Get, "/whitelisted")]
-    public async Task<IList<PlayerDTO>> ListWhitelistedPlayers()
-    {
-        return await _playerService.GetWhitelistedPlayersAsync();
-    }
-
-    /// <summary>
-    /// Lists all banned players.
-    /// </summary>
-    /// <returns>A list of all banned players.</returns>
-    [ResourceMethod(RequestMethod.Get, "/banned")]
-    public async Task<IList<PlayerDTO>> ListBannedPlayers()
-    {
-        return await _playerService.GetBannedPlayersAsync();
     }
 
     /// <summary>
@@ -73,13 +53,33 @@ public class PlayerManagementController
     }
 
     /// <summary>
-    /// Adds a player to the whitelist by their ID.
+    /// Lists all banned players.
     /// </summary>
-    /// <param name="id">The ID of the player to whitelist.</param>
-    [ResourceMethod(RequestMethod.Post, "/:id/whitelist")]
-    public async Task AddToWhitelist(string id)
+    /// <returns>A list of all banned players.</returns>
+    [ResourceMethod(RequestMethod.Get, "/banned")]
+    public async Task<IList<PlayerDTO>> ListBannedPlayers()
     {
-        await _playerService.AddPlayerToWhitelistAsync(id);
+        return await _playerService.GetBannedPlayersAsync();
+    }
+
+    /// <summary>
+    /// Lists all connected players.
+    /// </summary>
+    /// <returns>A list of all connected players.</returns>
+    [ResourceMethod(RequestMethod.Get)]
+    public async Task<IList<PlayerDTO>> ListPlayers()
+    {
+        return await _playerService.GetAllPlayersAsync();
+    }
+
+    /// <summary>
+    /// Lists all whitelisted players.
+    /// </summary>
+    /// <returns>A list of all whitelisted players.</returns>
+    [ResourceMethod(RequestMethod.Get, "/whitelisted")]
+    public async Task<IList<PlayerDTO>> ListWhitelistedPlayers()
+    {
+        return await _playerService.GetWhitelistedPlayersAsync();
     }
 
     /// <summary>

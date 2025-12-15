@@ -15,6 +15,12 @@ public class ServerCommandService
         _api = api ?? throw new ArgumentNullException(nameof(api));
     }
 
+    public async Task<string> ListUsersAsync()
+    {
+        var result = await ExecuteCommandAsync("list", new CmdArgs("clients"));
+        return result?.StatusMessage ?? "Failed to retrieve player list";
+    }
+
     private async Task<TextCommandResult?> ExecuteCommandAsync(string command, CmdArgs args)
     {
         var tcs = new TaskCompletionSource<TextCommandResult?>();
@@ -40,11 +46,5 @@ public class ServerCommandService
         );
 
         return await tcs.Task;
-    }
-
-    public async Task<string> ListUsersAsync()
-    {
-        var result = await ExecuteCommandAsync("list", new CmdArgs("clients"));
-        return result?.StatusMessage ?? "Failed to retrieve player list";
     }
 }

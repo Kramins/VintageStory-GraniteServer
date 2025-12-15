@@ -10,19 +10,28 @@ namespace GraniteServer.Api;
 public class WorldManagementController
 {
     /// <summary>
-    /// Get world configuration
-    /// Linked to: /worldconfig [key] [value] command
+    /// Create a backup of the current save game
+    /// Linked to: /genbackup [filename] command
     /// </summary>
-    public object GetWorldConfig(string? key = null)
+    public object CreateBackup(string? filename = null)
     {
         throw new NotImplementedException();
     }
 
     /// <summary>
-    /// Set world configuration
-    /// Linked to: /worldconfig <key> <value> command
+    /// Get current weather
+    /// Linked to: /weather command
     /// </summary>
-    public object SetWorldConfig(string key, string value)
+    public object GetWeather()
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Get world configuration
+    /// Linked to: /worldconfig [key] [value] command
+    /// </summary>
+    public object GetWorldConfig(string? key = null)
     {
         throw new NotImplementedException();
     }
@@ -46,15 +55,6 @@ public class WorldManagementController
     }
 
     /// <summary>
-    /// Get current weather
-    /// Linked to: /weather command
-    /// </summary>
-    public object GetWeather()
-    {
-        throw new NotImplementedException();
-    }
-
-    /// <summary>
     /// Set weather
     /// Linked to: /weather command
     /// </summary>
@@ -64,10 +64,10 @@ public class WorldManagementController
     }
 
     /// <summary>
-    /// Create a backup of the current save game
-    /// Linked to: /genbackup [filename] command
+    /// Set world configuration
+    /// Linked to: /worldconfig <key> <value> command
     /// </summary>
-    public object CreateBackup(string? filename = null)
+    public object SetWorldConfig(string key, string value)
     {
         throw new NotImplementedException();
     }
