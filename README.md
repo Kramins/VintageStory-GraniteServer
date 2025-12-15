@@ -48,7 +48,7 @@ We are actively working to expand the functionality of GraniteServer. Below is a
 #### **Planned Features**:
 
 - **Basic Authentication**: Implement a straightforward username and password authentication system for accessing the server.
-- **OAuth Integration**: Enable OAuth-based authentication for streamlined and secure server access using external accounts (e.g., Google, GitHub).
+- **OAuth Integration**: Enable OAuth-based authentication for streamlined and secure server access using external accounts.
 - **API Authentication**: Add token-based authentication for secure access to the server's API endpoints.
 
 ---
@@ -61,8 +61,6 @@ We are actively working to expand the functionality of GraniteServer. Below is a
 - **Stop Server**: Provide functionality to stop the server gracefully.
 - **Start Server**: Enable starting the server from the management interface.
 - **Chat Integration**: Enable the ability to send messages to players via the server interface and monitor player chat in real-time.
-
-**Note:** These features are subject to the constraints of the Vintage Story server. Since the server itself runs the GraniteServer mod, implementing features like restart, stop, and start might require external orchestration tools or manual intervention beyond the mod's scope.
 
 ---
 
