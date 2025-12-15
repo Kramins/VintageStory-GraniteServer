@@ -8,12 +8,6 @@ GraniteServer is an alpha-stage server management and web API project designed t
 
 **Alpha** – This project is under active development and is not yet feature complete. Expect breaking changes and incomplete features.
 
-## Features
-
-- Web API for server status and management
-- Player management endpoints
-- Designed for containerized deployment
-
 ## Roadmap
 
 We are actively working to expand the functionality of GraniteServer. Below is a roadmap of current and planned features.
@@ -21,6 +15,7 @@ We are actively working to expand the functionality of GraniteServer. Below is a
 ### **Player Management**
 
 #### **Currently Developing**:
+
 - **Display Players**: List all registered players on the server.
 - **Display Online Players**: Show a list of players currently online.
 - **Kick Player**: Remove a player from the server in real-time.
@@ -28,6 +23,7 @@ We are actively working to expand the functionality of GraniteServer. Below is a
 - **Whitelist Player**: Restrict server access to approved players only.
 
 #### **Planned Features**:
+
 - **Track Player Activity**: Monitor the time players spend on the server and provide analytics.
 - **Role Management**: Assign roles (e.g., moderator, admin) to players for elevated permissions.
 - **Mute Player**: Disable communication for disruptive players.
@@ -39,6 +35,7 @@ We are actively working to expand the functionality of GraniteServer. Below is a
 ### **World Management**
 
 #### **Planned Features**:
+
 - **Backup World**: Create and store backups of the current game world.
 - **Download World**: Allow downloading the complete world for local archival or transfer.
 - **Upload World**: Enable uploading an external world backup to the server.
@@ -49,6 +46,7 @@ We are actively working to expand the functionality of GraniteServer. Below is a
 ### **Authentication**
 
 #### **Planned Features**:
+
 - **Basic Authentication**: Implement a straightforward username and password authentication system for accessing the server.
 - **OAuth Integration**: Enable OAuth-based authentication for streamlined and secure server access using external accounts (e.g., Google, GitHub).
 - **API Authentication**: Add token-based authentication for secure access to the server's API endpoints.
@@ -58,6 +56,7 @@ We are actively working to expand the functionality of GraniteServer. Below is a
 ### **Basic Server Controls**
 
 #### **Planned Features**:
+
 - **Restart Server**: Allow the server to be restarted via the management system.
 - **Stop Server**: Provide functionality to stop the server gracefully.
 - **Start Server**: Enable starting the server from the management interface.
@@ -70,6 +69,7 @@ We are actively working to expand the functionality of GraniteServer. Below is a
 ### **Monitoring and Analytics**
 
 #### **Planned Features**:
+
 - **Server Metrics Dashboard**: Display real-time server performance metrics such as CPU, memory, and disk usage.
 - **Player Analytics**: Track player behavior and statistics, such as login frequency and average playtime.
 - **Error Logging**: Provide access to detailed logs for diagnosing server and mod issues.
@@ -80,6 +80,7 @@ We are actively working to expand the functionality of GraniteServer. Below is a
 ### **Mod Management**
 
 #### **Planned Features**:
+
 - **Install/Remove Mods**: Add the ability to dynamically install or remove mods from the server.
 - **Mod Version Checker**: Notify admins when there are new versions of installed mods.
 - **Compatibility Checker**: Ensure mods are compatible with the current server version or other installed mods.
@@ -89,6 +90,7 @@ We are actively working to expand the functionality of GraniteServer. Below is a
 ### **Cross-Compatibility**
 
 #### **Planned Features**:
+
 - **External Database Support**: Enable storing server data (e.g., player records, world backups) on external systems such as MySQL or PostgreSQL.
 - **Integration with External Tools**: Provide compatibility with third-party tools such as Discord bots for notifications or rich interactions.
 
@@ -97,9 +99,11 @@ We are actively working to expand the functionality of GraniteServer. Below is a
 ### **Server Configuration Management**
 
 #### **Currently Developing**:
+
 - **Enable/Disable Whitelist**: Provide control to enable or disable the server's whitelist feature from the management panel.
 
 #### **Planned Features**:
+
 - **Edit Configuration Files**: Add a user-friendly interface for modifying the server's configuration files directly from the management system.
 - **Apply Configuration Changes**: Allow reloading or applying configuration changes without restarting the server.
 - **Backup Configurations**: Create backups of server configuration files for easy recovery.
