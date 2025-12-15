@@ -1,17 +1,23 @@
 meta {
-  name: RemoveFromWhitelist
+  name: RemoveFromBanList
   type: http
-  seq: 2
+  seq: 9
 }
 
 delete {
-  url: http://{{HOST}}/api/players/{{playerId}}/whitelist
+  url: http://{{HOST}}/api/players/{{playerId}}/ban
   body: json
   auth: inherit
 }
 
+body:json {
+  {
+    
+  }
+}
+
 body:multipart-form {
-  playerId: ExamplePlayerId
+  playername: Dalraz
 }
 
 vars:pre-request {
