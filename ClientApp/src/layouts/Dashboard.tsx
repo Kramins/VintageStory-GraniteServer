@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Toolbar from '@mui/material/Toolbar';
 import Box from '@mui/material/Box';
 import Header from '../components/Header';
-import Drawer, { DRAWER_WIDTH } from '../components/Drawer';
+import Drawer from '../components/Drawer';
 
 
 export default function DashboardLayout() {
