@@ -19,15 +19,18 @@
             "stopAtEntry": false
         },
         {
-            "name": "CakeBuild",
+            "name": "Launch Server And ClientApp",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build (Cake)",
-            "program": "${workspaceFolder}/CakeBuild/bin/Debug/net8.0/CakeBuild.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/CakeBuild",
-            "stopAtEntry": false,
-            "console": "internalConsole"
+            "program": "/app/VintagestoryServer.dll",
+            "preLaunchTask": "build",
+            "args": [
+                "--tracelog",
+                "--addModPath",
+                "${workspaceFolder}/bin/mods"
+            ],
+            "console": "internalConsole",
+            "stopAtEntry": false
         },
         {
             "name": "Launch Server with UI Dev",
