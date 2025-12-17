@@ -62,7 +62,9 @@ public class PlayerManagementController
     [ResourceMethod(RequestMethod.Post, "/:id/kick")]
     public async Task Kick(string id, KickRequestDTO request)
     {
-        await _playerService.KickPlayerAsync(id, request.Reason ?? "Kicked by an administrator.");
+        var t =  _playerService.KickPlayerAsync(id, request.Reason ?? "Kicked by an administrator.", true);
+
+        await t;
     }
 
     /// <summary>
@@ -89,7 +91,6 @@ public class PlayerManagementController
         catch (Exception ex)
         {
             _api.Logger.Warning("Error retrieving all players: " + ex.Message);
-            //return new Result<IList<PlayerDTO>>([]).Status(ResponseStatus.InternalServerError);
             throw;
         }
     }
