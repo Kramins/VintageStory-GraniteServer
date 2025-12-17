@@ -5,15 +5,20 @@ import {
     Chip,
     Avatar,
     Button,
-    useTheme,
-    useMediaQuery,
+    Tabs,
+    Tab,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    TextField,
+    DialogActions,
 } from '@mui/material';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { DataGrid } from '@mui/x-data-grid';
 import {
-    Person as PersonIcon,
-    AdminPanelSettings as AdminIcon,
     Block as BlockIcon,
+    Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { PlayerService } from '../services/PlayerService'
 import type { PlayerDTO } from '../types/PlayerDTO';
@@ -41,21 +46,92 @@ const PlayersPage: React.FC = () => {
     const dispatch = useAppDispatch();
     const players = useAppSelector((state) => state.players.players as PlayerDTO[]);
     const loading = useAppSelector((state) => state.players.loading as boolean);
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
     useEffect(() => {
         dispatch(fetchAllPlayers());
     }, [dispatch]);
 
     const handleKick = async (playerId: string) => {
-        const reason = window.prompt('Enter a reason for kicking this player:', 'Kicked by an administrator.');
-        try {
-            await PlayerService.kickPlayer(playerId, reason || undefined);
-            dispatch(fetchAllPlayers()); // Refresh player list after kick
-        } catch (err) {
-            alert('Failed to kick player.');
+        handleKickClick(playerId);
+    };
+
+    const handleRefresh = () => {
+        dispatch(fetchAllPlayers());
+    };
+
+    const [kickDialogOpen, setKickDialogOpen] = React.useState(false);
+    const [kickTargetId, setKickTargetId] = React.useState<string | null>(null);
+    const [kickReason, setKickReason] = React.useState('Kicked by an administrator.');
+
+    const handleKickClick = (playerId: string) => {
+        setKickTargetId(playerId);
+        setKickReason('Kicked by an administrator.');
+        setKickDialogOpen(true);
+    };
+
+    const handleKickConfirm = async () => {
+        if (kickTargetId) {
+            try {
+                await PlayerService.kickPlayer(kickTargetId, kickReason);
+                dispatch(fetchAllPlayers());
+                setKickDialogOpen(false);
+            } catch (err) {
+                alert('Failed to kick player.');
+            }
         }
+    };
+
+    const handleKickCancel = () => {
+        setKickDialogOpen(false);
+        setKickTargetId(null);
+        setKickReason('Kicked by an administrator.');
+    };
+
+    const [tabValue, setTabValue] = React.useState(0);
+    const [paginationModel, setPaginationModel] = React.useState({ page: 0, pageSize: 20 });
+    const [whitelistedPlayers, setWhitelistedPlayers] = React.useState<PlayerDTO[]>([]);
+    const [bannedPlayers, setBannedPlayers] = React.useState<PlayerDTO[]>([]);
+    const [whitelistedLoading, setWhitelistedLoading] = React.useState(false);
+    const [bannedLoading, setBannedLoading] = React.useState(false);
+
+    const fetchWhitelistedPlayers = async () => {
+        setWhitelistedLoading(true);
+        try {
+            const data = await PlayerService.getWhitelistedPlayers();
+            setWhitelistedPlayers(data);
+        } catch (err) {
+            console.error('Failed to fetch whitelisted players', err);
+        } finally {
+            setWhitelistedLoading(false);
+        }
+    };
+
+    const fetchBannedPlayers = async () => {
+        setBannedLoading(true);
+        try {
+            const data = await PlayerService.getBannedPlayers();
+            setBannedPlayers(data);
+        } catch (err) {
+            console.error('Failed to fetch banned players', err);
+        } finally {
+            setBannedLoading(false);
+        }
+    };
+
+    const getDisplayPlayers = () => {
+        if (tabValue === 0) return players;
+        if (tabValue === 1) return players.filter(p => p.connectionState === 'Connected');
+        if (tabValue === 2) return whitelistedPlayers;
+        if (tabValue === 3) return bannedPlayers;
+        return [];
+    };
+
+    const getDisplayLoading = () => {
+        if (tabValue === 0) return loading;
+        if (tabValue === 1) return loading;
+        if (tabValue === 2) return whitelistedLoading;
+        if (tabValue === 3) return bannedLoading;
+        return false;
     };
 
     const columns: GridColDef[] = [
@@ -98,21 +174,17 @@ const PlayersPage: React.FC = () => {
                 />
             ),
         },
-        ...(isMobile ? [] : [
-            {
-                field: 'ping',
-                headerName: 'Ping',
-                width: 70,
-                align: 'center' as const,
-            },
-        ]),
-        ...(isMobile ? [] : [
-            {
-                field: 'languageCode',
-                headerName: 'Lang',
-                width: 70,
-            },
-        ]),
+        {
+            field: 'ping',
+            headerName: 'Ping',
+            width: 70,
+            align: 'center' as const,
+        },
+        {
+            field: 'languageCode',
+            headerName: 'Lang',
+            width: 70,
+        },
         {
             field: 'actions',
             headerName: 'Actions',
@@ -141,16 +213,85 @@ const PlayersPage: React.FC = () => {
         },
     ];
 
-    const tablePlayers = players.map(mapPlayerDTOtoTable);
+        const displayPlayers = getDisplayPlayers();
+        const displayLoading = getDisplayLoading();
+        const tablePlayers = displayPlayers.map(mapPlayerDTOtoTable);
 
+        const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+            setTabValue(newValue);
+            setPaginationModel({ page: 0, pageSize: 20 });
+            if (newValue === 2 && whitelistedPlayers.length === 0) {
+                fetchWhitelistedPlayers();
+            }
+            if (newValue === 3 && bannedPlayers.length === 0) {
+                fetchBannedPlayers();
+            }
+        };
 
-    return (
-       <Box sx={{ width: '100%', maxWidth: { sm: '100%', md: '1700px' } }}>
-        <Typography variant="h4" gutterBottom>
-          Players11
-        </Typography>
-      </Box>
-    );
+        return (
+            <>
+                <Box sx={{ minWidth: '100%', maxWidth: { sm: '100%', md: '1700px' } }}>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', marginBottom: 2 }}>
+                        <Typography variant="h4">Players</Typography>
+                        <Button
+                            startIcon={<RefreshIcon />}
+                            onClick={() => {
+                                handleRefresh();
+                                if (tabValue === 2) fetchWhitelistedPlayers();
+                                if (tabValue === 3) fetchBannedPlayers();
+                            }}
+                            disabled={displayLoading}
+                        >
+                            Refresh
+                        </Button>
+                    </Box>
+                    <Box sx={{ height: 600, width: '100%' }}>
+                        <Tabs value={tabValue} onChange={handleTabChange}>
+                            <Tab label="All Players" />
+                            <Tab label="Online" />
+                            <Tab label="Whitelisted" />
+                            <Tab label="Banned" />
+                        </Tabs>
+                        
+                        <DataGrid
+                            rows={tablePlayers}
+                            columns={columns}
+                            loading={displayLoading}
+                            pagination
+                            paginationModel={paginationModel}
+                            onPaginationModelChange={setPaginationModel}
+                            pageSizeOptions={[20, 50, 100]}
+                            disableRowSelectionOnClick
+                        />
+                        
+                    </Box>
+                </Box>
+
+                <Dialog open={kickDialogOpen} onClose={handleKickCancel}>
+                    <DialogTitle>Kick Player</DialogTitle>
+                    <DialogContent>
+                        <DialogContentText>
+                            Enter a reason for kicking this player:
+                        </DialogContentText>
+                        <TextField
+                            autoFocus
+                            margin="dense"
+                            label="Reason"
+                            fullWidth
+                            variant="standard"
+                            value={kickReason}
+                            onChange={(e) => setKickReason(e.target.value)}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleKickCancel}>Cancel</Button>
+                        <Button onClick={handleKickConfirm} variant="contained" color="error">
+                            Kick
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            </>
+        );
 };
 
 export default PlayersPage;
