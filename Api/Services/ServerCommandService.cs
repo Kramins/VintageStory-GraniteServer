@@ -47,4 +47,11 @@ public class ServerCommandService
 
         return await tcs.Task;
     }
+
+    public async Task<string> KickUserAsync(string playerName, string reason)
+    {
+        var args = new CmdArgs([playerName, reason]);
+        var result = await ExecuteCommandAsync("kick", args);
+        return result?.StatusMessage ?? $"Failed to kick player {playerName}";
+    }
 }

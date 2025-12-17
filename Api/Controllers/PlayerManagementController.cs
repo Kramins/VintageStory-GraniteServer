@@ -19,10 +19,12 @@ namespace GraniteServer.Api;
 public class PlayerManagementController
 {
     private readonly PlayerService _playerService;
+    private readonly ICoreServerAPI _api;
 
-    public PlayerManagementController(PlayerService playerService)
+    public PlayerManagementController(PlayerService playerService, ICoreServerAPI api)
     {
         _playerService = playerService ?? throw new ArgumentNullException(nameof(playerService));
+        _api = api ?? throw new ArgumentNullException(nameof(api));
     }
 
     /// <summary>
@@ -60,7 +62,9 @@ public class PlayerManagementController
     [ResourceMethod(RequestMethod.Post, "/:id/kick")]
     public async Task Kick(string id, KickRequestDTO request)
     {
-        await _playerService.KickPlayerAsync(id, request.Reason ?? "Kicked by an administrator.");
+        var t =  _playerService.KickPlayerAsync(id, request.Reason ?? "Kicked by an administrator.", true);
+
+        await t;
     }
 
     /// <summary>
@@ -68,7 +72,7 @@ public class PlayerManagementController
     /// </summary>
     /// <returns>A list of all banned players.</returns>
     [ResourceMethod(RequestMethod.Get, "/banned")]
-    public async Task<IList<PlayerDTO>> ListBannedPlayers()
+    public async Task<IList<PlayerDTO>> GetBannedPlayers()
     {
         return await _playerService.GetBannedPlayersAsync();
     }
@@ -78,9 +82,17 @@ public class PlayerManagementController
     /// </summary>
     /// <returns>A list of all connected players.</returns>
     [ResourceMethod(RequestMethod.Get)]
-    public async Task<IList<PlayerDTO>> ListPlayers()
+    public async Task<Result<IList<PlayerDTO>>> GetAllPlayers()
     {
-        return await _playerService.GetAllPlayersAsync();
+        try {
+            var result =  await _playerService.GetAllPlayersAsync();
+            return new Result<IList<PlayerDTO>>(result);
+        }
+        catch (Exception ex)
+        {
+            _api.Logger.Warning("Error retrieving all players: " + ex.Message);
+            throw;
+        }
     }
 
     /// <summary>
@@ -88,7 +100,7 @@ public class PlayerManagementController
     /// </summary>
     /// <returns>A list of all whitelisted players.</returns>
     [ResourceMethod(RequestMethod.Get, "/whitelisted")]
-    public async Task<IList<PlayerDTO>> ListWhitelistedPlayers()
+    public async Task<IList<PlayerDTO>> GetWhitelistedPlayers()
     {
         return await _playerService.GetWhitelistedPlayersAsync();
     }

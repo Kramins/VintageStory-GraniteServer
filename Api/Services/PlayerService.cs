@@ -12,10 +12,12 @@ namespace GraniteServer.Api.Services;
 public class PlayerService
 {
     private readonly ICoreServerAPI _api;
+    private readonly ServerCommandService _commandService;
 
-    public PlayerService(ICoreServerAPI api)
+    public PlayerService(ICoreServerAPI api, ServerCommandService commandService)
     {
         _api = api ?? throw new ArgumentNullException(nameof(api));
+        _commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
     }
 
     private PlayerDataManager PlayerDataManager => (PlayerDataManager)_api.PlayerData;
@@ -135,18 +137,34 @@ public class PlayerService
     /// </summary>
     /// <param name="playerId">The unique ID of the player to disconnect.</param>
     /// <param name="reason">The reason for disconnecting the player.</param>
-    public async Task KickPlayerAsync(string playerId, string reason)
+    public async Task KickPlayerAsync(string playerId, string reason, bool waitForDisconnect = false)
     {
         var player = _api.Server.Players.Where(p => p.PlayerUID == playerId).FirstOrDefault();
         if (player != null)
         {
             try
             {
-                await Task.Run(() => player.Disconnect(reason));
+                // player.Disconnect(reason);
+                await _commandService.KickUserAsync(player.PlayerName, reason);
+
             }
             catch (Exception)
             {
                 // Handle exception
+            }
+
+            if (waitForDisconnect)
+            {
+                // Wait up to 5 seconds for the player to disconnect
+                int attempts = 0;
+                var isDisconnected = false;
+                do
+                {
+
+                    isDisconnected = (await GetAllPlayersAsync()).Single(p => p.Id == playerId).ConnectionState == "Offline";
+                    await Task.Delay(500);
+                    attempts++;
+                } while (!isDisconnected && attempts < 10);
             }
         }
     }
@@ -198,7 +216,7 @@ public class PlayerService
             IpAddress = sp?.IpAddress ?? "Offline",
             LanguageCode = sp?.LanguageCode ?? "N/A",
             ConnectionState = sp?.ConnectionState.ToString() ?? "Offline",
-            Ping = sp?.Ping ?? 0,
+            Ping = sp == null || float.IsNaN(sp.Ping) ? 0 : sp.Ping,
             RolesCode = sp?.Role.Code ?? "N/A",
             FirstJoinDate = pd.FirstJoinDate,
             LastJoinDate = pd.LastJoinDate,

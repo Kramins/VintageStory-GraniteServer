@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { PlayerManagementService } from '../../services/PlayerManagementService';
+import { PlayerService } from '../../services/PlayerService'
 import type { AppDispatch } from '../../store/store';
 
 interface PlayerState {
@@ -19,30 +19,30 @@ const playersSlice = createSlice({
     name: 'players',
     initialState,
     reducers: {
-        fetchPlayersStart(state: PlayerState) {
+        fetchAllPlayersStart(state: PlayerState) {
             state.loading = true;
             state.error = null;
         },
-        fetchPlayersSuccess(state: PlayerState, action: PayloadAction<any[]>) {
+        fetchAllPlayersSuccess(state: PlayerState, action: PayloadAction<any[]>) {
             state.loading = false;
             state.players = action.payload;
         },
-        fetchPlayersFailure(state: PlayerState, action: PayloadAction<string>) {
+        fetchAllPlayersFailure(state: PlayerState, action: PayloadAction<string>) {
             state.loading = false;
             state.error = action.payload;
         },
     },
 });
 
-export const { fetchPlayersStart, fetchPlayersSuccess, fetchPlayersFailure } = playersSlice.actions;
+export const { fetchAllPlayersStart, fetchAllPlayersSuccess, fetchAllPlayersFailure } = playersSlice.actions;
 
-export const fetchPlayers = () => async (dispatch: AppDispatch) => {
-    dispatch(fetchPlayersStart());
+export const fetchAllPlayers = () => async (dispatch: AppDispatch) => {
+    dispatch(fetchAllPlayersStart());
     try {
-        const players = await PlayerManagementService.getPlayers();
-        dispatch(fetchPlayersSuccess(players));
+        const players = await PlayerService.getAllPlayers();
+        dispatch(fetchAllPlayersSuccess(players));
     } catch (error: any) {
-        dispatch(fetchPlayersFailure(error.message));
+        dispatch(fetchAllPlayersFailure(error.message));
     }
 };
 
