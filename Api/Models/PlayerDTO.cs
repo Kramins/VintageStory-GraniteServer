@@ -10,7 +10,7 @@ public class PlayerDTO
     public bool IsAdmin { get; set; }
     public string IpAddress { get; set; } = string.Empty;
     public string LanguageCode { get; set; } = string.Empty;
-    public float Ping { get; set; }
+    public float Ping { get; set; } = 0;
     public string RolesCode { get; set; } = string.Empty;
     public string FirstJoinDate { get; set; } = string.Empty;
     public string LastJoinDate { get; set; } = string.Empty;
