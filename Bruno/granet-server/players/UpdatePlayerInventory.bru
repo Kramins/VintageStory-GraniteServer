@@ -1,0 +1,29 @@
+meta {
+  name: UpdatePlayerInventory
+  type: http
+  seq: 11
+}
+
+post {
+  url: http://{{HOST}}/api/players/dNUwpFMGY1vs+ty2iZo3F+Nz/inventories/hotbar
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+            "id": 1081,
+            "class": "item",
+            "slotIndex": 8,
+            "stackSize": 64
+  }
+}
+
+body:multipart-form {
+  playername: Dalraz
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

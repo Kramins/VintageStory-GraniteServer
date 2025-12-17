@@ -1,0 +1,20 @@
+meta {
+  name: DeletePlayerInventory
+  type: http
+  seq: 12
+}
+
+delete {
+  url: http://{{HOST}}/api/players/dNUwpFMGY1vs+ty2iZo3F+Nz/inventories/hotbar/2
+  body: json
+  auth: inherit
+}
+
+body:multipart-form {
+  playername: Dalraz
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

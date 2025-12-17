@@ -14,6 +14,8 @@
 	],
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "uname -a",
+	// Use 'postStartCommand' to run commands after the container starts.
+	"postStartCommand": "dotnet tool install csharpier --global && dotnet tool install code-butler --global",
 	// Configure tool-specific properties.
 	"customizations": {
 		"vscode": {
