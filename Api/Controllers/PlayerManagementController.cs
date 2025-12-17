@@ -19,10 +19,12 @@ namespace GraniteServer.Api;
 public class PlayerManagementController
 {
     private readonly PlayerService _playerService;
+    private readonly ICoreServerAPI _api;
 
-    public PlayerManagementController(PlayerService playerService)
+    public PlayerManagementController(PlayerService playerService, ICoreServerAPI api)
     {
         _playerService = playerService ?? throw new ArgumentNullException(nameof(playerService));
+        _api = api ?? throw new ArgumentNullException(nameof(api));
     }
 
     /// <summary>
@@ -78,9 +80,18 @@ public class PlayerManagementController
     /// </summary>
     /// <returns>A list of all connected players.</returns>
     [ResourceMethod(RequestMethod.Get)]
-    public async Task<IList<PlayerDTO>> GetAllPlayers()
+    public async Task<Result<IList<PlayerDTO>>> GetAllPlayers()
     {
-        return await _playerService.GetAllPlayersAsync();
+        try {
+            var result =  await _playerService.GetAllPlayersAsync();
+            return new Result<IList<PlayerDTO>>(result);
+        }
+        catch (Exception ex)
+        {
+            _api.Logger.Warning("Error retrieving all players: " + ex.Message);
+            //return new Result<IList<PlayerDTO>>([]).Status(ResponseStatus.InternalServerError);
+            throw;
+        }
     }
 
     /// <summary>
