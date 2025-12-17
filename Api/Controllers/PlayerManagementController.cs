@@ -136,13 +136,23 @@ public class PlayerManagementController
         await _playerService.RemovePlayerFromWhitelistAsync(playerId);
     }
 
+    [ResourceMethod(RequestMethod.Delete, "/:playerId/inventories/:inventoryName/:slotIndex")]
+    public async Task RemovePlayerInventorySlotAsync(
+        string playerId,
+        string inventoryName,
+        int slotIndex
+    )
+    {
+        await _playerService.RemovePlayerInventoryFromSlotAsync(playerId, inventoryName, slotIndex);
+    }
+
     /// <summary>
     /// Updates a player's inventory slot.
     /// </summary>
     /// <param name="playerId">The ID of the player whose inventory slot is to be updated.</param>
     /// <param name="inventoryName">The name of the inventory to update.</param>
     /// <param name="request">The update request containing slot index, item ID, and stack size.</param>
-    [ResourceMethod(RequestMethod.Patch, "/:playerId/inventories/:inventoryName")]
+    [ResourceMethod(RequestMethod.Post, "/:playerId/inventories/:inventoryName")]
     public async Task UpdatePlayerInventorySlotAsync(
         string playerId,
         string inventoryName,

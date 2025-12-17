@@ -264,38 +264,73 @@ public class PlayerService
         PlayerDataManager.UnWhitelistPlayer(playerName, id);
     }
 
+    public async Task RemovePlayerInventoryFromSlotAsync(
+        string playerId,
+        string inventoryName,
+        int slotIndex
+    )
+    {
+        var inventoryManager = GetPlayerInventoryManager(playerId);
+        var inventoryId = inventoryManager.GetInventoryName(inventoryName);
+        var inventory = inventoryManager.GetInventory(inventoryId);
+
+        if (inventory != null)
+        {
+            var slot = inventory[slotIndex];
+            slot.Itemstack = null;
+            slot.MarkDirty();
+        }
+    }
+
     public async Task UpdatePlayerInventorySlotAsync(
         string playerId,
         string inventoryName,
         UpdateInventorySlotRequestDTO request
     )
     {
+        if (string.IsNullOrEmpty(request.Class))
+            throw new ArgumentException("Item class must be provided.");
+
+        var inventoryManager = GetPlayerInventoryManager(playerId);
+        var inventoryId = inventoryManager.GetInventoryName(inventoryName);
+        var inventory = inventoryManager.GetInventory(inventoryId);
+
+        if (inventory != null)
+        {
+            var slot = inventory[request.SlotIndex];
+
+            switch (request.Class)
+            {
+                case "item":
+                    var item = _api.World.GetItem(request.Id);
+                    if (item == null)
+                        throw new ArgumentException($"Item with ID {request.Id} not found.");
+                    slot.Itemstack = new ItemStack(item, request.StackSize ?? 1);
+                    break;
+                case "block":
+                    var block = _api.World.GetBlock(request.Id);
+                    if (block == null)
+                        throw new ArgumentException($"Block with ID {request.Id} not found.");
+                    slot.Itemstack = new ItemStack(block, request.StackSize ?? 1);
+                    break;
+                default:
+                    throw new ArgumentException(
+                        "Invalid item class specified. Must be 'item' or 'block'."
+                    );
+            }
+
+            slot.MarkDirty();
+        }
+    }
+
+    private IPlayerInventoryManager GetPlayerInventoryManager(string playerId)
+    {
         var serverPlayer = _api.World.AllPlayers.FirstOrDefault(sp => sp.PlayerUID == playerId);
         if (serverPlayer != null)
         {
-            var inventoryManager = serverPlayer.InventoryManager;
-
-            var inventoryId = inventoryManager.GetInventoryName(inventoryName);
-            var inventory = inventoryManager.GetInventory(inventoryId);
-            if (inventory != null)
-            {
-                var slot = inventory[request.SlotIndex];
-                if (slot.Empty)
-                {
-                    if (!request.Id.HasValue)
-                    {
-                        throw new ArgumentException(
-                            "Item ID must be provided when adding a new item to an empty slot."
-                        );
-                    }
-                    var block = _api.World.GetBlock(request.Id.Value);
-                    slot.Itemstack = new ItemStack(block, request.StackSize ?? 1);
-                }
-                slot.Itemstack.StackSize = request.StackSize ?? slot.Itemstack.StackSize;
-
-                slot.MarkDirty();
-            }
+            return serverPlayer.InventoryManager;
         }
+        throw new ArgumentException($"Player with ID {playerId} not found or not online.");
     }
 
     private Dictionary<string, object>? MapToAttributesDictionary(ITreeAttribute? attributes)
