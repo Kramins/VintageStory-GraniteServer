@@ -4,7 +4,7 @@ meta {
   seq: 11
 }
 
-patch {
+post {
   url: http://{{HOST}}/api/players/dNUwpFMGY1vs+ty2iZo3F+Nz/inventories/hotbar
   body: json
   auth: inherit
@@ -12,7 +12,10 @@ patch {
 
 body:json {
   {
-    
+            "id": 1081,
+            "class": "item",
+            "slotIndex": 8,
+            "stackSize": 64
   }
 }
 
