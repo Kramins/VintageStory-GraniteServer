@@ -68,7 +68,7 @@ public class PlayerManagementController
     /// </summary>
     /// <returns>A list of all banned players.</returns>
     [ResourceMethod(RequestMethod.Get, "/banned")]
-    public async Task<IList<PlayerDTO>> ListBannedPlayers()
+    public async Task<IList<PlayerDTO>> GetBannedPlayers()
     {
         return await _playerService.GetBannedPlayersAsync();
     }
@@ -78,7 +78,7 @@ public class PlayerManagementController
     /// </summary>
     /// <returns>A list of all connected players.</returns>
     [ResourceMethod(RequestMethod.Get)]
-    public async Task<IList<PlayerDTO>> ListPlayers()
+    public async Task<IList<PlayerDTO>> GetAllPlayers()
     {
         return await _playerService.GetAllPlayersAsync();
     }
@@ -88,7 +88,7 @@ public class PlayerManagementController
     /// </summary>
     /// <returns>A list of all whitelisted players.</returns>
     [ResourceMethod(RequestMethod.Get, "/whitelisted")]
-    public async Task<IList<PlayerDTO>> ListWhitelistedPlayers()
+    public async Task<IList<PlayerDTO>> GetWhitelistedPlayers()
     {
         return await _playerService.GetWhitelistedPlayersAsync();
     }
