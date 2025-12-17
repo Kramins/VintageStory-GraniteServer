@@ -15,10 +15,10 @@ import {
     AdminPanelSettings as AdminIcon,
     Block as BlockIcon,
 } from '@mui/icons-material';
-import { PlayerManagementService } from '../services/PlayerManagementService';
+import { PlayerService } from '../services/PlayerService'
 import type { PlayerDTO } from '../types/PlayerDTO';
 import { useAppDispatch, useAppSelector } from '../store/store';
-import { fetchPlayers } from '../store/slices/playersSlice';
+import { fetchAllPlayers } from '../store/slices/playersSlice';
 
 // Temporary mapping for demo, since server DTO only has Id, Name, IsAdmin
 // Map PlayerDTO to table row data for display
@@ -45,14 +45,14 @@ const PlayersPage: React.FC = () => {
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
     useEffect(() => {
-        dispatch(fetchPlayers());
+        dispatch(fetchAllPlayers());
     }, [dispatch]);
 
     const handleKick = async (playerId: string) => {
         const reason = window.prompt('Enter a reason for kicking this player:', 'Kicked by an administrator.');
         try {
-            await PlayerManagementService.kickPlayer(playerId, reason || undefined);
-            dispatch(fetchPlayers()); // Refresh player list after kick
+            await PlayerService.kickPlayer(playerId, reason || undefined);
+            dispatch(fetchAllPlayers()); // Refresh player list after kick
         } catch (err) {
             alert('Failed to kick player.');
         }
@@ -145,134 +145,11 @@ const PlayersPage: React.FC = () => {
 
 
     return (
-        <Box>
-            {/* Header Section */}
-            <Box
-                sx={{
-                    flexShrink: 0,
-                    p: 2,
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    backgroundColor: 'background.paper',
-                }}
-            >
-                <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
-                    Players
-                </Typography>
-                <Button variant="contained" color="primary" size="small">
-                    Invite Player
-                </Button>
-            </Box>
-
-            {/* Scrollable Main Area */}
-            <Box
-                sx={{
-                    width: '100%',
-                }}
-            >
-                {/* Stats Row */}
-                <Box
-                    sx={{
-                        display: 'grid',
-                        gridTemplateColumns: {
-                            xs: '1fr',
-                            sm: 'repeat(2, 1fr)',
-                            md: 'repeat(3, 1fr)',
-                        },
-                        gap: 2,
-                        flexShrink: 0,
-                    }}
-                >
-                    <Box
-                        sx={{
-                            p: 1.5,
-                            border: '1px solid',
-                            borderColor: 'divider',
-                            borderRadius: 1,
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            backgroundColor: 'background.paper',
-                        }}
-                    >
-                        <Box>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                                Total Players
-                            </Typography>
-                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                {players.length}
-                            </Typography>
-                        </Box>
-                        <PersonIcon sx={{ fontSize: 32, color: 'primary.main', opacity: 0.7 }} />
-                    </Box>
-
-                    <Box
-                        sx={{
-                            p: 1.5,
-                            border: '1px solid',
-                            borderColor: 'divider',
-                            borderRadius: 1,
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            backgroundColor: 'background.paper',
-                        }}
-                    >
-                        <Box>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                                Staff Members
-                            </Typography>
-                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                {players.filter(p => p.isAdmin).length}
-                            </Typography>
-                        </Box>
-                        <AdminIcon sx={{ fontSize: 32, color: 'warning.main', opacity: 0.7 }} />
-                    </Box>
-
-                    <Box
-                        sx={{
-                            p: 1.5,
-                            border: '1px solid',
-                            borderColor: 'divider',
-                            borderRadius: 1,
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            backgroundColor: 'background.paper',
-                        }}
-                    >
-                        <Box>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                                Online
-                            </Typography>
-                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                -
-                            </Typography>
-                        </Box>
-                        <PersonIcon sx={{ fontSize: 32, color: 'success.main', opacity: 0.7 }} />
-                    </Box>
-                </Box>
-
-                {/* Data Grid */}
-                <Box
-                    sx={{
-                        flex: 1,
-                        width: '100%',
-                    }}
-                >
-                    <DataGrid
-                        rows={tablePlayers}
-                        columns={columns}
-                        loading={loading}
-                        pageSizeOptions={[5, 10, 25]}
-                        sx={{ width: '100%' }}
-                    />
-                </Box>
-            </Box>
-        </Box>
+       <Box sx={{ width: '100%', maxWidth: { sm: '100%', md: '1700px' } }}>
+        <Typography variant="h4" gutterBottom>
+          Players11
+        </Typography>
+      </Box>
     );
 };
 

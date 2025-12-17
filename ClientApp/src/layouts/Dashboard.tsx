@@ -1,37 +1,47 @@
-import { Outlet } from 'react-router-dom';
-import { useState } from 'react';
+import { Outlet } from "react-router-dom";
+import { useState } from "react";
 
-import Toolbar from '@mui/material/Toolbar';
-import Box from '@mui/material/Box';
-import Header from '../components/Header';
-import Drawer from '../components/Drawer';
+import { alpha } from "@mui/material/styles";
 
+import Stack from "@mui/material/Stack";
+import Box from "@mui/material/Box";
+import Header from "../components/Header";
+import SideMenu from "../components/SideMenu";
+import { Grid } from "@mui/material";
+import AppNavbar from "../components/AppNavbar";
 
 export default function DashboardLayout() {
-    const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-    return (
-        <Box sx={{ display: 'flex', width: '100%' }}>
-            <Header onMenuClick={() => setDrawerOpen(!drawerOpen)} />
-            <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-
-            <Box component="main" sx={{ width: '100%', flexGrow: 1, p: { xs: 2, sm: 3 } }}>
-                <Toolbar sx={{ mt: 'inherit' }} />
-                <Box
-                    sx={{
-                        ...{ px: { xs: 0, sm: 2 } },
-                        position: 'relative',
-                        minHeight: 'calc(100vh - 110px)',
-                        display: 'flex',
-                        flexDirection: 'column'
-                    }}
-                >
-                    {/* <Breadcrumbs /> */}
-                    <Outlet />
-                    {/* <Footer /> */}
-                </Box>
-            </Box>
-        </Box>
-    );
-
+  return (
+    <Box sx={{ display: "flex" }}>
+      <SideMenu />
+      <AppNavbar />
+      {/* Main content */}
+      <Box
+        component="main"
+        sx={(theme) => ({
+          height: "100vh",
+          flexGrow: 1,
+          backgroundColor: theme.vars
+            ? `rgba(${theme.vars.palette.background.defaultChannel} / 1)`
+            : alpha(theme.palette.background.default, 1),
+          overflow: "auto",
+        })}
+      >
+        <Stack
+          spacing={2}
+          sx={{
+            alignItems: "center",
+            mx: 3,
+            pb: 5,
+            mt: { xs: 8, md: 0 },
+          }}
+        >
+          <Header />
+          <Outlet />
+        </Stack>
+      </Box>
+    </Box>
+  );
 }
