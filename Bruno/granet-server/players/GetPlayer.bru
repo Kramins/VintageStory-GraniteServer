@@ -1,0 +1,20 @@
+meta {
+  name: GetPlayer
+  type: http
+  seq: 10
+}
+
+get {
+  url: http://{{HOST}}/api/players/dNUwpFMGY1vs+ty2iZo3F+Nz
+  body: json
+  auth: inherit
+}
+
+body:multipart-form {
+  playername: Dalraz
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
