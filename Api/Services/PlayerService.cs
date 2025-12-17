@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using GraniteServer.Api.Models;
 using Vintagestory.API.Common;
+using Vintagestory.API.Datastructures;
 using Vintagestory.API.Server;
 using Vintagestory.Server;
 
@@ -122,6 +123,63 @@ public class PlayerService
         return player;
     }
 
+    public async Task<PlayerDetailsDTO?> GetPlayerDetailsAsync(string playerId)
+    {
+        var player = await GetPlayerByIdAsync(playerId);
+
+        if (player == null)
+        {
+            return null;
+        }
+
+        var playerDetails = new PlayerDetailsDTO
+        {
+            Id = player.Id,
+            Name = player.Name,
+            IpAddress = player.IpAddress,
+            LanguageCode = player.LanguageCode,
+            ConnectionState = player.ConnectionState,
+            Ping = player.Ping,
+            RolesCode = player.RolesCode,
+            FirstJoinDate = player.FirstJoinDate,
+            LastJoinDate = player.LastJoinDate,
+            Privileges = player.Privileges,
+            IsAdmin = player.IsAdmin,
+            IsBanned = player.IsBanned,
+            BanReason = player.BanReason,
+            BanBy = player.BanBy,
+            BanUntil = player.BanUntil,
+            IsWhitelisted = player.IsWhitelisted,
+            WhitelistedReason = player.WhitelistedReason,
+            WhitelistedBy = player.WhitelistedBy,
+            WhitelistedUntil = player.WhitelistedUntil,
+        };
+
+        // NOTE: Player needs to have logged into the server at least once for inventories to be available, I don't know how to get inventories for players the server has never seen
+        // Server restart clear the AllPlayers list, so inventories are only available for currently connected players
+        var serverPlayer = _api.World.AllPlayers.FirstOrDefault(sp => sp.PlayerUID == playerId);
+        if (serverPlayer != null)
+        {
+            var inventoryManager = serverPlayer.InventoryManager;
+
+            foreach (var inventoryEntry in inventoryManager.Inventories)
+            {
+                if (inventoryEntry.Value.ClassName == "creative")
+                {
+                    // Skip creative inventory
+                    continue;
+                }
+                var inventoryDto = MapToInventoryDTO(
+                    inventoryEntry.Value.ClassName,
+                    inventoryEntry.Value
+                );
+                playerDetails.Inventories.Add(inventoryDto.Name, inventoryDto);
+            }
+        }
+
+        return playerDetails;
+    }
+
     /// <summary>
     /// Retrieves a list of all players who are whitelisted on the server.
     /// </summary>
@@ -137,7 +195,11 @@ public class PlayerService
     /// </summary>
     /// <param name="playerId">The unique ID of the player to disconnect.</param>
     /// <param name="reason">The reason for disconnecting the player.</param>
-    public async Task KickPlayerAsync(string playerId, string reason, bool waitForDisconnect = false)
+    public async Task KickPlayerAsync(
+        string playerId,
+        string reason,
+        bool waitForDisconnect = false
+    )
     {
         var player = _api.Server.Players.Where(p => p.PlayerUID == playerId).FirstOrDefault();
         if (player != null)
@@ -146,7 +208,6 @@ public class PlayerService
             {
                 // player.Disconnect(reason);
                 await _commandService.KickUserAsync(player.PlayerName, reason);
-
             }
             catch (Exception)
             {
@@ -160,8 +221,9 @@ public class PlayerService
                 var isDisconnected = false;
                 do
                 {
-
-                    isDisconnected = (await GetAllPlayersAsync()).Single(p => p.Id == playerId).ConnectionState == "Offline";
+                    isDisconnected =
+                        (await GetAllPlayersAsync()).Single(p => p.Id == playerId).ConnectionState
+                        == "Offline";
                     await Task.Delay(500);
                     attempts++;
                 } while (!isDisconnected && attempts < 10);
@@ -200,6 +262,91 @@ public class PlayerService
         }
         var playerName = await ResolvePlayerNameById(id);
         PlayerDataManager.UnWhitelistPlayer(playerName, id);
+    }
+
+    public async Task UpdatePlayerInventorySlotAsync(
+        string playerId,
+        string inventoryName,
+        UpdateInventorySlotRequestDTO request
+    )
+    {
+        var serverPlayer = _api.World.AllPlayers.FirstOrDefault(sp => sp.PlayerUID == playerId);
+        if (serverPlayer != null)
+        {
+            var inventoryManager = serverPlayer.InventoryManager;
+
+            var inventoryId = inventoryManager.GetInventoryName(inventoryName);
+            var inventory = inventoryManager.GetInventory(inventoryId);
+            if (inventory != null)
+            {
+                var slot = inventory[request.SlotIndex];
+                if (slot.Empty)
+                {
+                    if (!request.Id.HasValue)
+                    {
+                        throw new ArgumentException(
+                            "Item ID must be provided when adding a new item to an empty slot."
+                        );
+                    }
+                    var block = _api.World.GetBlock(request.Id.Value);
+                    slot.Itemstack = new ItemStack(block, request.StackSize ?? 1);
+                }
+                slot.Itemstack.StackSize = request.StackSize ?? slot.Itemstack.StackSize;
+
+                slot.MarkDirty();
+            }
+        }
+    }
+
+    private Dictionary<string, object>? MapToAttributesDictionary(ITreeAttribute? attributes)
+    {
+        if (attributes == null)
+            return null;
+
+        var dict = new Dictionary<string, object>();
+        var attrString = attributes.ToString();
+        if (!string.IsNullOrEmpty(attrString))
+        {
+            dict["data"] = attrString;
+        }
+
+        return dict.Count > 0 ? dict : null;
+    }
+
+    private InventoryDTO MapToInventoryDTO(string name, IInventory inventory)
+    {
+        var slots = new List<InventorySlotDTO>();
+
+        for (int i = 0; i < inventory.Count; i++)
+        {
+            var slot = inventory[i];
+            if (slot != null)
+            {
+                var slotDto = MapToInventorySlotDTO(i, slot);
+                slots.Add(slotDto);
+            }
+        }
+
+        return new InventoryDTO { Name = name, Slots = slots };
+    }
+
+    private InventorySlotDTO MapToInventorySlotDTO(int slotIndex, ItemSlot slot)
+    {
+        slot.GetStackName();
+
+        if (!slot.Empty)
+        {
+            return new InventorySlotDTO
+            {
+                SlotIndex = slotIndex,
+                Class = slot.Itemstack.Class.ToString(),
+                Name = slot.Itemstack.GetName(),
+                Id = slot.Itemstack.Id,
+                StackSize = slot.Itemstack.StackSize,
+            };
+        }
+
+        return new InventorySlotDTO { SlotIndex = slotIndex };
     }
 
     private PlayerDTO MapToPlayerDTO(

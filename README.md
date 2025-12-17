@@ -8,6 +8,30 @@ GraniteServer is an alpha-stage server management and web API project designed t
 
 **Alpha** – This project is under active development and is not yet feature complete. Expect breaking changes and incomplete features.
 
+---
+
+## API Endpoints
+
+### **Player Management Controller**
+
+Base URL: `/api/players`
+
+| Method | Endpoint                                | Description                                             |
+| ------ | --------------------------------------- | ------------------------------------------------------- |
+| GET    | `/`                                     | List all connected players                              |
+| GET    | `/:playerId`                            | Get detailed information about a specific player        |
+| GET    | `/find`                                 | Find a player by name                                   |
+| GET    | `/banned`                               | List all banned players                                 |
+| GET    | `/whitelisted`                          | List all whitelisted players                            |
+| POST   | `/:playerId/whitelist`                  | Add a player to the whitelist                           |
+| DELETE | `/:playerId/whitelist`                  | Remove a player from the whitelist                      |
+| POST   | `/:playerId/ban`                        | Ban a player (with optional reason and expiration date) |
+| DELETE | `/:playerId/ban`                        | Remove a player from the ban list                       |
+| POST   | `/:playerId/kick`                       | Kick a player from the server                           |
+| PATCH  | `/:playerId/inventories/:inventoryName` | Update a player's inventory slot                        |
+
+---
+
 ## Roadmap
 
 We are actively working to expand the functionality of GraniteServer. Below is a roadmap of current and planned features.
