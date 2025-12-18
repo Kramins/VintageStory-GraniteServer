@@ -1,19 +1,39 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Typography, Card, CardContent, CircularProgress, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { Box, Typography, Card, CardContent, CircularProgress, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from '@mui/material';
 import { useAppDispatch, useAppSelector } from '../store/store';
 import { fetchPlayerDetails } from '../store/slices/playerDetailsSlice';
+import { PlayerService } from '../services/PlayerService';
 
 const PlayerDetailsPage: React.FC = () => {
     const { playerId } = useParams<{ playerId: string }>();
     const dispatch = useAppDispatch();
     const { playerDetails, loading, error } = useAppSelector(state => state.playerDetails);
+    const [removing, setRemoving] = useState<string | null>(null);
+    const [removeError, setRemoveError] = useState<string | null>(null);
 
     useEffect(() => {
         if (playerId) {
             dispatch(fetchPlayerDetails(playerId) as any);
         }
     }, [playerId, dispatch]);
+
+    const handleRemoveItem = async (inventoryName: string, slotIndex: number) => {
+        if (!playerId) return;
+        
+        const key = `${inventoryName}-${slotIndex}`;
+        setRemoving(key);
+        setRemoveError(null);
+        try {
+            await PlayerService.removeItemFromInventory(playerId, inventoryName, slotIndex);
+            // Refresh player details after removal
+            dispatch(fetchPlayerDetails(playerId) as any);
+        } catch (err: any) {
+            setRemoveError(err.message || 'Failed to remove item');
+        } finally {
+            setRemoving(null);
+        }
+    };
 
     if (loading) {
         return (
@@ -27,6 +47,14 @@ const PlayerDetailsPage: React.FC = () => {
         return (
             <Box sx={{ p: 3 }}>
                 <Alert severity="error">{error}</Alert>
+            </Box>
+        );
+    }
+
+    if (removeError) {
+        return (
+            <Box sx={{ p: 3 }}>
+                <Alert severity="error" onClose={() => setRemoveError(null)}>{removeError}</Alert>
             </Box>
         );
     }
@@ -116,15 +144,28 @@ const PlayerDetailsPage: React.FC = () => {
                                             <TableCell>Item Name</TableCell>
                                             <TableCell>Class</TableCell>
                                             <TableCell align="right">Stack Size</TableCell>
+                                            <TableCell align="center">Actions</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {inventory.slots.map((slot) => (
-                                            <TableRow key={slot.id}>
+                                            <TableRow key={`${inventoryName}-${slot.slotIndex}`}>
                                                 <TableCell>{slot.slotIndex}</TableCell>
                                                 <TableCell>{slot.name || '-'}</TableCell>
                                                 <TableCell>{slot.class || '-'}</TableCell>
                                                 <TableCell align="right">{slot.stackSize}</TableCell>
+                                                <TableCell align="center">
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        color="error"
+                                                        onClick={() => handleRemoveItem(inventoryName, slot.slotIndex)}
+                                                        disabled={removing === `${inventoryName}-${slot.slotIndex}`}
+                                                        sx={{ fontSize: '0.7rem', padding: '4px 8px' }}
+                                                    >
+                                                        {removing === `${inventoryName}-${slot.slotIndex}` ? 'Removing...' : 'Remove'}
+                                                    </Button>
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
