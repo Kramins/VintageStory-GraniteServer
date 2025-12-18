@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { PlayerDTO } from '../types/PlayerDTO';
+import type { PlayerDetailsDTO } from '../types/PlayerDetailsDTO';
 
 const API_BASE = '/api/players';
 
@@ -37,6 +38,11 @@ export const PlayerService = {
     
     async unWhitelistPlayer(playerId: string): Promise<void> {
         await axios.delete(`${API_BASE}/${playerId}/whitelist`);
+    },
+
+    async getPlayerDetails(playerId: string): Promise<PlayerDetailsDTO> {
+        const response = await axios.get(`${API_BASE}/${playerId}`);
+        return response.data;
     }
 
 

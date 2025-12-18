@@ -4,11 +4,13 @@ import type { AnyAction } from 'redux';
 import { useDispatch, useSelector } from 'react-redux';
 
 import playersReducer from './slices/playersSlice'
+import playerDetailsReducer from './slices/playerDetailsSlice'
 import serverReducer from './slices/serverSlice'
 
 const store = configureStore({
     reducer: {
         players: playersReducer,
+        playerDetails: playerDetailsReducer,
         server: serverReducer,
     },
 });

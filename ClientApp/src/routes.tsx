@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import DashboardLayout from "./layouts/Dashboard";
 import OverviewPage from "./pages/OverviewPage";
 import PlayersPage from "./pages/PlayersPage";
+import PlayerDetailsPage from "./pages/PlayerDetailsPage";
 
 const MainRoutes = {
     path: '/',
@@ -14,6 +15,10 @@ const MainRoutes = {
         {
             path: '/players',
             element: <PlayersPage />
+        },
+        {
+            path: '/players/:playerId',
+            element: <PlayerDetailsPage />
         }
     ]
 
