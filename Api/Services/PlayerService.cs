@@ -288,7 +288,7 @@ public class PlayerService
         UpdateInventorySlotRequestDTO request
     )
     {
-        if (string.IsNullOrEmpty(request.Class))
+        if (string.IsNullOrEmpty(request.EntityClass))
             throw new ArgumentException("Item class must be provided.");
 
         var inventoryManager = GetPlayerInventoryManager(playerId);
@@ -299,18 +299,18 @@ public class PlayerService
         {
             var slot = inventory[request.SlotIndex];
 
-            switch (request.Class)
+            switch (request.EntityClass.ToLower())
             {
                 case "item":
-                    var item = _api.World.GetItem(request.Id);
+                    var item = _api.World.GetItem(request.EntityId);
                     if (item == null)
-                        throw new ArgumentException($"Item with ID {request.Id} not found.");
+                        throw new ArgumentException($"Item with ID {request.EntityId} not found.");
                     slot.Itemstack = new ItemStack(item, request.StackSize ?? 1);
                     break;
                 case "block":
-                    var block = _api.World.GetBlock(request.Id);
+                    var block = _api.World.GetBlock(request.EntityId);
                     if (block == null)
-                        throw new ArgumentException($"Block with ID {request.Id} not found.");
+                        throw new ArgumentException($"Block with ID {request.EntityId} not found.");
                     slot.Itemstack = new ItemStack(block, request.StackSize ?? 1);
                     break;
                 default:
@@ -374,9 +374,9 @@ public class PlayerService
             return new InventorySlotDTO
             {
                 SlotIndex = slotIndex,
-                Class = slot.Itemstack.Class.ToString(),
+                EntityClass = slot.Itemstack.Class.ToString(),
                 Name = slot.Itemstack.GetName(),
-                Id = slot.Itemstack.Id,
+                EntityId = slot.Itemstack.Id,
                 StackSize = slot.Itemstack.StackSize,
             };
         }
