@@ -6,8 +6,8 @@ export interface InventoryDTO {
 }
 
 export interface InventorySlotDTO {
-    class: string | null;
-    id: number;
+    entityClass: string | null;
+    entityId: number;
     name: string | null;
     slotIndex: number;
     stackSize: number;

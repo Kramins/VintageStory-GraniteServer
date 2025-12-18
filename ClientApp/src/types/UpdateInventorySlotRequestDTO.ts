@@ -1,6 +1,6 @@
 export interface UpdateInventorySlotRequestDTO {
-    class: string;
-    id: number;
+    entityClass: string;
+    entityId: number;
     slotIndex: number;
     stackSize: number | null;
 }
