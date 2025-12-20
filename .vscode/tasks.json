@@ -24,7 +24,7 @@
                 "Release",
                 "${workspaceFolder}/GraniteServer.csproj",
                 "/p:BuildWebApp=true",
-                "/p:modinfoVersion=1.2.3"
+                "/p:modinfoVersion=${input:versionNumber}"
             ],
             "problemMatcher": "$msCompile"
         },
@@ -92,6 +92,14 @@
                     "${cwd}"
                 ]
             }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "versionNumber",
+            "type": "promptString",
+            "description": "Version number for the mod",
+            "default": "1.2.3"
         }
     ]
 }
