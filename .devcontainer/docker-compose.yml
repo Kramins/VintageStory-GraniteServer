@@ -7,6 +7,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ../..:/workspaces:cached
+      - vintage-mod-dev-data:/data
     command: sleep infinity
     environment:
       - VINTAGE_STORY=/app
@@ -18,3 +19,6 @@ services:
       - "5000:5000"
       - "3000:3000"
     user: vintagestory
+
+volumes:
+  vintage-mod-dev-data:

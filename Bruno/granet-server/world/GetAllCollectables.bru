@@ -1,0 +1,20 @@
+meta {
+  name: GetAllCollectables
+  type: http
+  seq: 13
+}
+
+get {
+  url: http://{{HOST}}/api/world/collectibles
+  body: json
+  auth: inherit
+}
+
+body:multipart-form {
+  playername: Dalraz
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

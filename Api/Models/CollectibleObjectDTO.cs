@@ -1,0 +1,10 @@
+using Vintagestory.API.Common;
+
+namespace GraniteServer.Api.Models;
+
+public class CollectibleObjectDTO
+{
+    public int Id { get; internal set; }
+    public string Name { get; internal set; }
+    public string Type { get; internal set; }
+}

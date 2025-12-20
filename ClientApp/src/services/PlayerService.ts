@@ -1,5 +1,7 @@
 import axios from 'axios';
 import type { PlayerDTO } from '../types/PlayerDTO';
+import type { PlayerDetailsDTO } from '../types/PlayerDetailsDTO';
+import type { UpdateInventorySlotRequestDTO } from '../types/UpdateInventorySlotRequestDTO';
 
 const API_BASE = '/api/players';
 
@@ -37,6 +39,17 @@ export const PlayerService = {
     
     async unWhitelistPlayer(playerId: string): Promise<void> {
         await axios.delete(`${API_BASE}/${playerId}/whitelist`);
+    },
+
+    async getPlayerDetails(playerId: string): Promise<PlayerDetailsDTO> {
+        const response = await axios.get(`${API_BASE}/${playerId}`);
+        return response.data;
+    },
+    async updatePlayerInventorySlot(playerId: string, inventoryName: string, data: UpdateInventorySlotRequestDTO): Promise<void> {
+        await axios.post(`${API_BASE}/${playerId}/inventories/${inventoryName}/`, data);
+    },
+    async removeItemFromInventory(playerId: string, inventoryName: string, slotIndex: number): Promise<void> {
+        await axios.delete(`${API_BASE}/${playerId}/inventories/${inventoryName}/${slotIndex}`);
     }
 
 

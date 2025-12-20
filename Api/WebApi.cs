@@ -13,6 +13,7 @@ using GenHTTP.Modules.Practices;
 using GenHTTP.Modules.Security;
 using GenHTTP.Modules.StaticWebsites;
 using GenHTTP.Modules.Webservices;
+using GraniteServer.Api.Controllers;
 using GraniteServer.Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Vintagestory.API.Common;
@@ -27,9 +28,9 @@ namespace GraniteServer.Api;
 /// </summary>
 public class WebApi
 {
+    private const ushort Port = 5000;
     private readonly ICoreServerAPI _api;
     private IServerHost? _host;
-    private const ushort Port = 5000;
 
     public WebApi(ICoreServerAPI api)
     {
@@ -66,6 +67,7 @@ public class WebApi
                 .Create()
                 .AddDependentController<ServerController>("server")
                 .AddDependentService<PlayerManagementController>("players")
+                .AddDependentService<WorldController>("world")
                 .Add(CorsPolicy.Permissive())
                 .AddSwaggerUi()
                 .AddScalar()
@@ -83,6 +85,7 @@ public class WebApi
             services.AddSingleton<ICoreServerAPI>(_api);
             services.AddSingleton<ServerCommandService>();
             services.AddSingleton<PlayerService>();
+            services.AddSingleton<WorldService>();
 
             _host = Host.Create()
                 .AddDependencyInjection(services.BuildServiceProvider())

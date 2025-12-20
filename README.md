@@ -33,6 +33,16 @@ Base URL: `/api/players`
 
 ---
 
+### **World Management Controller**
+
+Base URL: `/api/world`
+
+| Method | Endpoint        | Description                    |
+| ------ | --------------- | ------------------------------ |
+| GET    | `/collectibles` | Get all collectible items data |
+
+---
+
 ## Roadmap
 
 We are actively working to expand the functionality of GraniteServer. Below is a roadmap of current and planned features.

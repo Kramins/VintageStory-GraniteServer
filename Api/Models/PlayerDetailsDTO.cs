@@ -12,8 +12,8 @@ public class InventoryDTO
 
 public class InventorySlotDTO
 {
-    public string? Class { get; set; }
-    public int Id { get; set; }
+    public string? EntityClass { get; set; }
+    public int EntityId { get; set; }
     public string? Name { get; set; }
     public int SlotIndex { get; set; }
     public int StackSize { get; set; }
