@@ -12,6 +12,8 @@
             "preLaunchTask": "build-server",
             "args": [
                 "--tracelog",
+                "--dataPath",
+                "/data",
                 "--addModPath",
                 "${workspaceFolder}/bin/mods"
             ],
