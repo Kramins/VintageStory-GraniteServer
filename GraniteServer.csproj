@@ -30,17 +30,22 @@
       HintPath="$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll"
       Private="false"
     />
-    <!-- <FrameworkReference Include="Microsoft.AspNetCore.App" /> -->
-    <None Include="resources/**" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="">
+    <!-- Only include non-wwwroot resources initially -->
+    <None
+      Include="resources/modinfo.json"
+      CopyToOutputDirectory="PreserveNewest"
+      Pack="true"
+      PackagePath=""
+    >
       <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
     </None>
     <None
-      Include="resources/wwwroot/**"
+      Include="resources/assets/**"
       CopyToOutputDirectory="PreserveNewest"
       Pack="true"
-      PackagePath="wwwroot\"
+      PackagePath=""
     >
-      <Link>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -78,17 +83,27 @@
     <Message Importance="high" Text="Found @(WwwrootFiles->Count()) files in wwwroot" />
   </Target>
 
-  <!-- Ensure wwwroot is included in the output -->
+  <!-- Copy wwwroot files AFTER they're built -->
   <Target
-    Name="IncludeWwwroot"
-    BeforeTargets="BeforeCompile"
+    Name="CopyWwwrootToOutput"
+    AfterTargets="Build"
     DependsOnTargets="BuildWebApp"
     Condition=" '$(BuildWebApp)' == 'true' "
   >
     <ItemGroup>
-      <Content Include="resources/wwwroot/**/*" CopyToOutputDirectory="PreserveNewest" />
+      <WwwrootFilesToCopy Include="resources/wwwroot/**/*" />
     </ItemGroup>
+    <Copy
+      SourceFiles="@(WwwrootFilesToCopy)"
+      DestinationFolder="$(TargetDir)wwwroot/%(RecursiveDir)"
+      SkipUnchangedFiles="true"
+    />
+    <Message
+      Importance="high"
+      Text="Copied @(WwwrootFilesToCopy->Count()) wwwroot files to output directory"
+    />
   </Target>
+
   <Target
     Name="UpdateModinfoVersion"
     BeforeTargets="BeforeBuild"
