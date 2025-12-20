@@ -2,7 +2,7 @@
   "type": "code",
   "name": "Granite Server Mod",
   "modid": "graniteserver",
-  "version": "0.0.1-rc1",
+  "version": "0.0.1-rc5",
   "description": "Server Administration Tools and feature",
   "authors": [
     "kramins"
