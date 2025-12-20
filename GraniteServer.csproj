@@ -6,17 +6,41 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Vintagestory" HintPath="$(VINTAGE_STORY)/Vintagestory.dll" Private="false" />
+    <Reference
+      Include="Vintagestory"
+      HintPath="$(VINTAGE_STORY)/Vintagestory.dll"
+      Private="false"
+    />
     <Reference Include="VintagestoryAPI">
       <HintPath>$(VINTAGE_STORY)/VintagestoryAPI.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="VintagestoryLib" HintPath="$(VINTAGE_STORY)/VintagestoryLib.dll" Private="false" />
-    <Reference Include="VintagestoryServer" HintPath="$(VINTAGE_STORY)/VintagestoryServer.dll" Private="false" />
-    <Reference Include="Newtonsoft.Json" HintPath="$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll" Private="false" />
+    <Reference
+      Include="VintagestoryLib"
+      HintPath="$(VINTAGE_STORY)/VintagestoryLib.dll"
+      Private="false"
+    />
+    <Reference
+      Include="VintagestoryServer"
+      HintPath="$(VINTAGE_STORY)/VintagestoryServer.dll"
+      Private="false"
+    />
+    <Reference
+      Include="Newtonsoft.Json"
+      HintPath="$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll"
+      Private="false"
+    />
     <!-- <FrameworkReference Include="Microsoft.AspNetCore.App" /> -->
     <None Include="resources/**" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="">
       <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </None>
+    <None
+      Include="resources/wwwroot/**"
+      CopyToOutputDirectory="PreserveNewest"
+      Pack="true"
+      PackagePath="wwwroot\"
+    >
+      <Link>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -35,11 +59,27 @@
   </Target>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <MakeDir Directories="bin/mods" />
-    <ZipDirectory DestinationFile="bin/mods/$(TargetName)-$(ConfigurationName).zip" SourceDirectory="$(TargetDir)" Overwrite="true" />
+    <ZipDirectory
+      DestinationFile="bin/mods/$(TargetName)-$(ConfigurationName)-$(modinfoVersion).zip"
+      SourceDirectory="$(TargetDir)"
+      Overwrite="true"
+    />
   </Target>
-  <Target Name="BuildWebApp" BeforeTargets="Build" Condition=" '$(BuildWebApp)' == 'true' ">
+  <Target
+    Name="BuildWebApp"
+    BeforeTargets="PrepareForBuild"
+    Condition=" '$(BuildWebApp)' == 'true' "
+  >
     <RemoveDir Directories="resources/wwwroot" />
     <Exec WorkingDirectory="ClientApp" Command="npm install" />
     <Exec WorkingDirectory="ClientApp" Command="npm run build" />
+  </Target>
+  <Target
+    Name="UpdateModinfoVersion"
+    BeforeTargets="BeforeBuild"
+    Condition=" '$(modinfoVersion)' != '' "
+  >
+    <Message Importance="high" Text="Updating modinfo.json version to $(modinfoVersion)" />
+    <Exec Command="jq --arg v &quot;$(modinfoVersion)&quot; '.version = $v' resources/modinfo.json > resources/modinfo.tmp &amp;&amp; mv resources/modinfo.tmp resources/modinfo.json" />
   </Target>
 </Project>
