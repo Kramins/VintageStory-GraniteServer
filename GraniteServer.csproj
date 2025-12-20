@@ -65,14 +65,29 @@
       Overwrite="true"
     />
   </Target>
-  <Target
-    Name="BuildWebApp"
-    BeforeTargets="PrepareForBuild"
-    Condition=" '$(BuildWebApp)' == 'true' "
-  >
+  <Target Name="BuildWebApp" BeforeTargets="BeforeBuild" Condition=" '$(BuildWebApp)' == 'true' ">
     <RemoveDir Directories="resources/wwwroot" />
+    <MakeDir Directories="resources/wwwroot" />
     <Exec WorkingDirectory="ClientApp" Command="npm install" />
     <Exec WorkingDirectory="ClientApp" Command="npm run build" />
+    <!-- Add explicit verification -->
+    <Message Importance="high" Text="Verifying wwwroot contents..." />
+    <ItemGroup>
+      <WwwrootFiles Include="resources/wwwroot/**/*" />
+    </ItemGroup>
+    <Message Importance="high" Text="Found @(WwwrootFiles->Count()) files in wwwroot" />
+  </Target>
+
+  <!-- Ensure wwwroot is included in the output -->
+  <Target
+    Name="IncludeWwwroot"
+    BeforeTargets="BeforeCompile"
+    DependsOnTargets="BuildWebApp"
+    Condition=" '$(BuildWebApp)' == 'true' "
+  >
+    <ItemGroup>
+      <Content Include="resources/wwwroot/**/*" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
   </Target>
   <Target
     Name="UpdateModinfoVersion"
