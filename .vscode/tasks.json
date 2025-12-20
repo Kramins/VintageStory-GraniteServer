@@ -15,6 +15,20 @@
             "problemMatcher": "$msCompile"
         },
         {
+            "label": "build-release",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "-c",
+                "Release",
+                "${workspaceFolder}/GraniteServer.csproj",
+                "/p:BuildWebApp=true",
+                "/p:modinfoVersion=1.2.3"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
             "label": "build-server",
             "command": "dotnet",
             "type": "process",

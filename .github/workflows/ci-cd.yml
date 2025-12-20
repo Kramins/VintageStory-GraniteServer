@@ -88,8 +88,15 @@ jobs:
       - name: Restore .NET dependencies
         run: dotnet restore GraniteServer.sln
 
+      - name: Extract version from tag
+        id: extract_version
+        run: |
+          TAG="${GITHUB_REF##*/}"
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build Release version
-        run: dotnet build -c Release GraniteServer.csproj /p:BuildWebApp=true
+        run: dotnet build -c Release GraniteServer.csproj /p:BuildWebApp=true /p:modinfoVersion=${{ steps.extract_version.outputs.version }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
