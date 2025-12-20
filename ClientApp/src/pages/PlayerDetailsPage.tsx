@@ -140,7 +140,7 @@ const PlayerDetailsPage: React.FC = () => {
     }
 
     return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: 3, width: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
                 <Box sx={{ flex: 1 }}>
                     <Typography variant="h4" component="h1">
@@ -252,12 +252,12 @@ const PlayerDetailsPage: React.FC = () => {
                                                             slot.name || '-'
                                                         )}
                                                     </TableCell>
-                                                    <TableCell align="right">
+                                                    <TableCell align="right" sx={{ width: '80px' }}>
                                                         {isCurrentlyEditing ? (
                                                             <TextField
                                                                 size="small"
                                                                 type="number"
-                                                                inputProps={{ min: 0 }}
+                                                                inputProps={{ min: 0, max: 64 }}
                                                                 value={editFormData.stackSize}
                                                                 onChange={(e) => setEditFormData({ ...editFormData, stackSize: parseInt(e.target.value) || 0 })}
                                                                 variant="outlined"
