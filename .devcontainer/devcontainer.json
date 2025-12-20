@@ -28,7 +28,7 @@
 				"prettier.prettier-vscode"
 			]
 		}
-	},
+	}
 	// Set the default user for the container to 'vintagestory' (non-root best practice)
-	"remoteUser": "vintagestory"
+	// "remoteUser": "vintagestory"
 }
