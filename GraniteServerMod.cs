@@ -4,18 +4,17 @@ using GraniteServer.Api;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 
-[assembly: ModInfo("GraniteServerMod",
-        Authors = new string[] { "Kramins" },
-        Description = "Server Administration Tools and features",
-        Version = "1.0.0")]
+[assembly: ModInfo(
+    "GraniteServerMod",
+    Authors = new string[] { "Kramins" },
+    Description = "Server Administration Tools and features",
+    Version = "0.0.1"
+)]
 
 namespace GraniteServer
 {
-
     public class GraniteServerMod : ModSystem
     {
-        internal const string ConfigFile = "vsrcon.json";
-        internal ICoreServerAPI Api = null!;
         private WebApi? _webApi;
 
         public override bool ShouldLoad(EnumAppSide side)
@@ -25,16 +24,10 @@ namespace GraniteServer
 
         public override void StartServerSide(ICoreServerAPI api)
         {
-            Api = api;
-
-            _webApi = new WebApi(Api);
+            _webApi = new WebApi(api);
             _webApi.Initialize();
-
         }
 
-        public override void Dispose()
-        {
-        }
+        public override void Dispose() { }
     }
 }
-
