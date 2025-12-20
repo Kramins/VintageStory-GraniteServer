@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using System.Threading.Tasks;
 using GraniteServer.Api;
 using Vintagestory.API.Common;
@@ -15,6 +16,7 @@ namespace GraniteServer
 {
     public class GraniteServerMod : ModSystem
     {
+        private readonly string _modConfigFileName = "graniteserverconfig.json";
         private WebApi? _webApi;
 
         public override bool ShouldLoad(EnumAppSide side)
@@ -22,9 +24,50 @@ namespace GraniteServer
             return side.IsServer();
         }
 
+        private void OverrideConfigWithEnvironmentVariables(
+            GraniteServerConfig config,
+            ICoreServerAPI api
+        )
+        {
+            foreach (
+                var property in typeof(GraniteServerConfig).GetProperties(
+                    BindingFlags.Public | BindingFlags.Instance
+                )
+            )
+            {
+                string envVarName = $"GS_{property.Name.ToUpper()}";
+                string? envVarValue = Environment.GetEnvironmentVariable(envVarName);
+
+                if (!string.IsNullOrEmpty(envVarValue))
+                {
+                    try
+                    {
+                        var convertedValue = Convert.ChangeType(envVarValue, property.PropertyType);
+                        property.SetValue(config, convertedValue);
+                    }
+                    catch (Exception ex)
+                    {
+                        api.Logger.Warning(
+                            $"Failed to set property {property.Name} from environment variable {envVarName}: {ex.Message}"
+                        );
+                    }
+                }
+            }
+        }
+
         public override void StartServerSide(ICoreServerAPI api)
         {
-            _webApi = new WebApi(api);
+            var config = api.LoadModConfig<GraniteServerConfig>(_modConfigFileName);
+            if (config == null)
+            {
+                config = new GraniteServerConfig();
+            }
+
+            OverrideConfigWithEnvironmentVariables(config, api);
+
+            api.StoreModConfig<GraniteServerConfig>(config, _modConfigFileName);
+
+            _webApi = new WebApi(api, config);
             _webApi.Initialize();
         }
 

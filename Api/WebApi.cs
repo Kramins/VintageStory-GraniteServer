@@ -31,10 +31,12 @@ public class WebApi
     private const ushort Port = 5000;
     private readonly ICoreServerAPI _api;
     private IServerHost? _host;
+    private readonly GraniteServerConfig _config;
 
-    public WebApi(ICoreServerAPI api)
+    public WebApi(ICoreServerAPI api, GraniteServerConfig config)
     {
         _api = api ?? throw new ArgumentNullException(nameof(api));
+        _config = config ?? throw new ArgumentNullException(nameof(config));
     }
 
     public void Initialize()
@@ -89,7 +91,7 @@ public class WebApi
 
             _host = Host.Create()
                 .AddDependencyInjection(services.BuildServiceProvider())
-                .Port(Port)
+                .Port(Convert.ToUInt16(_config.Port))
                 .Handler(app)
                 .Defaults()
                 .Development()
