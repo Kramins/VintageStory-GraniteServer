@@ -8,9 +8,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useAppDispatch, useAppSelector } from '../store/store';
 import { fetchPlayerDetails } from '../store/slices/playerDetailsSlice';
+import { fetchCollectibles } from '../store/slices/collectiblesSlice';
 import { PlayerService } from '../services/PlayerService';
+import CollectibleAutocomplete from '../components/CollectibleAutocomplete';
 import type { InventorySlotDTO } from '../types/PlayerDetailsDTO';
 import type { UpdateInventorySlotRequestDTO } from '../types/UpdateInventorySlotRequestDTO';
+import type { CollectibleObjectDTO } from '../types/CollectibleObjectDTO';
 
 interface EditingState {
     inventoryName: string;
@@ -28,16 +31,20 @@ const PlayerDetailsPage: React.FC = () => {
     const { playerId } = useParams<{ playerId: string }>();
     const dispatch = useAppDispatch();
     const { playerDetails, loading, error } = useAppSelector(state => state.playerDetails);
+    const { items: collectibles, loading: collectiblesLoading, error: collectiblesError } = useAppSelector(state => state.world.collectibles);
     const [removing, setRemoving] = useState<string | null>(null);
     const [removeError, setRemoveError] = useState<string | null>(null);
     const [editingSlot, setEditingSlot] = useState<EditingState | null>(null);
     const [editFormData, setEditFormData] = useState<EditFormData>({ name: '', entityClass: '', entityId: 0, stackSize: 0 });
+    const [selectedCollectible, setSelectedCollectible] = useState<CollectibleObjectDTO | null>(null);
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (playerId) {
             dispatch(fetchPlayerDetails(playerId) as any);
         }
+        // Load collectibles data (will only fetch if not already loaded)
+        dispatch(fetchCollectibles() as any);
     }, [playerId, dispatch]);
 
     const handleEditClick = (slot: InventorySlotDTO, inventoryName: string) => {
@@ -48,22 +55,26 @@ const PlayerDetailsPage: React.FC = () => {
             entityId: slot.entityId,
             stackSize: slot.stackSize,
         });
+        // Try to find and select the matching collectible
+        const matchingCollectible = collectibles.find(c => c.id === slot.entityId);
+        setSelectedCollectible(matchingCollectible || null);
     };
 
     const handleSaveEdit = async () => {
-        if (!playerId || !editingSlot) return;
+        if (!playerId || !editingSlot || !selectedCollectible) return;
         
         setSaving(true);
         try {
             await PlayerService.updatePlayerInventorySlot(playerId, editingSlot.inventoryName, {
                 slotIndex: editingSlot.slotIndex,
-                entityClass: editFormData.entityClass,
-                entityId: editFormData.entityId,
+                entityClass: selectedCollectible.type,
+                entityId: selectedCollectible.id,
                 stackSize: editFormData.stackSize,
             } as UpdateInventorySlotRequestDTO);
             
             dispatch(fetchPlayerDetails(playerId) as any);
             setEditingSlot(null);
+            setSelectedCollectible(null);
         } catch (err: any) {
             setRemoveError(err.message || 'Failed to update item');
         } finally {
@@ -73,6 +84,7 @@ const PlayerDetailsPage: React.FC = () => {
 
     const handleCancelEdit = () => {
         setEditingSlot(null);
+        setSelectedCollectible(null);
     };
 
     const isEditing = (inventoryName: string, slotIndex: number) => 
@@ -204,7 +216,6 @@ const PlayerDetailsPage: React.FC = () => {
                                         <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
                                             <TableCell>Slot</TableCell>
                                             <TableCell>Item Name</TableCell>
-                                            <TableCell>Class</TableCell>
                                             <TableCell align="right">Stack Size</TableCell>
                                             <TableCell align="center">Actions</TableCell>
                                         </TableRow>
@@ -217,28 +228,28 @@ const PlayerDetailsPage: React.FC = () => {
                                                     <TableCell>{slot.slotIndex}</TableCell>
                                                     <TableCell>
                                                         {isCurrentlyEditing ? (
-                                                            <TextField
-                                                                size="small"
-                                                                value={editFormData.name}
-                                                                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                                                                fullWidth
-                                                                variant="outlined"
+                                                            <CollectibleAutocomplete
+                                                                value={selectedCollectible}
+                                                                onChange={(value) => {
+                                                                    setSelectedCollectible(value);
+                                                                    if (value) {
+                                                                        setEditFormData({ 
+                                                                            ...editFormData, 
+                                                                            name: value.name,
+                                                                            entityClass: value.type,
+                                                                            entityId: value.id,
+                                                                        });
+                                                                    }
+                                                                }}
+                                                                collectibles={collectibles}
+                                                                loading={collectiblesLoading}
+                                                                error={collectiblesError}
+                                                                disabled={saving}
+                                                                label="Item"
+                                                                placeholder="Search items..."
                                                             />
                                                         ) : (
                                                             slot.name || '-'
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {isCurrentlyEditing ? (
-                                                            <TextField
-                                                                size="small"
-                                                                value={editFormData.entityClass}
-                                                                onChange={(e) => setEditFormData({ ...editFormData, entityClass: e.target.value })}
-                                                                fullWidth
-                                                                variant="outlined"
-                                                            />
-                                                        ) : (
-                                                            slot.entityClass || '-'
                                                         )}
                                                     </TableCell>
                                                     <TableCell align="right">
@@ -262,9 +273,9 @@ const PlayerDetailsPage: React.FC = () => {
                                                                     <IconButton
                                                                         size="small"
                                                                         onClick={handleSaveEdit}
-                                                                        disabled={saving}
+                                                                        disabled={saving || !selectedCollectible}
                                                                         color="success"
-                                                                        title="Save"
+                                                                        title={!selectedCollectible ? 'Select an item first' : 'Save'}
                                                                     >
                                                                         <SaveIcon fontSize="small" />
                                                                     </IconButton>
