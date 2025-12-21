@@ -78,10 +78,7 @@ public class WebApi
             var tree = ResourceTree.FromDirectory(webClientPath);
             var clientApp = StaticWebsite.From(tree);
 
-            var app = Layout
-                .Create()
-                // .Add(["client"], clientApp)
-                .Add(["api"], controllers);
+            var app = Layout.Create().Add(clientApp).Add(["api"], controllers);
 
             var services = new ServiceCollection();
             services.AddSingleton<ICoreServerAPI>(_api);
