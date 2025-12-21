@@ -299,25 +299,35 @@ public class PlayerService
         {
             var slot = inventory[request.SlotIndex];
 
+            ItemStack newItemStack;
+            CollectibleObject newCollectible;
             switch (request.EntityClass.ToLower())
             {
                 case "item":
-                    var item = _api.World.GetItem(request.EntityId);
-                    if (item == null)
-                        throw new ArgumentException($"Item with ID {request.EntityId} not found.");
-                    slot.Itemstack = new ItemStack(item, request.StackSize ?? 1);
+                    newCollectible = _api.World.GetItem(request.EntityId);
                     break;
                 case "block":
-                    var block = _api.World.GetBlock(request.EntityId);
-                    if (block == null)
-                        throw new ArgumentException($"Block with ID {request.EntityId} not found.");
-                    slot.Itemstack = new ItemStack(block, request.StackSize ?? 1);
+                    newCollectible = _api.World.GetBlock(request.EntityId);
                     break;
                 default:
                     throw new ArgumentException(
                         "Invalid item class specified. Must be 'item' or 'block'."
                     );
             }
+
+            if (newCollectible == null)
+                throw new ArgumentException(
+                    $"{request.EntityClass} with ID {request.EntityId} not found."
+                );
+
+            var newStackSize = request.StackSize ?? 1;
+            if (newStackSize > newCollectible.MaxStackSize)
+            {
+                newStackSize = newCollectible.MaxStackSize;
+            }
+            newItemStack = new ItemStack(newCollectible, newStackSize);
+
+            slot.Itemstack = newItemStack;
 
             slot.MarkDirty();
         }
