@@ -8,5 +8,8 @@
     "terminal.integrated.env.linux": {
         "VINTAGE_STORY": "/app"
     },
-    "code-butler.cleanupOnSave": true
+    "code-butler.cleanupOnSave": true,
+    "cSpell.words": [
+      "Itemstack"
+    ]
 }
