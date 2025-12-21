@@ -31,9 +31,11 @@ public class WorldService
         var dto = new CollectibleObjectDTO { Id = collectible.Id };
         var text = collectible.ItemClass.Name();
         var itemName = Lang.GetMatching(
-            collectible.Code?.Domain + ":" + text + "-" + collectible.Code?.Path
+            collectible.Code?.Domain + ":" + text + "-" + collectible.Code?.Path,
+            [""]
         );
         dto.Name = itemName;
+        dto.Class = collectible.Class;
         dto.MaxStackSize = collectible.MaxStackSize;
         if (collectible is Item item)
         {

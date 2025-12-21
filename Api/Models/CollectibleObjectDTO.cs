@@ -8,4 +8,5 @@ public class CollectibleObjectDTO
     public string Name { get; internal set; }
     public string Type { get; internal set; }
     public int MaxStackSize { get; internal set; }
+    public string Class { get; internal set; }
 }
