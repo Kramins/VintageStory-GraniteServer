@@ -46,26 +46,13 @@ const CollectibleAutocomplete: React.FC<CollectibleAutocompleteProps> = ({
         for (let i = 0; i < options.length && matches.length < maxResults; i++) {
             const option = options[i];
             const lowerName = option.name.toLowerCase();
-            const lowerType = option.type.toLowerCase();
-            
-            // Exact matches first for better UX
-            if (lowerName === searchTerm || option.id.toString() === searchTerm) {
-                matches.unshift(option);
-                continue;
-            }
-            
-            // Check name first (most common search)
-            if (lowerName.includes(searchTerm)) {
+           
+
+            if (lowerName.startsWith(searchTerm)) {
                 matches.push(option);
                 continue;
             }
-            // Then type
-            if (lowerType.includes(searchTerm)) {
-                matches.push(option);
-                continue;
-            }
-            // Finally ID
-            if (option.id.toString().includes(searchTerm)) {
+            if (option.id.toString().startsWith(searchTerm)) {
                 matches.push(option);
             }
         }
@@ -93,7 +80,7 @@ const CollectibleAutocomplete: React.FC<CollectibleAutocompleteProps> = ({
             renderOption={(props, option) => {
                 const { key, ...otherProps } = props as any;
                 return (
-                    <Box component="li" key={key} {...otherProps} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', py: 1 }}>
+                    <Box component="li" key={`${option.type}-${option.id}`} {...otherProps} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', py: 1 }}>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
                             {option.name}
                         </Typography>
