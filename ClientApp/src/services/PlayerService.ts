@@ -22,34 +22,34 @@ export const PlayerService = {
     },
 
     async kickPlayer(playerId: string, reason?: string): Promise<void> {
-        await axios.post(`${API_BASE}/${playerId}/kick`, { reason });
+        await axios.post(`${API_BASE}/id/${playerId}/kick`, { reason });
     },
 
     async banPlayer(playerId: string, reason?: string): Promise<void> {
-        await axios.post(`${API_BASE}/${playerId}/ban`, { reason });
+        await axios.post(`${API_BASE}/id/${playerId}/ban`, { reason });
     },
 
     async unBanPlayer(playerId: string): Promise<void> {
-        await axios.delete(`${API_BASE}/${playerId}/ban`);
+        await axios.delete(`${API_BASE}/id/${playerId}/ban`);
     },
 
     async whitelistPlayer(playerId: string): Promise<void> {
-        await axios.post(`${API_BASE}/${playerId}/whitelist`);
+        await axios.post(`${API_BASE}/id/${playerId}/whitelist`);
     },
     
     async unWhitelistPlayer(playerId: string): Promise<void> {
-        await axios.delete(`${API_BASE}/${playerId}/whitelist`);
+        await axios.delete(`${API_BASE}/id/${playerId}/whitelist`);
     },
 
     async getPlayerDetails(playerId: string): Promise<PlayerDetailsDTO> {
-        const response = await axios.get(`${API_BASE}/${playerId}`);
+        const response = await axios.get(`${API_BASE}/id/${playerId}`);
         return response.data;
     },
     async updatePlayerInventorySlot(playerId: string, inventoryName: string, data: UpdateInventorySlotRequestDTO): Promise<void> {
-        await axios.post(`${API_BASE}/${playerId}/inventories/${inventoryName}/`, data);
+        await axios.post(`${API_BASE}/id/${playerId}/inventories/${inventoryName}/`, data);
     },
     async removeItemFromInventory(playerId: string, inventoryName: string, slotIndex: number): Promise<void> {
-        await axios.delete(`${API_BASE}/${playerId}/inventories/${inventoryName}/${slotIndex}`);
+        await axios.delete(`${API_BASE}/id/${playerId}/inventories/${inventoryName}/${slotIndex}`);
     }
 
 
