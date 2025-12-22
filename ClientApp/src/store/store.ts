@@ -7,6 +7,7 @@ import playersReducer from './slices/playersSlice'
 import playerDetailsReducer from './slices/playerDetailsSlice'
 import serverReducer from './slices/serverSlice'
 import worldReducer from './slices/collectiblesSlice'
+import authReducer from './slices/authSlice'
 
 const store = configureStore({
     reducer: {
@@ -14,6 +15,7 @@ const store = configureStore({
         playerDetails: playerDetailsReducer,
         server: serverReducer,
         world: worldReducer,
+        auth: authReducer,
     },
 });
 

@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import './App.css';
 
 import router from './routes';
+import AuthInitializer from './components/AuthInitializer';
 
 // import type {} from '@mui/x-date-pickers/themeAugmentation';
 // import type {} from '@mui/x-charts/themeAugmentation';
@@ -57,6 +58,7 @@ function App(props: { disableCustomTheme?: boolean }) {
     // </ThemeProvider>
       <AppTheme {...props} themeComponents={xThemeComponents}>
         <CssBaseline enableColorScheme />
+        <AuthInitializer />
         <RouterProvider router={router} />
       </AppTheme>
   );

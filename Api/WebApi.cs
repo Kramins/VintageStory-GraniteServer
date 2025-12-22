@@ -85,11 +85,14 @@ public class WebApi
                 .Add(protectedControllers)
                 .Add(CorsPolicy.Permissive());
 
-            if (_config.AuthenticationType != "None" || _config.AuthenticationType != "")
+            // Always add authentication controller so clients can query auth settings
+            controllers.AddDependentService<AuthenticationController>("auth");
+
+            // Only add bearer auth protection if authentication is required
+            if (_config.AuthenticationType.ToLower() != "none" && _config.AuthenticationType != "")
             {
                 var auth = GetApiBearerAuth();
                 protectedControllers.Add(auth);
-                controllers.AddDependentService<AuthenticationController>("auth");
             }
 
             var tree = ResourceTree.FromDirectory(webClientPath);

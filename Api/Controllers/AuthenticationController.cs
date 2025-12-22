@@ -12,14 +12,17 @@ public class AuthenticationController
 {
     private readonly BasicAuthService _basicAuthService;
     private readonly JwtTokenService _jwtTokenService;
+    private readonly GraniteServerConfig _config;
 
     public AuthenticationController(
         BasicAuthService basicAuthService,
-        JwtTokenService jwtTokenService
+        JwtTokenService jwtTokenService,
+        GraniteServerConfig config
     )
     {
         _basicAuthService = basicAuthService;
         _jwtTokenService = jwtTokenService;
+        _config = config;
     }
 
     [ResourceMethod(RequestMethod.Post, "/login")]
@@ -35,5 +38,12 @@ public class AuthenticationController
         {
             throw new UnauthorizedAccessException("Invalid username or password.");
         }
+    }
+
+    [ResourceMethod(RequestMethod.Get, "/settings")]
+    public Result<AuthSettingsDTO> GetAuthSettings()
+    {
+        var authSettings = new AuthSettingsDTO(_config.AuthenticationType);
+        return new Result<AuthSettingsDTO>(authSettings);
     }
 }
