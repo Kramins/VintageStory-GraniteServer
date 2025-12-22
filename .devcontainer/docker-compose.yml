@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   vintage-mod-dev:
@@ -11,8 +11,7 @@ services:
     command: sleep infinity
     environment:
       - VINTAGE_STORY=/app
-      - RCON_PORT=42425
-      - RCON_PASSWORD=development
+      - GS_PASSWORD=password
     ports:
       - "42425:42425"
       - "42420:42420"

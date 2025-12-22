@@ -105,6 +105,7 @@ public class WebApi
             services.AddSingleton<ServerCommandService>();
             services.AddSingleton<PlayerService>();
             services.AddSingleton<WorldService>();
+            services.AddSingleton<ServerService>();
             services.AddSingleton<BasicAuthService>();
             services.AddSingleton<JwtTokenService>();
             services.AddSingleton(_config);
