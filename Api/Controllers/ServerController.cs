@@ -23,6 +23,7 @@ public class ServerController
     /// <summary>
     /// Announce a message to all players
     /// </summary>
+    [ResourceMethod(RequestMethod.Post, "/announce/")]
     public object Announce(string message)
     {
         throw new NotImplementedException();
@@ -31,6 +32,7 @@ public class ServerController
     /// <summary>
     /// Reload server configuration
     /// </summary>
+    [ResourceMethod(RequestMethod.Post, "/reload/")]
     public object ReloadConfiguration()
     {
         throw new NotImplementedException();
@@ -39,11 +41,13 @@ public class ServerController
     /// <summary>
     /// Trigger an immediate autosave
     /// </summary>
+    [ResourceMethod(RequestMethod.Post, "/save/")]
     public object SaveNow()
     {
         throw new NotImplementedException();
     }
 
+    [ResourceMethod(RequestMethod.Get, "/status/")]
     public ServerStatusDTO Status()
     {
         var response = new ServerStatusDTO
@@ -69,12 +73,13 @@ public class ServerController
     /// <summary>
     /// Stop the server
     /// </summary>
+    [ResourceMethod(RequestMethod.Post, "/stop/")]
     public object StopServer(int? exitCode = null)
     {
         throw new NotImplementedException();
     }
 
-    [ControllerAction(RequestMethod.Post)]
+    [ResourceMethod(RequestMethod.Post, "/whitelist-mode/")]
     public void setWhitelistMode(SetWhitelistModeRequestDTO request)
     {
         _api.Server.Config.WhitelistMode = request.Enabled
