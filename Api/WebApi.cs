@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using GenHTTP.Api.Infrastructure;
 using GenHTTP.Engine.Internal;
 using GenHTTP.Modules.ApiBrowsing;
+using GenHTTP.Modules.Authentication;
+using GenHTTP.Modules.Authentication.ApiKey;
 using GenHTTP.Modules.Controllers;
 using GenHTTP.Modules.DependencyInjection;
 using GenHTTP.Modules.IO;
@@ -65,11 +67,47 @@ public class WebApi
             _api.Logger.Notification("[WebAPI] Starting server...");
             _api.Logger.Notification($"[WebAPI] Serving web client from: {webClientPath}");
 
-            var controllers = Layout
+            /// NOTE: There is a missing feature in GenHTTP where the BearerAuthentication
+            /// modules does not have built-in support for custom Signing Keys.
+            /// Will result in a 500 `Unable to fetch signing issuer signing keys`
+            /// Will have to submit a feature request or PR to add this functionality.
+            var auth = BearerAuthentication
                 .Create()
-                .AddDependentController<ServerController>("server")
+                .Issuer("GraniteServer")
+                .Audience("GraniteServerClient")
+                .Validation(
+                    (token) =>
+                    {
+                        return Task.CompletedTask;
+                    }
+                )
+                .UserMapping(
+                    (request, token) =>
+                    {
+                        var user = new GenHTTP.Modules.Authentication.Basic.BasicAuthenticationUser(
+                            token.Subject,
+                            Array.Empty<string>()
+                        );
+                        return new(user);
+                    }
+                );
+
+            var protectedControllers = Layout
+                .Create()
+                .AddDependentService<ServerController>("server")
                 .AddDependentService<PlayerManagementController>("players")
                 .AddDependentService<WorldController>("world")
+                .Add(CorsPolicy.Permissive())
+                .AddSwaggerUi()
+                .AddScalar()
+                .AddRedoc();
+
+            protectedControllers.Add(auth);
+
+            var controllers = Layout
+                .Create()
+                .Add(protectedControllers)
+                .AddDependentService<AuthenticationController>("auth")
                 .Add(CorsPolicy.Permissive())
                 .AddSwaggerUi()
                 .AddScalar()
@@ -85,6 +123,9 @@ public class WebApi
             services.AddSingleton<ServerCommandService>();
             services.AddSingleton<PlayerService>();
             services.AddSingleton<WorldService>();
+            services.AddSingleton<BasicAuthService>();
+            services.AddSingleton<JwtTokenService>();
+            services.AddSingleton(_config);
 
             _host = Host.Create()
                 .AddDependencyInjection(services.BuildServiceProvider())

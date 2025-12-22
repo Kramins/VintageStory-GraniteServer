@@ -1,0 +1,33 @@
+meta {
+  name: Basic Authentication
+  type: http
+  seq: 13
+}
+
+post {
+  url: http://{{HOST}}/api/auth/login/
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "admin",
+    "password": "password"
+  }
+}
+
+body:multipart-form {
+  playername: Dalraz
+}
+
+script:post-response {
+  let data = res.body;
+  bru.setEnvVar("token", data.access_token);
+  
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
