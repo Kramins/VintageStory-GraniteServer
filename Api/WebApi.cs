@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using GenHTTP.Api.Content;
 using GenHTTP.Api.Infrastructure;
 using GenHTTP.Engine.Internal;
 using GenHTTP.Modules.ApiBrowsing;
@@ -32,6 +34,7 @@ public class WebApi
 {
     private const ushort Port = 5000;
     private readonly ICoreServerAPI _api;
+    private ServiceProvider _serviceProvider;
     private IServerHost? _host;
     private readonly GraniteServerConfig _config;
 
@@ -67,31 +70,6 @@ public class WebApi
             _api.Logger.Notification("[WebAPI] Starting server...");
             _api.Logger.Notification($"[WebAPI] Serving web client from: {webClientPath}");
 
-            /// NOTE: There is a missing feature in GenHTTP where the BearerAuthentication
-            /// modules does not have built-in support for custom Signing Keys.
-            /// Will result in a 500 `Unable to fetch signing issuer signing keys`
-            /// Will have to submit a feature request or PR to add this functionality.
-            var auth = BearerAuthentication
-                .Create()
-                .Issuer("GraniteServer")
-                .Audience("GraniteServerClient")
-                .Validation(
-                    (token) =>
-                    {
-                        return Task.CompletedTask;
-                    }
-                )
-                .UserMapping(
-                    (request, token) =>
-                    {
-                        var user = new GenHTTP.Modules.Authentication.Basic.BasicAuthenticationUser(
-                            token.Subject,
-                            Array.Empty<string>()
-                        );
-                        return new(user);
-                    }
-                );
-
             var protectedControllers = Layout
                 .Create()
                 .AddDependentService<ServerController>("server")
@@ -102,16 +80,17 @@ public class WebApi
                 .AddScalar()
                 .AddRedoc();
 
-            protectedControllers.Add(auth);
-
             var controllers = Layout
                 .Create()
                 .Add(protectedControllers)
-                .AddDependentService<AuthenticationController>("auth")
-                .Add(CorsPolicy.Permissive())
-                .AddSwaggerUi()
-                .AddScalar()
-                .AddRedoc();
+                .Add(CorsPolicy.Permissive());
+
+            if (_config.AuthenticationType != "None" || _config.AuthenticationType != "")
+            {
+                var auth = GetApiBearerAuth();
+                protectedControllers.Add(auth);
+                controllers.AddDependentService<AuthenticationController>("auth");
+            }
 
             var tree = ResourceTree.FromDirectory(webClientPath);
             var clientApp = StaticWebsite.From(tree);
@@ -127,8 +106,9 @@ public class WebApi
             services.AddSingleton<JwtTokenService>();
             services.AddSingleton(_config);
 
+            _serviceProvider = services.BuildServiceProvider();
             _host = Host.Create()
-                .AddDependencyInjection(services.BuildServiceProvider())
+                .AddDependencyInjection(_serviceProvider)
                 .Port(Convert.ToUInt16(_config.Port))
                 .Handler(app)
                 .Defaults()
@@ -142,6 +122,49 @@ public class WebApi
         {
             _api.Logger.Error($"[WebAPI] Failed to start Web API: {ex.Message}\n{ex.StackTrace}");
         }
+    }
+
+    private IConcernBuilder GetApiBearerAuth()
+    {
+        /// NOTE: There is a missing feature in GenHTTP where the BearerAuthentication
+        /// modules does not have built-in support for custom Signing Keys.
+        /// Will result in a 500 `Unable to fetch signing issuer signing keys`
+        /// Will have to submit a feature request or PR to add this functionality.
+        return CustomBearerAuthentication
+            .CustomBearerAuthentication.Create()
+            .Issuer("GraniteServer")
+            .Audience("GraniteServerClient")
+            .Validation(
+                (token) =>
+                {
+                    return Task.CompletedTask;
+                }
+            )
+            .UserMapping(
+                (request, token) =>
+                {
+                    var user = new GenHTTP.Modules.Authentication.Basic.BasicAuthenticationUser(
+                        token.Subject,
+                        Array.Empty<string>()
+                    );
+                    return new(user);
+                }
+            )
+            .KeyResolver(
+                (token) =>
+                {
+                    var jwtTokenService = _serviceProvider.GetService<JwtTokenService>();
+
+                    if (jwtTokenService == null)
+                    {
+                        throw new InvalidOperationException("JwtTokenService not available");
+                    }
+
+                    var keys = jwtTokenService.GetSigningKeys();
+
+                    return new(keys);
+                }
+            );
     }
 
     /// <summary>

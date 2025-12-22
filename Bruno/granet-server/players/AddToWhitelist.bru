@@ -7,7 +7,11 @@ meta {
 post {
   url: http://{{HOST}}/api/players/{{playerId}}/whitelist
   body: json
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 body:multipart-form {

@@ -7,7 +7,11 @@ meta {
 get {
   url: http://{{HOST}}/api/players/find?name={{name}}
   body: json
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 params:query {
