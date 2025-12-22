@@ -16,20 +16,20 @@ GraniteServer is an alpha-stage server management and web API project designed t
 
 Base URL: `/api/players`
 
-| Method | Endpoint                                           | Description                                             |
-| ------ | -------------------------------------------------- | ------------------------------------------------------- |
-| GET    | `/`                                                | List all connected players                              |
-| GET    | `/:playerId`                                       | Get detailed information about a specific player        |
-| GET    | `/find`                                            | Find a player by name                                   |
-| GET    | `/banned`                                          | List all banned players                                 |
-| GET    | `/whitelisted`                                     | List all whitelisted players                            |
-| POST   | `/:playerId/whitelist`                             | Add a player to the whitelist                           |
-| DELETE | `/:playerId/whitelist`                             | Remove a player from the whitelist                      |
-| POST   | `/:playerId/ban`                                   | Ban a player (with optional reason and expiration date) |
-| DELETE | `/:playerId/ban`                                   | Remove a player from the ban list                       |
-| POST   | `/:playerId/kick`                                  | Kick a player from the server                           |
-| POST   | `/:playerId/inventories/:inventoryName`            | Update a player's inventory slot                        |
-| DELETE | `/:playerId/inventories/:inventoryName/:slotIndex` | Delete a player's inventory from a slot                 |
+| Method | Endpoint                                              | Description                                             |
+| ------ | ----------------------------------------------------- | ------------------------------------------------------- |
+| GET    | `/`                                                   | List all connected players                              |
+| GET    | `/id/:playerId`                                       | Get detailed information about a specific player        |
+| GET    | `/find`                                               | Find a player by name                                   |
+| GET    | `/banned`                                             | List all banned players                                 |
+| GET    | `/whitelisted`                                        | List all whitelisted players                            |
+| POST   | `/id/:playerId/whitelist`                             | Add a player to the whitelist                           |
+| DELETE | `/id/:playerId/whitelist`                             | Remove a player from the whitelist                      |
+| POST   | `/id/:playerId/ban`                                   | Ban a player (with optional reason and expiration date) |
+| DELETE | `/id/:playerId/ban`                                   | Remove a player from the ban list                       |
+| POST   | `/id/:playerId/kick`                                  | Kick a player from the server                           |
+| POST   | `/id/:playerId/inventories/:inventoryName`            | Update a player's inventory slot                        |
+| DELETE | `/id/:playerId/inventories/:inventoryName/:slotIndex` | Delete a player's inventory from a slot                 |
 
 ---
 

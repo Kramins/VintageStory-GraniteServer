@@ -28,16 +28,26 @@ public class PlayerManagementController
     }
 
     /// <summary>
+    /// Lists all whitelisted players.
+    /// </summary>
+    /// <returns>A list of all whitelisted players.</returns>
+    [ResourceMethod(RequestMethod.Get, "/whitelisted")]
+    public async Task<IList<PlayerDTO>> GetWhitelistedPlayers()
+    {
+        return await _playerService.GetWhitelistedPlayersAsync();
+    }
+
+    /// <summary>
     /// Adds a player to the whitelist by their ID.
     /// </summary>
     /// <param name="id">The ID of the player to whitelist.</param>
-    [ResourceMethod(RequestMethod.Post, "/:playerId/whitelist")]
+    [ResourceMethod(RequestMethod.Post, "/id/:playerId/whitelist")]
     public async Task AddToWhitelist(string playerId)
     {
         await _playerService.AddPlayerToWhitelistAsync(playerId);
     }
 
-    [ResourceMethod(RequestMethod.Post, "/:playerId/ban")]
+    [ResourceMethod(RequestMethod.Post, "/id/:playerId/ban")]
     public async Task BanPlayer(string playerId, BanRequestDTO request)
     {
         await _playerService.AddPlayerToBanListAsync(
@@ -83,20 +93,10 @@ public class PlayerManagementController
         return await _playerService.GetBannedPlayersAsync();
     }
 
-    [ResourceMethod(RequestMethod.Get, "/:playerId")]
+    [ResourceMethod(RequestMethod.Get, "/id/:playerId")]
     public async Task<PlayerDetailsDTO> GetPlayerDetailsAsync(string playerId)
     {
         return await _playerService.GetPlayerDetailsAsync(playerId);
-    }
-
-    /// <summary>
-    /// Lists all whitelisted players.
-    /// </summary>
-    /// <returns>A list of all whitelisted players.</returns>
-    [ResourceMethod(RequestMethod.Get, "/whitelisted")]
-    public async Task<IList<PlayerDTO>> GetWhitelistedPlayers()
-    {
-        return await _playerService.GetWhitelistedPlayersAsync();
     }
 
     /// <summary>
@@ -104,7 +104,7 @@ public class PlayerManagementController
     /// </summary>
     /// <param name="id">The ID of the player to kick.</param>
     /// <param name="request">The kick request containing the reason.</param>
-    [ResourceMethod(RequestMethod.Post, "/:playerId/kick")]
+    [ResourceMethod(RequestMethod.Post, "/id/:playerId/kick")]
     public async Task Kick(string playerId, KickRequestDTO request)
     {
         var t = _playerService.KickPlayerAsync(
@@ -120,7 +120,7 @@ public class PlayerManagementController
     /// Removes a player from the ban list by their ID.
     /// </summary>
     /// <param name="id">The ID of the player to remove from the ban list.</param>
-    [ResourceMethod(RequestMethod.Delete, "/:playerId/ban")]
+    [ResourceMethod(RequestMethod.Delete, "/id/:playerId/ban")]
     public async Task RemoveFromBanList(string playerId)
     {
         await _playerService.RemovePlayerFromBanListAsync(playerId);
@@ -130,13 +130,13 @@ public class PlayerManagementController
     /// Removes a player from the whitelist by their ID.
     /// </summary>
     /// <param name="id">The ID of the player to remove from the whitelist.</param>
-    [ResourceMethod(RequestMethod.Delete, "/:playerId/whitelist")]
+    [ResourceMethod(RequestMethod.Delete, "/id/:playerId/whitelist")]
     public async Task RemoveFromWhitelist(string playerId)
     {
         await _playerService.RemovePlayerFromWhitelistAsync(playerId);
     }
 
-    [ResourceMethod(RequestMethod.Delete, "/:playerId/inventories/:inventoryName/:slotIndex")]
+    [ResourceMethod(RequestMethod.Delete, "/id/:playerId/inventories/:inventoryName/:slotIndex")]
     public async Task RemovePlayerInventorySlotAsync(
         string playerId,
         string inventoryName,
@@ -152,7 +152,7 @@ public class PlayerManagementController
     /// <param name="playerId">The ID of the player whose inventory slot is to be updated.</param>
     /// <param name="inventoryName">The name of the inventory to update.</param>
     /// <param name="request">The update request containing slot index, item ID, and stack size.</param>
-    [ResourceMethod(RequestMethod.Post, "/:playerId/inventories/:inventoryName")]
+    [ResourceMethod(RequestMethod.Post, "/id/:playerId/inventories/:inventoryName")]
     public async Task UpdatePlayerInventorySlotAsync(
         string playerId,
         string inventoryName,
