@@ -126,4 +126,9 @@ public class JwtTokenService
             return null;
         }
     }
+
+    public ICollection<SecurityKey> GetSigningKeys()
+    {
+        return new List<SecurityKey> { _securityKey };
+    }
 }
