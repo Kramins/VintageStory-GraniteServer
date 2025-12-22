@@ -33,6 +33,32 @@ Base URL: `/api/players`
 
 ---
 
+### **Server Controller**
+
+Base URL: `/api/server`
+
+| Method | Endpoint  | Description                                                             |
+| ------ | --------- | ----------------------------------------------------------------------- |
+| GET    | `/config` | Get server configuration (port, name, max clients, game rules, etc.)    |
+| POST   | `/config` | Update server configuration (supports partial updates - nullable props) |
+
+**Server Configuration Properties:**
+
+- `Port` (int?) - Server network port
+- `ServerName` (string?) - Server display name
+- `WelcomeMessage` (string?) - Message shown to players on login
+- `MaxClients` (int?) - Maximum concurrent players
+- `Password` (string?) - Server password (null/empty to remove)
+- `MaxChunkRadius` (int?) - Max chunks loaded per player
+- `WhitelistMode` (string?) - Whitelist mode (e.g., "Disabled", "Enabled")
+- `AllowPvP` (bool?) - Enable/disable player vs player combat
+- `AllowFireSpread` (bool?) - Enable/disable fire spreading
+- `AllowFallingBlocks` (bool?) - Enable/disable block physics
+
+_Note: All properties are nullable. Only include properties you want to update in POST requests._
+
+---
+
 ### **World Management Controller**
 
 Base URL: `/api/world`
@@ -131,9 +157,12 @@ We are actively working to expand the functionality of GraniteServer. Below is a
 
 ### **Server Configuration Management**
 
-#### **Currently Developing**:
+#### **Currently Implemented**:
 
-- **Enable/Disable Whitelist**: Provide control to enable or disable the server's whitelist feature from the management panel.
+- **Get Server Configuration**: Retrieve current server configuration including port, name, game rules, and limits via REST API.
+- **Update Server Configuration**: Modify server configuration dynamically with partial update support (only send changed values).
+- **Enable/Disable Whitelist**: Control the server's whitelist mode through the configuration API.
+- **Game Rule Management**: Configure PvP, fire spread, and falling blocks settings.
 
 #### **Planned Features**:
 
