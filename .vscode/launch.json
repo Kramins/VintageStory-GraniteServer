@@ -28,6 +28,8 @@
             "preLaunchTask": "build",
             "args": [
                 "--tracelog",
+                "--dataPath",
+                "/data",
                 "--addModPath",
                 "${workspaceFolder}/bin/mods"
             ],

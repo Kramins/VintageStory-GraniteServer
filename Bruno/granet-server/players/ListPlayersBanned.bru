@@ -7,9 +7,12 @@ meta {
 get {
   url: http://{{HOST}}/api/players/banned
   body: json
-  auth: inherit
+  auth: bearer
 }
 
+auth:bearer {
+  token: {{token}}
+}
 body:multipart-form {
   playername: Dalraz
 }

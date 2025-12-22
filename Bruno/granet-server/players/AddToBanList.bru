@@ -7,13 +7,17 @@ meta {
 post {
   url: http://{{HOST}}/api/players/id/{{playerId}}/ban
   body: json
-  auth: inherit
+  auth: bearer
 }
 
 body:json {
   {
     
   }
+}
+
+auth:bearer {
+  token: {{token}}
 }
 
 body:multipart-form {
