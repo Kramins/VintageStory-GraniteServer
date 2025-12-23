@@ -11,11 +11,13 @@ import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
 import HelpRoundedIcon from '@mui/icons-material/HelpRounded';
+import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
 import { NavLink } from 'react-router-dom';
 
 const mainListItems = [
   { text: 'Overview', icon: <HomeRoundedIcon />, path: '/' },
   { text: 'Players', icon: <PeopleRoundedIcon />, path: '/players' },
+  { text: 'Server Configuration', icon: <TuneRoundedIcon />, path: '/server/config' },
 ];
 
 const secondaryListItems = [
