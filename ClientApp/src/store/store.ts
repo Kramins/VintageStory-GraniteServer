@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import playersReducer from './slices/playersSlice'
 import playerDetailsReducer from './slices/playerDetailsSlice'
 import serverReducer from './slices/serverSlice'
+import serverConfigReducer from './slices/serverConfigSlice'
 import worldReducer from './slices/collectiblesSlice'
 import authReducer from './slices/authSlice'
 
@@ -14,6 +15,7 @@ const store = configureStore({
         players: playersReducer,
         playerDetails: playerDetailsReducer,
         server: serverReducer,
+        serverConfig: serverConfigReducer,
         world: worldReducer,
         auth: authReducer,
     },

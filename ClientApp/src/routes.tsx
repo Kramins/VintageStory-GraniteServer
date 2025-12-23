@@ -5,6 +5,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import OverviewPage from "./pages/OverviewPage";
 import PlayersPage from "./pages/PlayersPage";
 import PlayerDetailsPage from "./pages/PlayerDetailsPage";
+import ServerConfigurationPage from "./pages/ServerConfigurationPage";
 import LoginPage from "./pages/LoginPage";
 
 const MainRoutes = {
@@ -22,6 +23,10 @@ const MainRoutes = {
         {
             path: '/players/:playerId',
             element: <PlayerDetailsPage />
+        },
+        {
+            path: '/server/config',
+            element: <ServerConfigurationPage />
         }
     ]
 };
