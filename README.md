@@ -69,9 +69,61 @@ Base URL: `/api/world`
 
 ---
 
+## Configuration
+
+GraniteServer is configured via the `graniteserverconfig.json` file, which is created automatically at runtime if it doesn't exist. Configuration can also be overridden using environment variables, which is especially useful when running in Docker containers.
+
+### Configuration File
+
+The configuration file `graniteserverconfig.json` is loaded from the mod directory at server startup. If the file doesn't exist, a default configuration is created.
+
+### Environment Variables
+
+All configuration properties can be overridden using environment variables with the `GS_` prefix followed by the property name in uppercase.
+
+### Configuration Properties
+
+| Property                       | Type   | Description                                  | Default     |
+| ------------------------------ | ------ | -------------------------------------------- | ----------- |
+| `Port`                         | int    | API server port                              | `5000`      |
+| `AuthenticationType`           | string | Authentication method (`Basic`)              | `Basic`     |
+| `JwtSecret`                    | string | Secret key for JWT token signing             | Random GUID |
+| `JwtExpiryMinutes`             | int    | JWT token expiration time in minutes         | `60`        |
+| `JwtRefreshTokenExpiryMinutes` | int    | JWT refresh token expiration time in minutes | `1440`      |
+| `Username`                     | string | Default username for API authentication      | `admin`     |
+| `Password`                     | string | Default password for API authentication      | Random GUID |
+
+### Docker Compose Example
+
+When running with Docker Compose, you can override configuration with environment variables:
+
+This setup should be considered alpha and not ready for production
+
+```yaml
+version: "3.8"
+
+services:
+  vintagestory:
+    image: ghcr.io/kramins/vintagestory:latest
+    ports:
+      - "42420:42420"
+      - "5000:5000"
+    environment:
+      GS_PORT: 5000
+      GS_AUTHENTICATIONTYPE: "Basic"
+      GS_JWTSECRET: "your-secret-key-here"
+      GS_JWTEXPIRMINUTES: 60
+      GS_USERNAME: "admin"
+      GS_PASSWORD: "your-password-here"
+    volumes:
+      - ./world-data:/data
+```
+
+---
+
 ## Usage
 
-This project is intended to be used alongside the `kramins/vintagestory` Docker container. See the container documentation for setup instructions.
+This project is intended to be used alongside the [Kramins/container-vintagestory-server](https://github.com/Kramins/container-vintagestory-server) container. See the container documentation for setup instructions.
 
 ## License
 
