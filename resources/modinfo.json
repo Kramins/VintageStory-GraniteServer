@@ -9,6 +9,6 @@
   ],
   "side": "server",
   "dependencies": {
-    "game": "1.19.0-X"
+    "game": "*"
   }
 }
