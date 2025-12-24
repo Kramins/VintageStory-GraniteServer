@@ -14,9 +14,7 @@ const ServerService = {
         return axios.post(`${API_BASE}/announce/`, { message });
     },
 
-    async saveNow(): Promise<any> {
-        return axios.post(`${API_BASE}/save/`);
-    },
+    
 
     async stopServer(exitCode?: number): Promise<any> {
         return axios.post(`${API_BASE}/stop/`, { exitCode });

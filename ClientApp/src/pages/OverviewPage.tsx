@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ServerService from '../services/ServerService';
+import WorldService from '../services/WorldService';
 import type { ServerStatusDTO } from '../types/ServerStatusDTO';
 import {
     Box,
@@ -8,6 +9,8 @@ import {
     Typography,
     Paper,
     Chip,
+    Snackbar,
+    Alert,
 } from '@mui/material';
 import {
     People as PlayersIcon,
@@ -45,6 +48,10 @@ const OverviewPage: React.FC = () => {
     const [status, setStatus] = useState<ServerStatusDTO | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [saving, setSaving] = useState(false);
+    const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>(
+        { open: false, message: '', severity: 'success' }
+    );
 
     useEffect(() => {
         ServerService.getStatus()
@@ -57,6 +64,23 @@ const OverviewPage: React.FC = () => {
                 setLoading(false);
             });
     }, []);
+
+    const handleSaveWorld = async () => {
+        if (saving) return;
+        setSaving(true);
+        try {
+            await WorldService.saveNow();
+            setSnackbar({ open: true, message: 'World saved successfully.', severity: 'success' });
+        } catch (e: any) {
+            if (e?.response?.status === 401) {
+                setSnackbar({ open: true, message: 'Please log in to save the world.', severity: 'info' });
+            } else {
+                setSnackbar({ open: true, message: 'Failed to save world. Please try again.', severity: 'error' });
+            }
+        } finally {
+            setSaving(false);
+        }
+    };
 
     if (loading) {
         return <Typography>Loading server status...</Typography>;
@@ -205,11 +229,23 @@ const OverviewPage: React.FC = () => {
                                     color="info"
                                     variant="outlined"
                                     clickable
+                                    onClick={handleSaveWorld}
+                                    disabled={saving}
                                 />
                             </Box>
                         </CardContent>
                     </Card>
                 </Box>
+                <Snackbar
+                    open={snackbar.open}
+                    autoHideDuration={3000}
+                    onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                >
+                    <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+                        {snackbar.message}
+                    </Alert>
+                </Snackbar>
             </Box>
         </Box>
     );

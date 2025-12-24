@@ -105,15 +105,13 @@ public class PlayerManagementController
     /// <param name="id">The ID of the player to kick.</param>
     /// <param name="request">The kick request containing the reason.</param>
     [ResourceMethod(RequestMethod.Post, "/id/:playerId/kick")]
-    public async Task Kick(string playerId, KickRequestDTO request)
+    public async Task<string> Kick(string playerId, KickRequestDTO request)
     {
-        var t = _playerService.KickPlayerAsync(
+        return await _playerService.KickPlayerAsync(
             playerId,
             request.Reason ?? "Kicked by an administrator.",
             true
         );
-
-        await t;
     }
 
     /// <summary>

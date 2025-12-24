@@ -34,15 +34,6 @@ public class ServerController
         throw new NotImplementedException();
     }
 
-    /// <summary>
-    /// Trigger an immediate autosave
-    /// </summary>
-    [ResourceMethod(RequestMethod.Post, "/save")]
-    public object SaveNow()
-    {
-        throw new NotImplementedException();
-    }
-
     [ResourceMethod(RequestMethod.Get, "/status")]
     public ServerStatusDTO Status()
     {
