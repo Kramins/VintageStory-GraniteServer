@@ -6,6 +6,9 @@ import './App.css';
 
 import router from './routes';
 import AuthInitializer from './components/AuthInitializer';
+import DisconnectedModal from './components/DisconnectedModal';
+import { useServerStatusMonitor } from './hooks/useServerStatusMonitor';
+import { useAppSelector } from './store/store';
 
 // import type {} from '@mui/x-date-pickers/themeAugmentation';
 // import type {} from '@mui/x-charts/themeAugmentation';
@@ -50,6 +53,23 @@ const darkTheme = createTheme({
   },
 });
 
+function AppContent(props: { disableCustomTheme?: boolean }) {
+  const { retryConnection } = useServerStatusMonitor();
+  const { isServerConnected, disconnectionReason } = useAppSelector(state => state.ui);
+
+  return (
+    <>
+      <DisconnectedModal
+        open={!isServerConnected}
+        onRetry={retryConnection}
+        reason={disconnectionReason}
+      />
+      <AuthInitializer />
+      <RouterProvider router={router} />
+    </>
+  );
+}
+
 function App(props: { disableCustomTheme?: boolean }) {
   return (
     // <ThemeProvider theme={darkTheme}>
@@ -58,8 +78,7 @@ function App(props: { disableCustomTheme?: boolean }) {
     // </ThemeProvider>
       <AppTheme {...props} themeComponents={xThemeComponents}>
         <CssBaseline enableColorScheme />
-        <AuthInitializer />
-        <RouterProvider router={router} />
+        <AppContent {...props} />
       </AppTheme>
   );
 }
