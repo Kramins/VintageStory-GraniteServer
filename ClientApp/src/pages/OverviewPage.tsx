@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ServerService from '../services/ServerService';
 import WorldService from '../services/WorldService';
+import { useToast } from '../components/ToastProvider';
 import type { ServerStatusDTO } from '../types/ServerStatusDTO';
 import {
     Box,
@@ -9,8 +10,6 @@ import {
     Typography,
     Paper,
     Chip,
-    Snackbar,
-    Alert,
 } from '@mui/material';
 import {
     People as PlayersIcon,
@@ -45,13 +44,11 @@ const StatCard: React.FC<{
 );
 
 const OverviewPage: React.FC = () => {
+    const toast = useToast();
     const [status, setStatus] = useState<ServerStatusDTO | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
-    const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>(
-        { open: false, message: '', severity: 'success' }
-    );
 
     useEffect(() => {
         ServerService.getStatus()
@@ -70,12 +67,12 @@ const OverviewPage: React.FC = () => {
         setSaving(true);
         try {
             await WorldService.saveNow();
-            setSnackbar({ open: true, message: 'World saved successfully.', severity: 'success' });
+            toast.show('World saved successfully.', 'success');
         } catch (e: any) {
             if (e?.response?.status === 401) {
-                setSnackbar({ open: true, message: 'Please log in to save the world.', severity: 'info' });
+                toast.show('Please log in to save the world.', 'info');
             } else {
-                setSnackbar({ open: true, message: 'Failed to save world. Please try again.', severity: 'error' });
+                toast.show('Failed to save world. Please try again.', 'error');
             }
         } finally {
             setSaving(false);
@@ -218,16 +215,6 @@ const OverviewPage: React.FC = () => {
                         </CardContent>
                     </Card>
                 </Box>
-                <Snackbar
-                    open={snackbar.open}
-                    autoHideDuration={3000}
-                    onClose={() => setSnackbar(s => ({ ...s, open: false }))}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                >
-                    <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
-                        {snackbar.message}
-                    </Alert>
-                </Snackbar>
             </Box>
         </Box>
     );

@@ -30,6 +30,7 @@ import { PlayerService } from '../services/PlayerService'
 import type { PlayerDTO } from '../types/PlayerDTO';
 import { useAppDispatch, useAppSelector } from '../store/store';
 import { fetchAllPlayers } from '../store/slices/playersSlice';
+import { useToast } from '../components/ToastProvider';
 
 // Temporary mapping for demo, since server DTO only has Id, Name, IsAdmin
 // Map PlayerDTO to table row data for display
@@ -52,6 +53,7 @@ const PlayersPage: React.FC = () => {
     const dispatch = useAppDispatch();
     const players = useAppSelector((state) => state.players.players as PlayerDTO[]);
     const loading = useAppSelector((state) => state.players.loading as boolean);
+    const toast = useToast();
 
     useEffect(() => {
         dispatch(fetchAllPlayers());
@@ -77,7 +79,7 @@ const PlayersPage: React.FC = () => {
                 fetchWhitelistedPlayers();
             }
         } catch (err) {
-            alert('Failed to update whitelist status.');
+            toast.show('Failed to update whitelist status.', 'error');
         }
     };
 
@@ -110,7 +112,7 @@ const PlayersPage: React.FC = () => {
                 dispatch(fetchAllPlayers());
                 setKickDialogOpen(false);
             } catch (err) {
-                alert('Failed to kick player.');
+                toast.show('Failed to kick player.', 'error');
             }
         }
     };
@@ -142,7 +144,7 @@ const PlayersPage: React.FC = () => {
 
     const handleAddWhitelistConfirm = async () => {
         if (addWhitelistSearchQuery.trim() === '') {
-            alert('Please enter a player name or ID.');
+            toast.show('Please enter a player name or ID.', 'warning');
             return;
         }
 
@@ -159,12 +161,12 @@ const PlayersPage: React.FC = () => {
                 setTimeout(() => handleAddWhitelistClose(), 600);
             } else {
                 setAddWhitelistSubmitting(false);
-                alert('Player not found or already whitelisted.');
+                toast.show('Player not found or already whitelisted.', 'info');
             }
         } catch (err) {
             console.error('Failed to add player to whitelist', err);
             setAddWhitelistSubmitting(false);
-            alert('Failed to add player to whitelist.');
+            toast.show('Failed to add player to whitelist.', 'error');
         }
     };
 
@@ -390,7 +392,7 @@ const PlayersPage: React.FC = () => {
                     <MenuItem onClick={() => menuPlayerId && handleToggleWhitelistFromMenu(menuPlayerId)}>
                         {whitelistedPlayers.some(p => p.id === menuPlayerId) ? 'Remove from Whitelist' : 'Add to Whitelist'}
                     </MenuItem>
-                    <MenuItem onClick={() => alert('Ban feature - to be implemented')}>
+                    <MenuItem onClick={() => toast.show('Ban feature - to be implemented', 'info')}>
                         Ban
                     </MenuItem>
                 </Menu>
