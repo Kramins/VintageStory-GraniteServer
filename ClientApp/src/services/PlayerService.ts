@@ -2,6 +2,7 @@ import axios from 'axios';
 import type { PlayerDTO } from '../types/PlayerDTO';
 import type { PlayerDetailsDTO } from '../types/PlayerDetailsDTO';
 import type { UpdateInventorySlotRequestDTO } from '../types/UpdateInventorySlotRequestDTO';
+import type { PlayerNameIdDTO } from '../types/PlayerNameIdDTO';
 
 const API_BASE = '/api/players';
 
@@ -50,6 +51,11 @@ export const PlayerService = {
     },
     async removeItemFromInventory(playerId: string, inventoryName: string, slotIndex: number): Promise<void> {
         await axios.delete(`${API_BASE}/id/${playerId}/inventories/${inventoryName}/${slotIndex}`);
+    },
+
+    async findPlayerByName(name: string): Promise<PlayerNameIdDTO> {
+        const response = await axios.get(`${API_BASE}/find`, { params: { name } });
+        return response.data;
     }
 
 
