@@ -31,6 +31,7 @@ public class ServerController
     [ResourceMethod(RequestMethod.Post, "/announce/")]
     public object Announce(string message)
     {
+        // To be implemented: broadcast message to players
         throw new NotImplementedException();
     }
 
@@ -57,14 +58,7 @@ public class ServerController
         return response;
     }
 
-    /// <summary>
-    /// Stop the server
-    /// </summary>
-    [ResourceMethod(RequestMethod.Post, "/stop/")]
-    public object StopServer(int? exitCode = null)
-    {
-        throw new NotImplementedException();
-    }
+    // Stop server endpoint removed
 
     [ResourceMethod(RequestMethod.Get, "/config")]
     public async Task<ServerConfigDTO> GetServerConfigAsync()

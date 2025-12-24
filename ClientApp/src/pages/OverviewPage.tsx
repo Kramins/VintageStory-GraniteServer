@@ -207,24 +207,6 @@ const OverviewPage: React.FC = () => {
                             </Typography>
                             <Box display="flex" flexDirection="column" gap={1}>
                                 <Chip
-                                    label="Start Server"
-                                    color="success"
-                                    variant="outlined"
-                                    clickable
-                                />
-                                <Chip
-                                    label="Stop Server"
-                                    color="error"
-                                    variant="outlined"
-                                    clickable
-                                />
-                                <Chip
-                                    label="Restart Server"
-                                    color="warning"
-                                    variant="outlined"
-                                    clickable
-                                />
-                                <Chip
                                     label="Save World"
                                     color="info"
                                     variant="outlined"
