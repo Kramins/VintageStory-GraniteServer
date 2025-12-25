@@ -66,8 +66,9 @@
   <Target Name="BuildWebApp" BeforeTargets="BeforeBuild" Condition=" '$(BuildWebApp)' == 'true' ">
     <RemoveDir Directories="resources/wwwroot" />
     <MakeDir Directories="resources/wwwroot" />
-    <Exec WorkingDirectory="ClientApp" Command="npm install" />
-    <Exec WorkingDirectory="ClientApp" Command="npm run build" />
+    <Exec WorkingDirectory="../ClientApp" Command="npm install" />
+    <Exec WorkingDirectory="../ClientApp" Command="npm run build" />
+
     <!-- Add explicit verification -->
     <Message Importance="high" Text="Verifying wwwroot contents..." />
     <ItemGroup>
@@ -109,5 +110,17 @@
   >
     <Message Importance="high" Text="Updating modinfo.json version to $(modinfoVersion)" />
     <Exec Command="jq --arg v '$(modinfoVersion)' '.version = $v' resources/modinfo.json > resources/modinfo.tmp &amp;&amp; mv resources/modinfo.tmp resources/modinfo.json" />
+  </Target>
+  <Target Name="CopyClientAppDist" AfterTargets="BuildWebApp">
+    <Message Importance="high" Text="Copying ClientApp dist files to resources/wwwroot..." />
+    <ItemGroup>
+      <DistFiles Include="../ClientApp/dist/**/*" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(DistFiles)"
+      DestinationFolder="resources/wwwroot/%(RecursiveDir)"
+      SkipUnchangedFiles="true"
+    />
+    <Message Importance="high" Text="Copied @(DistFiles->Count()) files to resources/wwwroot." />
   </Target>
 </Project>

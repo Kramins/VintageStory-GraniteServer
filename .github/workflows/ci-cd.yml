@@ -44,7 +44,7 @@ jobs:
         run: dotnet restore GraniteServer.sln
 
       - name: Build Debug version
-        run: dotnet build -c Debug GraniteServer.csproj /p:BuildWebApp=true
+        run: dotnet build -c Debug GraniteServerMod/GraniteServerMod.csproj /p:BuildWebApp=true
 
       - name: Run .NET tests
         if: github.event_name == 'pull_request'
@@ -96,12 +96,12 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Build Release version
-        run: dotnet build -c Release GraniteServer.csproj /p:BuildWebApp=true /p:modinfoVersion=${{ steps.extract_version.outputs.version }}
+        run: dotnet build -c Release GraniteServerMod/GraniteServerMod.csproj /p:BuildWebApp=true /p:modinfoVersion=${{ steps.extract_version.outputs.version }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: bin/mods/*
+          files: GraniteServerMod/bin/mods/*
           draft: false
           prerelease: ${{ contains(github.ref, '-RC') || contains(github.ref, '-rc') }}
           generate_release_notes: true

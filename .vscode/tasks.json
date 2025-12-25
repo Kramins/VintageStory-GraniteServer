@@ -9,7 +9,7 @@
                 "build",
                 "-c",
                 "Debug",
-                "${workspaceFolder}/GraniteServer.csproj",
+                "${workspaceFolder}/GraniteServerMod/GraniteServerMod.csproj",
                 "/p:BuildWebApp=true"
             ],
             "problemMatcher": "$msCompile"
@@ -22,7 +22,7 @@
                 "build",
                 "-c",
                 "Release",
-                "${workspaceFolder}/GraniteServer.csproj",
+                "${workspaceFolder}/GraniteServerMod/GraniteServerMod.csproj",
                 "/p:BuildWebApp=true",
                 "/p:modinfoVersion=${input:versionNumber}"
             ],
@@ -36,7 +36,7 @@
                 "build",
                 "-c",
                 "Debug",
-                "${workspaceFolder}/GraniteServer.csproj"
+                "${workspaceFolder}/GraniteServerMod/GraniteServerMod.csproj"
             ],
             "problemMatcher": "$msCompile"
         },

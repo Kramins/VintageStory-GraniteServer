@@ -15,7 +15,7 @@
                 "--dataPath",
                 "/data",
                 "--addModPath",
-                "${workspaceFolder}/bin/mods"
+                "${workspaceFolder}/GraniteServerMod/bin/mods"
             ],
             "console": "internalConsole",
             "stopAtEntry": false
@@ -31,7 +31,7 @@
                 "--dataPath",
                 "/data",
                 "--addModPath",
-                "${workspaceFolder}/bin/mods"
+                "${workspaceFolder}/GraniteServerMod/bin/mods"
             ],
             "console": "internalConsole",
             "stopAtEntry": false
@@ -45,7 +45,7 @@
             "args": [
                 "--tracelog",
                 "--addModPath",
-                "${workspaceFolder}/bin/mods"
+                "${workspaceFolder}/GraniteServerMod/bin/mods"
             ],
             "console": "internalConsole",
             "stopAtEntry": false
