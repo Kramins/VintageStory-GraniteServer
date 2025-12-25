@@ -217,7 +217,7 @@ public class PlayerService
     /// </summary>
     /// <param name="playerId">The unique ID of the player to disconnect.</param>
     /// <param name="reason">The reason for disconnecting the player.</param>
-    public async Task KickPlayerAsync(
+    public async Task<string> KickPlayerAsync(
         string playerId,
         string reason,
         bool waitForDisconnect = false
@@ -229,7 +229,7 @@ public class PlayerService
             try
             {
                 // player.Disconnect(reason);
-                await _commandService.KickUserAsync(player.PlayerName, reason);
+                var result = await _commandService.KickUserAsync(player.PlayerName, reason);
             }
             catch (Exception)
             {
@@ -250,7 +250,9 @@ public class PlayerService
                     attempts++;
                 } while (!isDisconnected && attempts < 10);
             }
+            return $"Player {playerId} kicked.";
         }
+        return $"Player {playerId} not found or already offline.";
     }
 
     /// <summary>

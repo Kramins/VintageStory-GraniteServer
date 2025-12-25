@@ -1,11 +1,15 @@
 import { RouterProvider } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+// ThemeProvider not used directly
 import CssBaseline from '@mui/material/CssBaseline';
 
 import './App.css';
 
 import router from './routes';
 import AuthInitializer from './components/AuthInitializer';
+import DisconnectedModal from './components/DisconnectedModal';
+import { useServerStatusMonitor } from './hooks/useServerStatusMonitor';
+import { useAppSelector } from './store/store';
+import { ToastProvider } from './components/ToastProvider';
 
 // import type {} from '@mui/x-date-pickers/themeAugmentation';
 // import type {} from '@mui/x-charts/themeAugmentation';
@@ -34,21 +38,22 @@ const xThemeComponents = {
   // ...treeViewCustomizations,
 };
 
-const darkTheme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#8B4513', // Vintage brown color
-    },
-    secondary: {
-      main: '#D2691E', // Orange accent
-    },
-    background: {
-      default: '#1a1a1a',
-      paper: '#2d2d2d',
-    },
-  },
-});
+function AppContent() {
+  const { retryConnection } = useServerStatusMonitor();
+  const { isServerConnected, disconnectionReason } = useAppSelector(state => state.ui);
+
+  return (
+    <>
+      <DisconnectedModal
+        open={!isServerConnected}
+        onRetry={retryConnection}
+        reason={disconnectionReason}
+      />
+      <AuthInitializer />
+      <RouterProvider router={router} />
+    </>
+  );
+}
 
 function App(props: { disableCustomTheme?: boolean }) {
   return (
@@ -58,8 +63,9 @@ function App(props: { disableCustomTheme?: boolean }) {
     // </ThemeProvider>
       <AppTheme {...props} themeComponents={xThemeComponents}>
         <CssBaseline enableColorScheme />
-        <AuthInitializer />
-        <RouterProvider router={router} />
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
       </AppTheme>
   );
 }
