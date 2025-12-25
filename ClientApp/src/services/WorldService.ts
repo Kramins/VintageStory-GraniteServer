@@ -10,6 +10,10 @@ const WorldService = {
         const response = await axios.get<CollectibleObjectDTO[]>(`${API_BASE}/collectibles`);
         return response.data;
     },
+    
+    async saveNow(): Promise<any> {
+        return axios.post(`${API_BASE}/save`);
+    },
 
  
 };

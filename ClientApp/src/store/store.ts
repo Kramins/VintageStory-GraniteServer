@@ -9,6 +9,7 @@ import serverReducer from './slices/serverSlice'
 import serverConfigReducer from './slices/serverConfigSlice'
 import worldReducer from './slices/collectiblesSlice'
 import authReducer from './slices/authSlice'
+import uiReducer from './slices/uiSlice'
 
 const store = configureStore({
     reducer: {
@@ -18,6 +19,7 @@ const store = configureStore({
         serverConfig: serverConfigReducer,
         world: worldReducer,
         auth: authReducer,
+        ui: uiReducer,
     },
 });
 

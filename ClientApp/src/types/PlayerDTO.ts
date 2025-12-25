@@ -11,4 +11,12 @@ export interface PlayerDTO {
     lastJoinDate: string;
     privileges: string[];
     connectionState: string;
+    isBanned: boolean;
+    isWhitelisted: boolean;
+    banReason?: string | null;
+    banBy?: string | null;
+    banUntil?: string | null;
+    whitelistedReason?: string | null;
+    whitelistedBy?: string | null;
+    whitelistedUntil?: string | null;
 }

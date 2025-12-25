@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ServerService from '../services/ServerService';
+import WorldService from '../services/WorldService';
+import { useToast } from '../components/ToastProvider';
 import type { ServerStatusDTO } from '../types/ServerStatusDTO';
 import {
     Box,
@@ -15,6 +17,7 @@ import {
     AccessTime as UptimeIcon,
     Memory as MemoryIcon,
 } from '@mui/icons-material';
+import AnnounceModal from '../components/AnnounceModal';
 
 const StatCard: React.FC<{
     title: string;
@@ -42,9 +45,12 @@ const StatCard: React.FC<{
 );
 
 const OverviewPage: React.FC = () => {
+    const toast = useToast();
     const [status, setStatus] = useState<ServerStatusDTO | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [saving, setSaving] = useState(false);
+    const [announceOpen, setAnnounceOpen] = useState(false);
 
     useEffect(() => {
         ServerService.getStatus()
@@ -57,6 +63,32 @@ const OverviewPage: React.FC = () => {
                 setLoading(false);
             });
     }, []);
+
+    const handleSaveWorld = async () => {
+        if (saving) return;
+        setSaving(true);
+        try {
+            await WorldService.saveNow();
+            toast.show('World saved successfully.', 'success');
+        } catch (e: any) {
+            if (e?.response?.status === 401) {
+                toast.show('Please log in to save the world.', 'info');
+            } else {
+                toast.show('Failed to save world. Please try again.', 'error');
+            }
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleAnnounce = async (message: string) => {
+        try {
+            await ServerService.announce(message);
+            toast.show('Message announced successfully.', 'success');
+        } catch (e: any) {
+            toast.show('Failed to announce message. Please try again.', 'error');
+        }
+    };
 
     if (loading) {
         return <Typography>Loading server status...</Typography>;
@@ -174,7 +206,7 @@ const OverviewPage: React.FC = () => {
                         </CardContent>
                     </Card>
                 </Box>
-                {/* Quick Actions remain unchanged */}
+                {/* Quick Actions */}
                 <Box flex="0 0 300px">
                     <Card>
                         <CardContent>
@@ -183,34 +215,30 @@ const OverviewPage: React.FC = () => {
                             </Typography>
                             <Box display="flex" flexDirection="column" gap={1}>
                                 <Chip
-                                    label="Start Server"
-                                    color="success"
-                                    variant="outlined"
-                                    clickable
-                                />
-                                <Chip
-                                    label="Stop Server"
-                                    color="error"
-                                    variant="outlined"
-                                    clickable
-                                />
-                                <Chip
-                                    label="Restart Server"
-                                    color="warning"
-                                    variant="outlined"
-                                    clickable
-                                />
-                                <Chip
                                     label="Save World"
                                     color="info"
                                     variant="outlined"
                                     clickable
+                                    onClick={handleSaveWorld}
+                                    disabled={saving}
+                                />
+                                <Chip
+                                    label="Announce Message"
+                                    color="primary"
+                                    variant="outlined"
+                                    clickable
+                                    onClick={() => setAnnounceOpen(true)}
                                 />
                             </Box>
                         </CardContent>
                     </Card>
                 </Box>
             </Box>
+            <AnnounceModal
+                open={announceOpen}
+                onClose={() => setAnnounceOpen(false)}
+                onSubmit={handleAnnounce}
+            />
         </Box>
     );
 };

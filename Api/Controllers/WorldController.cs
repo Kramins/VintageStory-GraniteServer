@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using GenHTTP.Api.Protocol;
+using GenHTTP.Engine.Shared.Types;
 using GenHTTP.Modules.Webservices;
 using GraniteServer.Api.Models;
 using GraniteServer.Api.Services;
@@ -21,5 +22,12 @@ public class WorldController
     public Task<List<CollectibleObjectDTO>> GetAllCollectiblesAsync()
     {
         return _worldService.GetAllCollectiblesAsync();
+    }
+
+    [ResourceMethod(RequestMethod.Post, "/save")]
+    public async Task<string> SaveWorldAsync()
+    {
+        var result = await _worldService.SaveWorldAsync();
+        return result;
     }
 }

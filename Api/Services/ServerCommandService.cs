@@ -8,7 +8,7 @@ namespace GraniteServer.Api.Services;
 
 public class ServerCommandService
 {
-    private readonly ICoreAPI _api;
+    private readonly ICoreServerAPI _api;
 
     public ServerCommandService(ICoreServerAPI api)
     {
@@ -21,37 +21,66 @@ public class ServerCommandService
         return result?.StatusMessage ?? "Failed to retrieve player list";
     }
 
+    public async Task<string> AutoSaveWorldAsync()
+    {
+        var result = await ExecuteCommandAsync("autosavenow", new CmdArgs());
+        return result?.StatusMessage ?? "Failed to save world";
+    }
+
+    public async Task<string> AnnounceMessageAsync(string message)
+    {
+        var args = new CmdArgs([message]);
+        var result = await ExecuteCommandAsync("announce", args);
+        return result?.StatusMessage ?? "Failed to announce message";
+    }
+
     private async Task<TextCommandResult?> ExecuteCommandAsync(string command, CmdArgs args)
     {
         var tcs = new TaskCompletionSource<TextCommandResult?>();
 
-        _api.ChatCommands.Execute(
-            command,
-            new TextCommandCallingArgs()
+        _api.Event.EnqueueMainThreadTask(
+            () =>
             {
-                Caller = new Caller
+                var commandHandler = _api.ChatCommands.Get(command);
+                try
                 {
-                    Type = EnumCallerType.Console,
-                    CallerRole = "admin",
-                    CallerPrivileges = new string[] { "*" },
-                    FromChatGroupId = GlobalConstants.ConsoleGroup,
-                },
-                RawArgs = args,
+                    commandHandler.Execute(
+                        new TextCommandCallingArgs()
+                        {
+                            Caller = new Caller
+                            {
+                                Type = EnumCallerType.Console,
+                                CallerRole = "admin",
+                                CallerPrivileges = new string[] { "*" },
+                                FromChatGroupId = GlobalConstants.ConsoleGroup,
+                            },
+                            RawArgs = args,
+                        },
+                        result =>
+                        {
+                            if (tcs.Task.IsCompleted)
+                            {
+                                return;
+                            }
+                            tcs.TrySetResult(result);
+                        }
+                    );
+                }
+                catch (Exception ex)
+                {
+                    tcs.TrySetException(ex);
+                }
             },
-            (TextCommandResult result) =>
-            {
-                _api.Logger.Notification(result.StatusMessage);
-                tcs.SetResult(result);
-            }
+            "ExecuteServerCommand"
         );
-
-        return await tcs.Task;
+        var result = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        return result;
     }
 
     public async Task<string> KickUserAsync(string playerName, string reason)
     {
         var args = new CmdArgs([playerName, reason]);
         var result = await ExecuteCommandAsync("kick", args);
-        return result?.StatusMessage ?? $"Failed to kick player {playerName}";
+        return result.StatusMessage ?? $"Failed to kick player {playerName}";
     }
 }

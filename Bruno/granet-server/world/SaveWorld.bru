@@ -1,0 +1,24 @@
+meta {
+  name: SaveWorld
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://{{HOST}}/api/world/save
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:multipart-form {
+  playername: Dalraz
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

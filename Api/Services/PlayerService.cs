@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,6 +15,12 @@ public class PlayerService
 {
     private readonly ICoreServerAPI _api;
     private readonly ServerCommandService _commandService;
+
+    private readonly ConcurrentDictionary<string, string> _nameToIdCache =
+        new ConcurrentDictionary<string, string>();
+
+    private readonly ConcurrentDictionary<string, string> _idToNameCache =
+        new ConcurrentDictionary<string, string>();
 
     public PlayerService(ICoreServerAPI api, ServerCommandService commandService)
     {
@@ -83,22 +90,37 @@ public class PlayerService
     /// <returns>A list of PlayerDTO objects representing all players.</returns>
     public async Task<List<PlayerDTO>> GetAllPlayersAsync()
     {
-        var allPlayerData = _api.PlayerData.PlayerDataByUid.Values.ToList();
-        var allServerPlayers = _api.Server.Players.ToList();
+        var allPlayerData = _api.PlayerData.PlayerDataByUid;
+        var allServerPlayers = _api.Server.Players.ToDictionary(p => p.PlayerUID);
         var allBannedPlayers = PlayerDataManager.BannedPlayers;
         var allWhitelistedPlayers = PlayerDataManager.WhitelistedPlayers;
 
-        var fullList =
-            from pd in allPlayerData
-            join sp in allServerPlayers on pd.PlayerUID equals sp.PlayerUID into ps
-            from sp in ps.DefaultIfEmpty()
-            join bp in allBannedPlayers on pd.PlayerUID equals bp.PlayerUID into bps
-            from bp in bps.DefaultIfEmpty()
-            join wp in allWhitelistedPlayers on pd.PlayerUID equals wp.PlayerUID into wps
-            from wp in wps.DefaultIfEmpty()
-            select MapToPlayerDTO(pd, sp, bp, wp);
+        // Build quick lookups keyed by player ID
+        var bannedById = allBannedPlayers
+            .GroupBy(bp => bp.PlayerUID)
+            .ToDictionary(g => g.Key, g => g.First());
+        var whitelistedById = allWhitelistedPlayers
+            .GroupBy(wp => wp.PlayerUID)
+            .ToDictionary(g => g.Key, g => g.First());
 
-        return await Task.FromResult(fullList.ToList());
+        // Union all known player IDs from any source (seen, online, banned, whitelisted)
+        var allIds = new HashSet<string>(allPlayerData.Keys);
+        allIds.UnionWith(allServerPlayers.Keys);
+        allIds.UnionWith(bannedById.Keys);
+        allIds.UnionWith(whitelistedById.Keys);
+
+        var fullList = allIds
+            .Select(id =>
+            {
+                allPlayerData.TryGetValue(id, out var pd);
+                allServerPlayers.TryGetValue(id, out var sp);
+                bannedById.TryGetValue(id, out var bp);
+                whitelistedById.TryGetValue(id, out var wp);
+                return MapToPlayerDTO(id, pd, sp, bp, wp);
+            })
+            .ToList();
+
+        return await Task.FromResult(fullList);
     }
 
     /// <summary>
@@ -195,7 +217,7 @@ public class PlayerService
     /// </summary>
     /// <param name="playerId">The unique ID of the player to disconnect.</param>
     /// <param name="reason">The reason for disconnecting the player.</param>
-    public async Task KickPlayerAsync(
+    public async Task<string> KickPlayerAsync(
         string playerId,
         string reason,
         bool waitForDisconnect = false
@@ -207,7 +229,7 @@ public class PlayerService
             try
             {
                 // player.Disconnect(reason);
-                await _commandService.KickUserAsync(player.PlayerName, reason);
+                var result = await _commandService.KickUserAsync(player.PlayerName, reason);
             }
             catch (Exception)
             {
@@ -228,7 +250,9 @@ public class PlayerService
                     attempts++;
                 } while (!isDisconnected && attempts < 10);
             }
+            return $"Player {playerId} kicked.";
         }
+        return $"Player {playerId} not found or already offline.";
     }
 
     /// <summary>
@@ -395,24 +419,32 @@ public class PlayerService
     }
 
     private PlayerDTO MapToPlayerDTO(
-        IServerPlayerData pd,
-        IServerPlayer sp,
-        PlayerEntry bp,
-        PlayerEntry wp
+        string playerId,
+        IServerPlayerData? pd,
+        IServerPlayer? sp,
+        PlayerEntry? bp,
+        PlayerEntry? wp
     )
     {
+        var resolvedName =
+            pd?.LastKnownPlayername
+            ?? sp?.PlayerName
+            ?? bp?.PlayerName
+            ?? wp?.PlayerName
+            ?? playerId;
+
         var playerDto = new PlayerDTO
         {
-            Id = pd.PlayerUID,
-            Name = pd.LastKnownPlayername,
+            Id = playerId,
+            Name = resolvedName,
             IpAddress = sp?.IpAddress ?? "Offline",
             LanguageCode = sp?.LanguageCode ?? "N/A",
             ConnectionState = sp?.ConnectionState.ToString() ?? "Offline",
             Ping = sp == null || float.IsNaN(sp.Ping) ? 0 : sp.Ping,
             RolesCode = sp?.Role.Code ?? "N/A",
-            FirstJoinDate = pd.FirstJoinDate,
-            LastJoinDate = pd.LastJoinDate,
-            Privileges = sp?.Privileges.ToArray() ?? new string[0],
+            FirstJoinDate = pd?.FirstJoinDate ?? string.Empty,
+            LastJoinDate = pd?.LastJoinDate ?? string.Empty,
+            Privileges = sp?.Privileges.ToArray() ?? Array.Empty<string>(),
             IsAdmin = false,
             IsBanned = bp != null,
             BanReason = bp?.Reason,
@@ -427,8 +459,9 @@ public class PlayerService
         return playerDto;
     }
 
-    private async Task<string> ResolvePlayerIdByName(string name)
+    private async Task<string> ResolvePlayerIdByName(string name, bool useCache = true)
     {
+        var loweredName = name.ToLower();
         var player = _api.Server.Players.FirstOrDefault(p =>
             p.PlayerName.Equals(name, StringComparison.OrdinalIgnoreCase)
         );
@@ -437,20 +470,28 @@ public class PlayerService
             return player.PlayerUID;
         }
 
-        // For players the server has never seen
+        if (useCache && _nameToIdCache.TryGetValue(loweredName, out var cachedId))
+        {
+            return cachedId;
+        }
+
+        // For players the server has never seen, we want to minimize calls to AuthServerComm
         var playerResponseTask = new TaskCompletionSource<string>();
-        PlayerDataManager.ResolvePlayerName(
+        AuthServerComm.ResolvePlayerName(
             name,
             (response, data) =>
             {
                 playerResponseTask.TrySetResult(data);
             }
         );
+
         var playerId = await playerResponseTask.Task;
+        _nameToIdCache.AddOrUpdate(loweredName, playerId, (_, __) => playerId);
+        _idToNameCache.AddOrUpdate(playerId, loweredName, (_, __) => loweredName);
         return playerId;
     }
 
-    private async Task<string> ResolvePlayerNameById(string id)
+    private async Task<string> ResolvePlayerNameById(string id, bool useCache = true)
     {
         // Check if the server has data on the player first
         var player = (await GetAllPlayersAsync()).FirstOrDefault(p => p.Id == id);
@@ -459,20 +500,26 @@ public class PlayerService
             return player.Name;
         }
 
-        // For players the server has never seen
+        if (useCache && _idToNameCache.TryGetValue(id, out var cachedName))
+        {
+            return cachedName;
+        }
+
+        // For players the server has never seen, we want to minimize calls to AuthServerComm
         var playerResponseTask = new TaskCompletionSource<string>();
-        // TODO: Investigate why this returns the correct name but will cause a `System.Threading.Tasks.Task' does not contain a definition for 'Result'` to be thrown by the caller
-        PlayerDataManager.ResolvePlayerUid(
+        AuthServerComm.ResolvePlayerUid(
             id,
             (response, data) =>
             {
-                if (response == EnumServerResponse.Good)
-                {
-                    playerResponseTask.TrySetResult(data);
-                }
+                playerResponseTask.TrySetResult(data);
             }
         );
+
         var playerName = await playerResponseTask.Task;
+        var loweredName = playerName.ToLower();
+        _idToNameCache.AddOrUpdate(id, loweredName, (_, __) => loweredName);
+        _nameToIdCache.AddOrUpdate(loweredName, id, (_, __) => id);
+
         return playerName;
     }
 }

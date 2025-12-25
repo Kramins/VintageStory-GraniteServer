@@ -28,19 +28,10 @@ public class ServerController
     /// <summary>
     /// Announce a message to all players
     /// </summary>
-    [ResourceMethod(RequestMethod.Post, "/announce/")]
-    public object Announce(string message)
+    [ResourceMethod(RequestMethod.Post, "/announce")]
+    public async Task<string> AnnounceAsync(AnnounceMessageDTO request)
     {
-        throw new NotImplementedException();
-    }
-
-    /// <summary>
-    /// Trigger an immediate autosave
-    /// </summary>
-    [ResourceMethod(RequestMethod.Post, "/save")]
-    public object SaveNow()
-    {
-        throw new NotImplementedException();
+        return await _serverService.AnnounceMessageAsync(request.Message);
     }
 
     [ResourceMethod(RequestMethod.Get, "/status")]
@@ -66,14 +57,7 @@ public class ServerController
         return response;
     }
 
-    /// <summary>
-    /// Stop the server
-    /// </summary>
-    [ResourceMethod(RequestMethod.Post, "/stop/")]
-    public object StopServer(int? exitCode = null)
-    {
-        throw new NotImplementedException();
-    }
+    // Stop server endpoint removed
 
     [ResourceMethod(RequestMethod.Get, "/config")]
     public async Task<ServerConfigDTO> GetServerConfigAsync()

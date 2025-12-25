@@ -14,17 +14,23 @@ import {
     DialogContentText,
     TextField,
     DialogActions,
+    IconButton,
+    Menu,
+    MenuItem,
+    CircularProgress,
 } from '@mui/material';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { DataGrid } from '@mui/x-data-grid';
 import {
-    Block as BlockIcon,
     Refresh as RefreshIcon,
+    MoreVert as MoreVertIcon,
+    Check as CheckIcon,
 } from '@mui/icons-material';
 import { PlayerService } from '../services/PlayerService'
 import type { PlayerDTO } from '../types/PlayerDTO';
 import { useAppDispatch, useAppSelector } from '../store/store';
 import { fetchAllPlayers } from '../store/slices/playersSlice';
+import { useToast } from '../components/ToastProvider';
 
 // Temporary mapping for demo, since server DTO only has Id, Name, IsAdmin
 // Map PlayerDTO to table row data for display
@@ -47,27 +53,56 @@ const PlayersPage: React.FC = () => {
     const dispatch = useAppDispatch();
     const players = useAppSelector((state) => state.players.players as PlayerDTO[]);
     const loading = useAppSelector((state) => state.players.loading as boolean);
+    const toast = useToast();
 
     useEffect(() => {
         dispatch(fetchAllPlayers());
     }, [dispatch]);
 
-    const handleKick = async (playerId: string) => {
-        handleKickClick(playerId);
-    };
-
     const handleRefresh = () => {
         dispatch(fetchAllPlayers());
+    };
+
+    const handleToggleWhitelist = async (playerId: string) => {
+        try {
+            const isWhitelisted = whitelistedPlayers.some(p => p.id === playerId);
+            
+            if (isWhitelisted) {
+                await PlayerService.unWhitelistPlayer(playerId);
+            } else {
+                await PlayerService.whitelistPlayer(playerId);
+            }
+            
+            // Refresh data based on current tab
+            dispatch(fetchAllPlayers());
+            if (tabValue === 2) {
+                fetchWhitelistedPlayers();
+            }
+        } catch (err) {
+            toast.show('Failed to update whitelist status.', 'error');
+        }
     };
 
     const [kickDialogOpen, setKickDialogOpen] = React.useState(false);
     const [kickTargetId, setKickTargetId] = React.useState<string | null>(null);
     const [kickReason, setKickReason] = React.useState('Kicked by an administrator.');
+    const [menuAnchor, setMenuAnchor] = React.useState<null | HTMLElement>(null);
+    const [menuPlayerId, setMenuPlayerId] = React.useState<string | null>(null);
 
     const handleKickClick = (playerId: string) => {
         setKickTargetId(playerId);
         setKickReason('Kicked by an administrator.');
         setKickDialogOpen(true);
+    };
+
+    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, playerId: string) => {
+        setMenuAnchor(event.currentTarget);
+        setMenuPlayerId(playerId);
+    };
+
+    const handleMenuClose = () => {
+        setMenuAnchor(null);
+        setMenuPlayerId(null);
     };
 
     const handleKickConfirm = async () => {
@@ -77,7 +112,7 @@ const PlayersPage: React.FC = () => {
                 dispatch(fetchAllPlayers());
                 setKickDialogOpen(false);
             } catch (err) {
-                alert('Failed to kick player.');
+                toast.show('Failed to kick player.', 'error');
             }
         }
     };
@@ -88,12 +123,63 @@ const PlayersPage: React.FC = () => {
         setKickReason('Kicked by an administrator.');
     };
 
+    const handleToggleWhitelistFromMenu = (playerId: string) => {
+        handleToggleWhitelist(playerId);
+        handleMenuClose();
+    };
+
+    const handleAddWhitelistOpen = () => {
+        setAddWhitelistDialogOpen(true);
+        setAddWhitelistSearchQuery('');
+        setAddWhitelistSubmitting(false);
+        setAddWhitelistSuccess(false);
+    };
+
+    const handleAddWhitelistClose = () => {
+        setAddWhitelistDialogOpen(false);
+        setAddWhitelistSearchQuery('');
+        setAddWhitelistSubmitting(false);
+        setAddWhitelistSuccess(false);
+    };
+
+    const handleAddWhitelistConfirm = async () => {
+        if (addWhitelistSearchQuery.trim() === '') {
+            toast.show('Please enter a player name or ID.', 'warning');
+            return;
+        }
+
+        try {
+            setAddWhitelistSubmitting(true);
+            setAddWhitelistSuccess(false);
+            const result = await PlayerService.findPlayerByName(addWhitelistSearchQuery);
+            if (result && !whitelistedPlayers.some(w => w.id === result.id)) {
+                await PlayerService.whitelistPlayer(result.id);
+                dispatch(fetchAllPlayers());
+                fetchWhitelistedPlayers();
+                setAddWhitelistSubmitting(false);
+                setAddWhitelistSuccess(true);
+                setTimeout(() => handleAddWhitelistClose(), 600);
+            } else {
+                setAddWhitelistSubmitting(false);
+                toast.show('Player not found or already whitelisted.', 'info');
+            }
+        } catch (err) {
+            console.error('Failed to add player to whitelist', err);
+            setAddWhitelistSubmitting(false);
+            toast.show('Failed to add player to whitelist.', 'error');
+        }
+    };
+
     const [tabValue, setTabValue] = React.useState(0);
     const [paginationModel, setPaginationModel] = React.useState({ page: 0, pageSize: 20 });
     const [whitelistedPlayers, setWhitelistedPlayers] = React.useState<PlayerDTO[]>([]);
     const [bannedPlayers, setBannedPlayers] = React.useState<PlayerDTO[]>([]);
     const [whitelistedLoading, setWhitelistedLoading] = React.useState(false);
     const [bannedLoading, setBannedLoading] = React.useState(false);
+    const [addWhitelistDialogOpen, setAddWhitelistDialogOpen] = React.useState(false);
+    const [addWhitelistSearchQuery, setAddWhitelistSearchQuery] = React.useState('');
+    const [addWhitelistSubmitting, setAddWhitelistSubmitting] = React.useState(false);
+    const [addWhitelistSuccess, setAddWhitelistSuccess] = React.useState(false);
 
     const fetchWhitelistedPlayers = async () => {
         setWhitelistedLoading(true);
@@ -191,28 +277,18 @@ const PlayersPage: React.FC = () => {
         {
             field: 'actions',
             headerName: 'Actions',
-            width: 130,
+            width: 80,
             sortable: false,
-            renderCell: (params: GridRenderCellParams) => (
-                <Box display="flex" gap={0.5}>
-                    <Button
+            renderCell: (params: GridRenderCellParams) => {
+                return (
+                    <IconButton
                         size="small"
-                        variant="outlined"
-                        onClick={() => handleKick(params.row.id)}
-                        sx={{ fontSize: '0.7rem', padding: '4px 8px' }}
+                        onClick={(e) => handleMenuOpen(e, params.row.id)}
                     >
-                        Kick
-                    </Button>
-                    <Button
-                        size="small"
-                        variant="outlined"
-                        color="error"
-                        sx={{ padding: '4px 8px' }}
-                    >
-                        <BlockIcon fontSize="small" />
-                    </Button>
-                </Box>
-            ),
+                        <MoreVertIcon fontSize="small" />
+                    </IconButton>
+                );
+            },
         },
     ];
 
@@ -249,12 +325,23 @@ const PlayersPage: React.FC = () => {
                         </Button>
                     </Box>
                     <Box sx={{ height: 600, width: '100%' }}>
-                        <Tabs value={tabValue} onChange={handleTabChange}>
-                            <Tab label="All Players" />
-                            <Tab label="Online" />
-                            <Tab label="Whitelisted" />
-                            <Tab label="Banned" />
-                        </Tabs>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 1 }}>
+                            <Tabs value={tabValue} onChange={handleTabChange}>
+                                <Tab label="All Players" />
+                                <Tab label="Online" />
+                                <Tab label="Whitelisted" />
+                                <Tab label="Banned" />
+                            </Tabs>
+                            {tabValue === 2 && (
+                                <Button
+                                    variant="contained"
+                                    size="small"
+                                    onClick={handleAddWhitelistOpen}
+                                >
+                                    Add Player
+                                </Button>
+                            )}
+                        </Box>
                         
                         <DataGrid
                             rows={tablePlayers}
@@ -290,6 +377,56 @@ const PlayersPage: React.FC = () => {
                         <Button onClick={handleKickCancel}>Cancel</Button>
                         <Button onClick={handleKickConfirm} variant="contained" color="error">
                             Kick
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                <Menu
+                    anchorEl={menuAnchor}
+                    open={Boolean(menuAnchor)}
+                    onClose={handleMenuClose}
+                >
+                    <MenuItem onClick={() => menuPlayerId && handleKickClick(menuPlayerId)}>
+                        Kick
+                    </MenuItem>
+                    <MenuItem onClick={() => menuPlayerId && handleToggleWhitelistFromMenu(menuPlayerId)}>
+                        {whitelistedPlayers.some(p => p.id === menuPlayerId) ? 'Remove from Whitelist' : 'Add to Whitelist'}
+                    </MenuItem>
+                    <MenuItem onClick={() => toast.show('Ban feature - to be implemented', 'info')}>
+                        Ban
+                    </MenuItem>
+                </Menu>
+
+                <Dialog open={addWhitelistDialogOpen} onClose={handleAddWhitelistClose} maxWidth="sm" fullWidth>
+                    <DialogTitle>Add Player to Whitelist</DialogTitle>
+                    <DialogContent>
+                        <Box sx={{ pt: 2 }}>
+                            <TextField
+                                fullWidth
+                                placeholder="Search by player name or ID..."
+                                value={addWhitelistSearchQuery}
+                                onChange={(e) => setAddWhitelistSearchQuery(e.target.value)}
+                                variant="outlined"
+                                size="small"
+                            />
+                        </Box>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleAddWhitelistClose}>Cancel</Button>
+                        <Button 
+                            onClick={handleAddWhitelistConfirm} 
+                            variant="contained" 
+                            color="primary"
+                            disabled={addWhitelistSubmitting || addWhitelistSuccess}
+                            startIcon={addWhitelistSuccess ? <CheckIcon /> : undefined}
+                        >
+                            {addWhitelistSubmitting && !addWhitelistSuccess ? (
+                                <CircularProgress size={18} color="inherit" />
+                            ) : addWhitelistSuccess ? (
+                                'Added'
+                            ) : (
+                                'Add'
+                            )}
                         </Button>
                     </DialogActions>
                 </Dialog>
