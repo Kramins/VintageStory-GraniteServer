@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using GraniteServer.Api.Models;
+using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 
 namespace GraniteServer.Api.Services;
@@ -8,10 +9,12 @@ namespace GraniteServer.Api.Services;
 public class ServerService
 {
     private readonly ICoreServerAPI _api;
+    private readonly ServerCommandService _commandService;
 
-    public ServerService(ICoreServerAPI api)
+    public ServerService(ICoreServerAPI api, ServerCommandService commandService)
     {
         _api = api;
+        _commandService = commandService;
     }
 
     public async Task<ServerConfigDTO> GetServerConfig()
@@ -89,5 +92,11 @@ public class ServerService
         _api.Server.MarkConfigDirty();
 
         await Task.CompletedTask;
+    }
+
+    public async Task<string> AnnounceMessageAsync(string message)
+    {
+        _api.BroadcastMessageToAllGroups(message, EnumChatType.OthersMessage);
+        return await Task.FromResult("Message announced to all players.");
     }
 }

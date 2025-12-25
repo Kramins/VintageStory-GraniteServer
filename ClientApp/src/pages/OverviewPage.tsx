@@ -17,6 +17,7 @@ import {
     AccessTime as UptimeIcon,
     Memory as MemoryIcon,
 } from '@mui/icons-material';
+import AnnounceModal from '../components/AnnounceModal';
 
 const StatCard: React.FC<{
     title: string;
@@ -49,6 +50,7 @@ const OverviewPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [announceOpen, setAnnounceOpen] = useState(false);
 
     useEffect(() => {
         ServerService.getStatus()
@@ -76,6 +78,15 @@ const OverviewPage: React.FC = () => {
             }
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleAnnounce = async (message: string) => {
+        try {
+            await ServerService.announce(message);
+            toast.show('Message announced successfully.', 'success');
+        } catch (e: any) {
+            toast.show('Failed to announce message. Please try again.', 'error');
         }
     };
 
@@ -195,7 +206,7 @@ const OverviewPage: React.FC = () => {
                         </CardContent>
                     </Card>
                 </Box>
-                {/* Quick Actions remain unchanged */}
+                {/* Quick Actions */}
                 <Box flex="0 0 300px">
                     <Card>
                         <CardContent>
@@ -211,11 +222,23 @@ const OverviewPage: React.FC = () => {
                                     onClick={handleSaveWorld}
                                     disabled={saving}
                                 />
+                                <Chip
+                                    label="Announce Message"
+                                    color="primary"
+                                    variant="outlined"
+                                    clickable
+                                    onClick={() => setAnnounceOpen(true)}
+                                />
                             </Box>
                         </CardContent>
                     </Card>
                 </Box>
             </Box>
+            <AnnounceModal
+                open={announceOpen}
+                onClose={() => setAnnounceOpen(false)}
+                onSubmit={handleAnnounce}
+            />
         </Box>
     );
 };

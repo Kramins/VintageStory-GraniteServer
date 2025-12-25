@@ -27,6 +27,13 @@ public class ServerCommandService
         return result?.StatusMessage ?? "Failed to save world";
     }
 
+    public async Task<string> AnnounceMessageAsync(string message)
+    {
+        var args = new CmdArgs([message]);
+        var result = await ExecuteCommandAsync("announce", args);
+        return result?.StatusMessage ?? "Failed to announce message";
+    }
+
     private async Task<TextCommandResult?> ExecuteCommandAsync(string command, CmdArgs args)
     {
         var tcs = new TaskCompletionSource<TextCommandResult?>();

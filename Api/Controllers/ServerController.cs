@@ -28,11 +28,10 @@ public class ServerController
     /// <summary>
     /// Announce a message to all players
     /// </summary>
-    [ResourceMethod(RequestMethod.Post, "/announce/")]
-    public object Announce(string message)
+    [ResourceMethod(RequestMethod.Post, "/announce")]
+    public async Task<string> AnnounceAsync(AnnounceMessageDTO request)
     {
-        // To be implemented: broadcast message to players
-        throw new NotImplementedException();
+        return await _serverService.AnnounceMessageAsync(request.Message);
     }
 
     [ResourceMethod(RequestMethod.Get, "/status")]
