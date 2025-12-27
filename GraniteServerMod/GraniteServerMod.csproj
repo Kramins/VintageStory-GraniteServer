@@ -60,10 +60,7 @@
     <PackageReference Include="GenHTTP.Modules.Webservices" Version="10.2.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.13" />
-    <!-- Use EF Core Sqlite provider for compile-time only; avoid bundling runtime/native assets to prevent conflicts with host -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.13">
-      <!-- <ExcludeAssets>runtime</ExcludeAssets> -->
-    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.13" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="8.0.1" />
   </ItemGroup>
@@ -114,39 +111,6 @@
       Overwrite="true"
     />
   </Target>
-  <!-- Copy bundled SQLite native binaries (windows/linux/osx) into native/ so the mod loader can find e_sqlite3/libe_sqlite3 -->
-  <ItemGroup>
-    <SQLiteNativeFiles Include="$(OutDir)runtimes/*/native/*sqlite*.dll" />
-    <SQLiteNativeFiles Include="$(OutDir)runtimes/*/native/*sqlite*.so" />
-    <SQLiteNativeFiles Include="$(OutDir)runtimes/*/native/*sqlite*.dylib" />
-  </ItemGroup>
-  <Target Name="CopySQLiteNative" AfterTargets="Build">
-    <Message
-      Importance="high"
-      Text="Copying SQLite native binaries to native/"
-      Condition="@(SQLiteNativeFiles) != ''"
-    />
-    <MakeDir Directories="$(OutDir)native" Condition="@(SQLiteNativeFiles) != ''" />
-    <Copy
-      SourceFiles="@(SQLiteNativeFiles)"
-      DestinationFolder="$(OutDir)native"
-      SkipUnchangedFiles="true"
-      Condition="@(SQLiteNativeFiles) != ''"
-    />
-  </Target>
-  <!-- Ensure Microsoft.EntityFrameworkCore.Sqlite managed assembly is present at runtime without pulling native bundles -->
-  <!-- <ItemGroup>
-    <EfSqliteAssembly Include="$(NuGetPackageRoot)Microsoft.EntityFrameworkCore.Sqlite/8.0.13/lib/net8.0/Microsoft.EntityFrameworkCore.Sqlite.dll" />
-  </ItemGroup>
-  <Target Name="CopyEfSqliteAssembly" AfterTargets="Build">
-    <Message Importance="high" Text="Copying EFCore.Sqlite assembly to output" />
-    <Copy
-      SourceFiles="@(EfSqliteAssembly)"
-      DestinationFolder="$(OutDir)"
-      SkipUnchangedFiles="true"
-      Condition="Exists('%(EfSqliteAssembly.Identity)')"
-    />
-  </Target> -->
   <Target
     Name="UpdateModinfoVersion"
     BeforeTargets="BeforeBuild"
