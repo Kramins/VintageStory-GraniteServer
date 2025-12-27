@@ -12,7 +12,7 @@ public class GraniteServerConfig
     public int JwtRefreshTokenExpiryMinutes { get; set; } = 1440;
     public string? Username { get; set; } = "admin";
     public string? Password { get; set; } = Guid.NewGuid().ToString();
-    public string? DatabaseType { get; set; }
+    public string? DatabaseType { get; set; } = "Sqlite";
     public string? DatabaseHost { get; set; }
     public string? DatabaseUsername { get; set; }
     public string? DatabasePassword { get; set; }
