@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Typography, Card, CardContent, CircularProgress, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, IconButton, ButtonBase } from '@mui/material';
+import { Box, Typography, Card, CardContent, CircularProgress, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, IconButton, ButtonBase, Tabs, Tab } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -32,11 +32,26 @@ interface EditFormData {
     stackSize: number;
 }
 
+interface TabPanelProps {
+    children?: React.ReactNode;
+    index: number;
+    value: number;
+}
+
+const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
+    return (
+        <div role="tabpanel" hidden={value !== index}>
+            {value === index && <Box sx={{ pt: 2 }}>{children}</Box>}
+        </div>
+    );
+};
+
 const PlayerDetailsPage: React.FC = () => {
     const { playerId } = useParams<{ playerId: string }>();
     const dispatch = useAppDispatch();
     const { playerDetails, loading, error } = useAppSelector(state => state.playerDetails);
     const { items: collectibles, loading: collectiblesLoading, error: collectiblesError } = useAppSelector(state => state.world.collectibles);
+    const [tabValue, setTabValue] = useState(0);
     const [removing, setRemoving] = useState<string | null>(null);
     const [removeError, setRemoveError] = useState<string | null>(null);
     const [editingSlot, setEditingSlot] = useState<EditingState | null>(null);
@@ -213,6 +228,14 @@ const PlayerDetailsPage: React.FC = () => {
                 </Box>
             </Box>
 
+            {actionError && (
+                <Box sx={{ mb: 2 }}>
+                    <Alert severity="error" onClose={() => setActionError(null)}>
+                        {actionError}
+                    </Alert>
+                </Box>
+            )}
+
             <Box
                 sx={{
                     background: 'linear-gradient(180deg, #2d2f33 0%, #22232a 100%)',
@@ -347,175 +370,198 @@ const PlayerDetailsPage: React.FC = () => {
                 </Box>
             </Box>
 
-            {actionError && (
-                <Box sx={{ mb: 2 }}>
-                    <Alert severity="error" onClose={() => setActionError(null)}>
-                        {actionError}
-                    </Alert>
-                </Box>
-            )}
-
-            {/* Player Info Cards */}
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3, mb: 3 }}>
-                <Card>
-                    <CardContent>
-                        <Typography color="textSecondary" gutterBottom>
-                            Connection State
-                        </Typography>
-                        <Typography variant="h5">{playerDetails.connectionState}</Typography>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent>
-                        <Typography color="textSecondary" gutterBottom>
-                            Last Join Date
-                        </Typography>
-                        <Typography variant="h5">{new Date(playerDetails.lastJoinDate).toLocaleString()}</Typography>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent>
-                        <Typography color="textSecondary" gutterBottom>
-                            IP Address
-                        </Typography>
-                        <Typography variant="h5">{playerDetails.ipAddress}</Typography>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent>
-                        <Typography color="textSecondary" gutterBottom>
-                            Ping
-                        </Typography>
-                        <Typography variant="h5">{playerDetails.ping}ms</Typography>
-                    </CardContent>
-                </Card>
+            {/* Tabs */}
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
+                    <Tab label="Overview" />
+                    <Tab label="Inventory" />
+                    <Tab label="Permissions" />
+                    <Tab label="Sessions" />
+                </Tabs>
             </Box>
 
-            {/* Inventory Section */}
-            {playerDetails.inventories && Object.keys(playerDetails.inventories).length > 0 && (
-                <Box sx={{ mt: 4 }}>
-                    <Typography variant="h5" sx={{ mb: 2 }}>
-                        Inventory
-                    </Typography>
-                    {Object.entries(playerDetails.inventories).map(([inventoryName, inventory]) => (
-                        <Box key={inventoryName} sx={{ mb: 3 }}>
-                            <Typography variant="h6" sx={{ mb: 1 }}>
-                                {inventory.name}
+            {/* Overview Tab */}
+            <TabPanel value={tabValue} index={0}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3, mb: 3 }}>
+                    <Card>
+                        <CardContent>
+                            <Typography color="textSecondary" gutterBottom>
+                                Connection State
                             </Typography>
-                            <TableContainer component={Paper}>
-                                <Table size="small">
-                                    <TableHead>
-                                        <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                                            <TableCell>Slot</TableCell>
-                                            <TableCell>Item Name</TableCell>
-                                            <TableCell align="right">Stack Size</TableCell>
-                                            <TableCell align="center">Actions</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {inventory.slots.map((slot) => {
-                                            const isCurrentlyEditing = isEditing(inventoryName, slot.slotIndex);
-                                            return (
-                                                <TableRow key={`${inventoryName}-${slot.slotIndex}`} sx={{ backgroundColor: isCurrentlyEditing ? '#f5f5f5' : 'inherit' }}>
-                                                    <TableCell>{slot.slotIndex}</TableCell>
-                                                    <TableCell>
-                                                        {isCurrentlyEditing ? (
-                                                            <CollectibleAutocomplete
-                                                                value={selectedCollectible}
-                                                                onChange={(value) => {
-                                                                    setSelectedCollectible(value);
-                                                                    if (value) {
-                                                                        setEditFormData({ 
-                                                                            ...editFormData, 
-                                                                            name: value.name,
-                                                                            entityClass: value.type,
-                                                                            entityId: value.id,
-                                                                        });
-                                                                    }
-                                                                }}
-                                                                collectibles={collectibles}
-                                                                loading={collectiblesLoading}
-                                                                error={collectiblesError}
-                                                                disabled={saving}
-                                                                label="Item"
-                                                                placeholder="Search items..."
-                                                            />
-                                                        ) : (
-                                                            slot.name || '-'
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell align="right" sx={{ width: '80px' }}>
-                                                        {isCurrentlyEditing ? (
-                                                            <TextField
-                                                                size="small"
-                                                                type="number"
-                                                                inputProps={{ min: 0, max: 64 }}
-                                                                value={editFormData.stackSize}
-                                                                onChange={(e) => setEditFormData({ ...editFormData, stackSize: parseInt(e.target.value) || 0 })}
-                                                                variant="outlined"
-                                                            />
-                                                        ) : (
-                                                            slot.stackSize
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell align="center">
-                                                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                                                            {isCurrentlyEditing ? (
-                                                                <>
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        onClick={handleSaveEdit}
-                                                                        disabled={saving || !selectedCollectible}
-                                                                        color="success"
-                                                                        title={!selectedCollectible ? 'Select an item first' : 'Save'}
-                                                                    >
-                                                                        <SaveIcon fontSize="small" />
-                                                                    </IconButton>
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        onClick={handleCancelEdit}
-                                                                        disabled={saving}
-                                                                        title="Cancel"
-                                                                    >
-                                                                        <CancelIcon fontSize="small" />
-                                                                    </IconButton>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        onClick={() => handleEditClick(slot, inventoryName)}
-                                                                        title="Edit"
-                                                                    >
-                                                                        <EditIcon fontSize="small" />
-                                                                    </IconButton>
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        onClick={() => handleRemoveItem(inventoryName, slot.slotIndex)}
-                                                                        disabled={removing === `${inventoryName}-${slot.slotIndex}`}
-                                                                        color="error"
-                                                                        title="Delete"
-                                                                    >
-                                                                        <DeleteIcon fontSize="small" />
-                                                                    </IconButton>
-                                                                </>
-                                                            )}
-                                                        </Box>
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
-                        </Box>
-                    ))}
+                            <Typography variant="h5">{playerDetails.connectionState}</Typography>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent>
+                            <Typography color="textSecondary" gutterBottom>
+                                Last Join Date
+                            </Typography>
+                            <Typography variant="h5">{new Date(playerDetails.lastJoinDate).toLocaleString()}</Typography>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent>
+                            <Typography color="textSecondary" gutterBottom>
+                                IP Address
+                            </Typography>
+                            <Typography variant="h5">{playerDetails.ipAddress}</Typography>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent>
+                            <Typography color="textSecondary" gutterBottom>
+                                Ping
+                            </Typography>
+                            <Typography variant="h5">{playerDetails.ping}ms</Typography>
+                        </CardContent>
+                    </Card>
                 </Box>
-            )}
+            </TabPanel>
+
+            {/* Inventory Tab */}
+            <TabPanel value={tabValue} index={1}>
+                {playerDetails.inventories && Object.keys(playerDetails.inventories).length > 0 ? (
+                    <Box sx={{ mt: 0 }}>
+                        {Object.entries(playerDetails.inventories).map(([inventoryName, inventory]) => (
+                            <Box key={inventoryName} sx={{ mb: 3 }}>
+                                <Typography variant="h6" sx={{ mb: 1 }}>
+                                    {inventory.name}
+                                </Typography>
+                                <TableContainer component={Paper}>
+                                    <Table size="small">
+                                        <TableHead>
+                                            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                                                <TableCell>Slot</TableCell>
+                                                <TableCell>Item Name</TableCell>
+                                                <TableCell align="right">Stack Size</TableCell>
+                                                <TableCell align="center">Actions</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {inventory.slots.map((slot) => {
+                                                const isCurrentlyEditing = isEditing(inventoryName, slot.slotIndex);
+                                                return (
+                                                    <TableRow key={`${inventoryName}-${slot.slotIndex}`} sx={{ backgroundColor: isCurrentlyEditing ? '#f5f5f5' : 'inherit' }}>
+                                                        <TableCell>{slot.slotIndex}</TableCell>
+                                                        <TableCell>
+                                                            {isCurrentlyEditing ? (
+                                                                <CollectibleAutocomplete
+                                                                    value={selectedCollectible}
+                                                                    onChange={(value) => {
+                                                                        setSelectedCollectible(value);
+                                                                        if (value) {
+                                                                            setEditFormData({ 
+                                                                                ...editFormData, 
+                                                                                name: value.name,
+                                                                                entityClass: value.type,
+                                                                                entityId: value.id,
+                                                                            });
+                                                                        }
+                                                                    }}
+                                                                    collectibles={collectibles}
+                                                                    loading={collectiblesLoading}
+                                                                    error={collectiblesError}
+                                                                    disabled={saving}
+                                                                    label="Item"
+                                                                    placeholder="Search items..."
+                                                                />
+                                                            ) : (
+                                                                slot.name || '-'
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell align="right" sx={{ width: '80px' }}>
+                                                            {isCurrentlyEditing ? (
+                                                                <TextField
+                                                                    size="small"
+                                                                    type="number"
+                                                                    inputProps={{ min: 0, max: 64 }}
+                                                                    value={editFormData.stackSize}
+                                                                    onChange={(e) => setEditFormData({ ...editFormData, stackSize: parseInt(e.target.value) || 0 })}
+                                                                    variant="outlined"
+                                                                />
+                                                            ) : (
+                                                                slot.stackSize
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell align="center">
+                                                            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                                                {isCurrentlyEditing ? (
+                                                                    <>
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            onClick={handleSaveEdit}
+                                                                            disabled={saving || !selectedCollectible}
+                                                                            color="success"
+                                                                            title={!selectedCollectible ? 'Select an item first' : 'Save'}
+                                                                        >
+                                                                            <SaveIcon fontSize="small" />
+                                                                        </IconButton>
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            onClick={handleCancelEdit}
+                                                                            disabled={saving}
+                                                                            title="Cancel"
+                                                                        >
+                                                                            <CancelIcon fontSize="small" />
+                                                                        </IconButton>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            onClick={() => handleEditClick(slot, inventoryName)}
+                                                                            title="Edit"
+                                                                        >
+                                                                            <EditIcon fontSize="small" />
+                                                                        </IconButton>
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            onClick={() => handleRemoveItem(inventoryName, slot.slotIndex)}
+                                                                            disabled={removing === `${inventoryName}-${slot.slotIndex}`}
+                                                                            color="error"
+                                                                            title="Delete"
+                                                                        >
+                                                                            <DeleteIcon fontSize="small" />
+                                                                        </IconButton>
+                                                                    </>
+                                                                )}
+                                                            </Box>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            </Box>
+                        ))}
+                    </Box>
+                ) : (
+                    <Alert severity="info">No inventories found.</Alert>
+                )}
+            </TabPanel>
+
+            {/* Permissions Tab */}
+            <TabPanel value={tabValue} index={2}>
+                <Box sx={{ p: 2 }}>
+                    <Typography variant="h6">Permissions</Typography>
+                    <Alert severity="info" sx={{ mt: 2 }}>
+                        Permissions management UI coming soon.
+                    </Alert>
+                </Box>
+            </TabPanel>
+
+            {/* Sessions Tab */}
+            <TabPanel value={tabValue} index={3}>
+                <Box sx={{ p: 2 }}>
+                    <Typography variant="h6">Sessions</Typography>
+                    <Alert severity="info" sx={{ mt: 2 }}>
+                        Sessions list UI coming soon.
+                    </Alert>
+                </Box>
+            </TabPanel>
         </Box>
     );
 };
 
 export default PlayerDetailsPage;
-
-
