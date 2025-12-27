@@ -19,10 +19,14 @@ using GenHTTP.Modules.StaticWebsites;
 using GenHTTP.Modules.Webservices;
 using GraniteServer.Api.Controllers;
 using GraniteServer.Api.Services;
+using GraniteServerMod.Data;
+using GraniteServerMod.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 using Vintagestory.Common;
+using Vintagestory.Server;
 
 namespace GraniteServer.Api;
 
@@ -34,14 +38,17 @@ public class WebApi
 {
     private const ushort Port = 5000;
     private readonly ICoreServerAPI _api;
-    private ServiceProvider _serviceProvider;
+    private ServiceProvider _serviceProvider = null!;
+    private GraniteDataContext _dataContext;
     private IServerHost? _host;
     private readonly GraniteServerConfig _config;
+    private readonly ILogger _logger;
 
-    public WebApi(ICoreServerAPI api, GraniteServerConfig config)
+    public WebApi(ICoreServerAPI api, GraniteServerConfig config, ILogger logger)
     {
         _api = api ?? throw new ArgumentNullException(nameof(api));
         _config = config ?? throw new ArgumentNullException(nameof(config));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public void Initialize()
@@ -62,13 +69,13 @@ public class WebApi
                 as ModContainer;
             if (graniteServerMod == null)
             {
-                _api.Logger.Error("[WebAPI] Could not find GraniteServer mod container.");
+                _logger.Error("[WebAPI] Could not find GraniteServer mod container.");
                 return;
             }
 
             var webClientPath = Path.Join(graniteServerMod.FolderPath, "wwwroot");
-            _api.Logger.Notification("[WebAPI] Starting server...");
-            _api.Logger.Notification($"[WebAPI] Serving web client from: {webClientPath}");
+            _logger.Notification("[WebAPI] Starting server...");
+            _logger.Notification($"[WebAPI] Serving web client from: {webClientPath}");
 
             var protectedControllers = Layout
                 .Create()
@@ -102,15 +109,25 @@ public class WebApi
 
             var services = new ServiceCollection();
             services.AddSingleton<ICoreServerAPI>(_api);
+            services.AddSingleton<ILogger>(_logger);
+            // Register application services, might need to be scoped or transient based on actual usage
             services.AddSingleton<ServerCommandService>();
             services.AddSingleton<PlayerService>();
+            services.AddSingleton<PlayerSessionTracker>();
             services.AddSingleton<WorldService>();
             services.AddSingleton<ServerService>();
             services.AddSingleton<BasicAuthService>();
             services.AddSingleton<JwtTokenService>();
             services.AddSingleton(_config);
 
+            // Configure database context with provider-specific derived contexts
+            RegisterDatabaseContext(services);
+
             _serviceProvider = services.BuildServiceProvider();
+
+            InitializeDatabase();
+            RegisterPlayerSessionTrackingEvents();
+
             _host = Host.Create()
                 .AddDependencyInjection(_serviceProvider)
                 .Port(Convert.ToUInt16(_config.Port))
@@ -120,11 +137,86 @@ public class WebApi
                 .Console();
 
             _host.StartAsync();
-            _api.Logger.Notification($"[WebAPI] Server started on port {Port}");
+            _logger.Notification($"[WebAPI] Server started on port {Port}");
         }
         catch (Exception ex)
         {
-            _api.Logger.Error($"[WebAPI] Failed to start Web API: {ex.Message}\n{ex.StackTrace}");
+            _logger.Error($"[WebAPI] Failed to start Web API: {ex.Message}\n{ex.StackTrace}");
+        }
+    }
+
+    private void InitializeDatabase()
+    {
+        _logger.Notification("[WebAPI] Initializing database...");
+
+        _dataContext = _serviceProvider.GetRequiredService<GraniteDataContext>();
+
+        // _dataContext.Database.EnsureDeleted();
+        _dataContext.Database.EnsureCreated();
+        _dataContext.Database.Migrate();
+
+        var ServerEntity = _dataContext.Servers.FirstOrDefault(x => x.Id == _config.ServerId);
+
+        if (ServerEntity == null)
+        {
+            ServerEntity = new ServerEntity
+            {
+                Id = _config.ServerId,
+                Name = string.Empty,
+                Description = string.Empty,
+            };
+            _dataContext.Servers.Add(ServerEntity);
+            _dataContext.SaveChanges();
+            _logger.Notification("[WebAPI] Created new server entity in database.");
+        }
+        else
+        {
+            _logger.Notification("[WebAPI] Loaded existing server entity from database.");
+        }
+
+        _logger.Notification("[WebAPI] Database initialization complete.");
+    }
+
+    private void RegisterPlayerSessionTrackingEvents()
+    {
+        _api.Event.PlayerJoin += OnPlayerJoin;
+        _api.Event.PlayerLeave += OnPlayerLeave;
+    }
+
+    private void OnPlayerLeave(IServerPlayer byPlayer)
+    {
+        var sessionTracker = _serviceProvider.GetService<PlayerSessionTracker>();
+        sessionTracker?.OnPlayerLeave(byPlayer);
+    }
+
+    private void OnPlayerJoin(IServerPlayer byPlayer)
+    {
+        var sessionTracker = _serviceProvider.GetService<PlayerSessionTracker>();
+        sessionTracker?.OnPlayerJoin(byPlayer);
+    }
+
+    private void RegisterDatabaseContext(ServiceCollection services)
+    {
+        var dbType = _config.DatabaseType?.ToLowerInvariant();
+
+        if (dbType == "postgresql")
+        {
+            var connectionString =
+                $"Host={_config.DatabaseHost};Port={_config.DatabasePort};Database={_config.DatabaseName};Username={_config.DatabaseUsername};Password={_config.DatabasePassword}";
+
+            services.AddDbContext<GraniteDataContextPostgres>(options =>
+                options.UseNpgsql(connectionString)
+            );
+            services.AddScoped<GraniteDataContext>(sp =>
+                sp.GetRequiredService<GraniteDataContextPostgres>()
+            );
+            _logger.Notification("[WebAPI] Using PostgreSQL provider");
+        }
+        else
+        {
+            throw new NotSupportedException(
+                $"Database type '{_config.DatabaseType}' is not supported. Only PostgreSQL is currently supported."
+            );
         }
     }
 
@@ -176,17 +268,17 @@ public class WebApi
     /// </summary>
     public void Shutdown()
     {
-        _api.Logger.Notification("[WebAPI] Stopping server...");
+        _logger.Notification("[WebAPI] Stopping server...");
         if (_host != null)
         {
             try
             {
                 _host.StopAsync().AsTask().Wait();
-                _api.Logger.Notification("[WebAPI] Server stopped.");
+                _logger.Notification("[WebAPI] Server stopped.");
             }
             catch (Exception ex)
             {
-                _api.Logger.Error($"[WebAPI] Error stopping Web API: {ex}");
+                _logger.Error($"[WebAPI] Error stopping Web API: {ex}");
             }
             finally
             {

@@ -12,12 +12,33 @@ services:
     environment:
       - VINTAGE_STORY=/app
       - GS_PASSWORD=password
+      - GS_DATABASETYPE=PostgreSQL
+      - GS_DATABASEHOST=postgres
+      - GS_DATABASEUSERNAME=postgres
+      - GS_DATABASEPASSWORD=postgres
+      - GS_DATABASEPORT=5432
+      - GS_DATABASENAME=graniteserver
     ports:
       - "42425:42425"
       - "42420:42420"
       - "5000:5000"
       - "3000:3000"
     user: vintagestory
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: graniteserver
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
 
 volumes:
   vintage-mod-dev-data:
+  postgres-data:

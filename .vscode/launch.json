@@ -49,6 +49,50 @@
             ],
             "console": "internalConsole",
             "stopAtEntry": false
+        },
+        {
+            "name": "Launch Server (Postgres)",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "/app/VintagestoryServer.dll",
+            "preLaunchTask": "build",
+            "args": [
+                "--tracelog",
+                "--dataPath",
+                "/data",
+                "--addModPath",
+                "${workspaceFolder}/GraniteServerMod/bin/mods"
+            ],
+            "env": {
+                "GS_DATABASETYPE": "PostgreSQL",
+                "GS_DATABASEHOST": "db",
+                "GS_DATABASEPORT": "5432",
+                "GS_DATABASENAME": "graniteserver",
+                "GS_DATABASEUSERNAME": "postgres",
+                "GS_DATABASEPASSWORD": "postgres"
+            },
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "Launch Server (SQLite)",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "/app/VintagestoryServer.dll",
+            "preLaunchTask": "build",
+            "args": [
+                "--tracelog",
+                "--dataPath",
+                "/data",
+                "--addModPath",
+                "${workspaceFolder}/GraniteServerMod/bin/mods"
+            ],
+            "env": {
+                "GS_DATABASETYPE": "SQLite",
+                "GS_SQLITEFILEPATH": "${workspaceFolder}/GraniteServerMod/graniteserver.db"
+            },
+            "console": "internalConsole",
+            "stopAtEntry": false
         }
     ],
     "compounds": [

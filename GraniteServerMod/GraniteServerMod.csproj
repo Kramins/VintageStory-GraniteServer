@@ -6,45 +6,19 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Reference
-      Include="Vintagestory"
-      HintPath="$(VINTAGE_STORY)/Vintagestory.dll"
-      Private="false"
-    />
+    <Reference Include="Vintagestory" HintPath="$(VINTAGE_STORY)/Vintagestory.dll" Private="false" />
     <Reference Include="VintagestoryAPI">
       <HintPath>$(VINTAGE_STORY)/VintagestoryAPI.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference
-      Include="VintagestoryLib"
-      HintPath="$(VINTAGE_STORY)/VintagestoryLib.dll"
-      Private="false"
-    />
-    <Reference
-      Include="VintagestoryServer"
-      HintPath="$(VINTAGE_STORY)/VintagestoryServer.dll"
-      Private="false"
-    />
-    <Reference
-      Include="Newtonsoft.Json"
-      HintPath="$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll"
-      Private="false"
-    />
+    <Reference Include="VintagestoryLib" HintPath="$(VINTAGE_STORY)/VintagestoryLib.dll" Private="false" />
+    <Reference Include="VintagestoryServer" HintPath="$(VINTAGE_STORY)/VintagestoryServer.dll" Private="false" />
+    <Reference Include="Newtonsoft.Json" HintPath="$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll" Private="false" />
     <!-- Only include non-wwwroot resources initially -->
-    <None
-      Include="resources/modinfo.json"
-      CopyToOutputDirectory="PreserveNewest"
-      Pack="true"
-      PackagePath=""
-    >
+    <None Include="resources/modinfo.json" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="">
       <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
     </None>
-    <None
-      Include="resources/assets/**"
-      CopyToOutputDirectory="PreserveNewest"
-      Pack="true"
-      PackagePath=""
-    >
+    <None Include="resources/assets/**" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="">
       <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
     </None>
   </ItemGroup>
@@ -58,6 +32,9 @@
     <PackageReference Include="GenHTTP.Modules.StaticWebsites" Version="10.2.0" />
     <PackageReference Include="GenHTTP.Modules.Webservices" Version="10.2.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="8.0.1" />
   </ItemGroup>
   <Target Name="PreClean" BeforeTargets="PreBuildEvent">
     <RemoveDir Directories="bin/mods" />
@@ -68,7 +45,6 @@
     <MakeDir Directories="resources/wwwroot" />
     <Exec WorkingDirectory="../ClientApp" Command="npm install" />
     <Exec WorkingDirectory="../ClientApp" Command="npm run build" />
-
     <!-- Add explicit verification -->
     <Message Importance="high" Text="Verifying wwwroot contents..." />
     <ItemGroup>
@@ -76,38 +52,33 @@
     </ItemGroup>
     <Message Importance="high" Text="Found @(WwwrootFiles->Count()) files in wwwroot" />
   </Target>
-  <Target
-    Name="CopyWwwrootToOutput"
-    BeforeTargets="PostBuildEvent"
-    DependsOnTargets="BuildWebApp"
-    Condition=" '$(BuildWebApp)' == 'true' "
-  >
+  <Target Name="CopyWwwrootToOutput" BeforeTargets="PostBuildEvent" DependsOnTargets="BuildWebApp" Condition=" '$(BuildWebApp)' == 'true' ">
     <ItemGroup>
       <WwwrootFilesToCopy Include="resources/wwwroot/**/*" />
     </ItemGroup>
-    <Copy
-      SourceFiles="@(WwwrootFilesToCopy)"
-      DestinationFolder="$(TargetDir)wwwroot/%(RecursiveDir)"
-      SkipUnchangedFiles="true"
-    />
-    <Message
-      Importance="high"
-      Text="Copied @(WwwrootFilesToCopy->Count()) wwwroot files to output directory"
-    />
+    <Copy SourceFiles="@(WwwrootFilesToCopy)" DestinationFolder="$(TargetDir)wwwroot/%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Copied @(WwwrootFilesToCopy->Count()) wwwroot files to output directory" />
+  </Target>
+  <Target Name="CleanupBeforeZip" BeforeTargets="PostBuildEvent">
+    <!-- Remove runtimes folder if it exists (shouldn't since we removed the SQLite bundle) -->
+    <RemoveDir Directories="$(TargetDir)runtimes" Condition="Exists('$(TargetDir)runtimes')" />
   </Target>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <MakeDir Directories="bin/mods" />
-    <ZipDirectory
-      DestinationFile="bin/mods/$(TargetName)-$(ConfigurationName)-$(modinfoVersion).zip"
-      SourceDirectory="$(TargetDir)"
-      Overwrite="true"
-    />
+    <ZipDirectory DestinationFile="bin/mods/$(TargetName)-$(ConfigurationName)-$(modinfoVersion).zip" SourceDirectory="$(TargetDir)" Overwrite="true" />
   </Target>
-  <Target
-    Name="UpdateModinfoVersion"
-    BeforeTargets="BeforeBuild"
-    Condition=" '$(modinfoVersion)' != '' "
-  >
+  <!-- Copy bundled SQLite native binaries (windows/linux/osx) into native/ so the mod loader can find e_sqlite3/libe_sqlite3 -->
+  <ItemGroup>
+    <SQLiteNativeFiles Include="$(OutDir)runtimes/*/native/*sqlite*.dll" />
+    <SQLiteNativeFiles Include="$(OutDir)runtimes/*/native/*sqlite*.so" />
+    <SQLiteNativeFiles Include="$(OutDir)runtimes/*/native/*sqlite*.dylib" />
+  </ItemGroup>
+  <Target Name="CopySQLiteNative" AfterTargets="Build">
+    <Message Importance="high" Text="Copying SQLite native binaries to native/" Condition="@(SQLiteNativeFiles) != ''" />
+    <MakeDir Directories="$(OutDir)native" Condition="@(SQLiteNativeFiles) != ''" />
+    <Copy SourceFiles="@(SQLiteNativeFiles)" DestinationFolder="$(OutDir)native" SkipUnchangedFiles="true" Condition="@(SQLiteNativeFiles) != ''" />
+  </Target>
+  <Target Name="UpdateModinfoVersion" BeforeTargets="BeforeBuild" Condition=" '$(modinfoVersion)' != '' ">
     <Message Importance="high" Text="Updating modinfo.json version to $(modinfoVersion)" />
     <Exec Command="jq --arg v '$(modinfoVersion)' '.version = $v' resources/modinfo.json > resources/modinfo.tmp &amp;&amp; mv resources/modinfo.tmp resources/modinfo.json" />
   </Target>
@@ -116,11 +87,7 @@
     <ItemGroup>
       <DistFiles Include="../ClientApp/dist/**/*" />
     </ItemGroup>
-    <Copy
-      SourceFiles="@(DistFiles)"
-      DestinationFolder="resources/wwwroot/%(RecursiveDir)"
-      SkipUnchangedFiles="true"
-    />
+    <Copy SourceFiles="@(DistFiles)" DestinationFolder="resources/wwwroot/%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Message Importance="high" Text="Copied @(DistFiles->Count()) files to resources/wwwroot." />
   </Target>
 </Project>
