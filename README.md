@@ -79,6 +79,17 @@ The configuration file `graniteserverconfig.json` is loaded from the mod directo
 
 All configuration properties can be overridden using environment variables with the `GS_` prefix followed by the property name in uppercase.
 
+#### Database Configuration
+
+- **Switch providers**: Set `GS_DATABASETYPE` to either `PostgreSQL` or `SQLite`.
+- **PostgreSQL**: Provide `GS_DATABASEHOST`, `GS_DATABASEPORT` (default `5432`), `GS_DATABASENAME`, `GS_DATABASEUSERNAME`, `GS_DATABASEPASSWORD`.
+- **SQLite**: Optionally set `GS_SQLITEFILEPATH` to the desired `.db` file path. If omitted, the database file `graniteserver.db` is created next to the mod folder.
+
+Notes:
+
+- For development, the Postgres service in the dev container is already wired via `GS_DATABASEHOST=db`.
+- The mod avoids auto-deleting the SQLite file on startup. Postgres databases may be reset by the app during development.
+
 ### Configuration Properties
 
 | Property                       | Type   | Description                                  | Default     |

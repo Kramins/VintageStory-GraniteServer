@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using GraniteServer.Api.Models;
+using GraniteServerMod.Data;
+using GraniteServerMod.Data.Entities;
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.Server;
@@ -15,7 +17,6 @@ public class PlayerService
 {
     private readonly ICoreServerAPI _api;
     private readonly ServerCommandService _commandService;
-
     private readonly ConcurrentDictionary<string, string> _nameToIdCache =
         new ConcurrentDictionary<string, string>();
 

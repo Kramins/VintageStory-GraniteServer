@@ -2,6 +2,8 @@
 using System.Reflection;
 using System.Threading.Tasks;
 using GraniteServer.Api;
+using GraniteServerMod.Data;
+using Microsoft.EntityFrameworkCore;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 
@@ -67,7 +69,7 @@ namespace GraniteServer
 
             api.StoreModConfig<GraniteServerConfig>(config, _modConfigFileName);
 
-            _webApi = new WebApi(api, config);
+            _webApi = new WebApi(api, config, Mod);
             _webApi.Initialize();
         }
 

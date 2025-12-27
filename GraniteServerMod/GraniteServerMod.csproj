@@ -25,6 +25,7 @@
       HintPath="$(VINTAGE_STORY)/VintagestoryServer.dll"
       Private="false"
     />
+
     <Reference
       Include="Newtonsoft.Json"
       HintPath="$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll"
@@ -58,6 +59,10 @@
     <PackageReference Include="GenHTTP.Modules.StaticWebsites" Version="10.2.0" />
     <PackageReference Include="GenHTTP.Modules.Webservices" Version="10.2.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.13" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="8.0.1" />
   </ItemGroup>
   <Target Name="PreClean" BeforeTargets="PreBuildEvent">
     <RemoveDir Directories="bin/mods" />
@@ -68,7 +73,6 @@
     <MakeDir Directories="resources/wwwroot" />
     <Exec WorkingDirectory="../ClientApp" Command="npm install" />
     <Exec WorkingDirectory="../ClientApp" Command="npm run build" />
-
     <!-- Add explicit verification -->
     <Message Importance="high" Text="Verifying wwwroot contents..." />
     <ItemGroup>
@@ -94,6 +98,10 @@
       Importance="high"
       Text="Copied @(WwwrootFilesToCopy->Count()) wwwroot files to output directory"
     />
+  </Target>
+  <Target Name="CleanupBeforeZip" BeforeTargets="PostBuildEvent">
+    <!-- Remove runtimes folder if it exists (shouldn't since we removed the SQLite bundle) -->
+    <RemoveDir Directories="$(TargetDir)runtimes" Condition="Exists('$(TargetDir)runtimes')" />
   </Target>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <MakeDir Directories="bin/mods" />
