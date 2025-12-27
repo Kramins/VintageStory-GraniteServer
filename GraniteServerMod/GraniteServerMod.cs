@@ -69,8 +69,7 @@ namespace GraniteServer
 
             api.StoreModConfig<GraniteServerConfig>(config, _modConfigFileName);
 
-            var logger = Mod.Logger;
-            _webApi = new WebApi(api, config, logger);
+            _webApi = new WebApi(api, config, Mod);
             _webApi.Initialize();
         }
 

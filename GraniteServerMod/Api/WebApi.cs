@@ -42,13 +42,19 @@ public class WebApi
     private GraniteDataContext _dataContext;
     private IServerHost? _host;
     private readonly GraniteServerConfig _config;
+    private readonly Mod _mod;
     private readonly ILogger _logger;
+    private readonly ModContainer _modContainer;
 
-    public WebApi(ICoreServerAPI api, GraniteServerConfig config, ILogger logger)
+    public WebApi(ICoreServerAPI api, GraniteServerConfig config, Mod mod)
     {
         _api = api ?? throw new ArgumentNullException(nameof(api));
         _config = config ?? throw new ArgumentNullException(nameof(config));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _mod = mod ?? throw new ArgumentNullException(nameof(mod));
+        _logger = _mod.Logger;
+        _modContainer =
+            mod as ModContainer
+            ?? throw new ArgumentException("Mod must be a ModContainer", nameof(mod));
     }
 
     public void Initialize()
@@ -64,16 +70,7 @@ public class WebApi
     {
         try
         {
-            var graniteServerMod =
-                _api.ModLoader.Mods.FirstOrDefault(m => m.Info.ModID == "graniteserver")
-                as ModContainer;
-            if (graniteServerMod == null)
-            {
-                _logger.Error("[WebAPI] Could not find GraniteServer mod container.");
-                return;
-            }
-
-            var webClientPath = Path.Join(graniteServerMod.FolderPath, "wwwroot");
+            var webClientPath = Path.Join(_modContainer.FolderPath, "wwwroot");
             _logger.Notification("[WebAPI] Starting server...");
             _logger.Notification($"[WebAPI] Serving web client from: {webClientPath}");
 
@@ -212,10 +209,38 @@ public class WebApi
             );
             _logger.Notification("[WebAPI] Using PostgreSQL provider");
         }
+        else if (dbType == "sqlite")
+        {
+            string dbPath;
+
+            try
+            {
+                var basePath = _api.DataBasePath;
+                var DatabaseName =
+                    Path.GetExtension(_config.DatabaseName) == ".db"
+                        ? _config.DatabaseName
+                        : $"{_config.DatabaseName}.db";
+                dbPath = Path.Combine(basePath, DatabaseName);
+            }
+            catch
+            {
+                throw new InvalidOperationException("Failed to determine SQLite database path");
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(dbPath) ?? AppContext.BaseDirectory);
+
+            services.AddDbContext<GraniteDataContextSqlite>(options =>
+                options.UseSqlite($"Data Source={dbPath}")
+            );
+            services.AddScoped<GraniteDataContext>(sp =>
+                sp.GetRequiredService<GraniteDataContextSqlite>()
+            );
+            _logger.Notification($"[WebAPI] Using SQLite provider at: {dbPath}");
+        }
         else
         {
             throw new NotSupportedException(
-                $"Database type '{_config.DatabaseType}' is not supported. Only PostgreSQL is currently supported."
+                $"Database type '{_config.DatabaseType}' is not supported. Use 'PostgreSQL' or 'SQLite'."
             );
         }
     }

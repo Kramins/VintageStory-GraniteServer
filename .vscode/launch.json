@@ -89,7 +89,7 @@
             ],
             "env": {
                 "GS_DATABASETYPE": "SQLite",
-                "GS_SQLITEFILEPATH": "${workspaceFolder}/GraniteServerMod/graniteserver.db"
+                // "GS_SQLITEFILEPATH": "${workspaceFolder}/GraniteServerMod/graniteserver.db"
             },
             "console": "internalConsole",
             "stopAtEntry": false

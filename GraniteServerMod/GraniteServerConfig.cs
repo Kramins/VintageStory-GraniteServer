@@ -18,5 +18,4 @@ public class GraniteServerConfig
     public string? DatabasePassword { get; set; }
     public int DatabasePort { get; set; } = 5432;
     public string? DatabaseName { get; set; } = "graniteserver";
-    public string? SqliteFilePath { get; set; }
 }
