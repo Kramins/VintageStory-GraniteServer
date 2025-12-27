@@ -22,5 +22,13 @@ public class GraniteDataContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
         });
+
+        modelBuilder.Entity<PlayerEntity>(entity =>
+        {
+            entity.HasKey(e => new { e.Id, e.ServerId });
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.FirstJoinDate).IsRequired();
+            entity.Property(e => e.LastJoinDate).IsRequired();
+        });
     }
 }

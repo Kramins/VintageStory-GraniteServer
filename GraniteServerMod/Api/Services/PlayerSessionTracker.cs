@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using GraniteServerMod.Data;
 using GraniteServerMod.Data.Entities;
 using Vintagestory.API.Common;
@@ -41,7 +42,9 @@ public class PlayerSessionTracker
             $"[PlayerSessionTracker] Player joined: {byPlayer.PlayerName} ({byPlayer.PlayerUID})"
         );
 
-        var playerEntity = _dataContext.Players.Find(byPlayer.PlayerUID);
+        var playerEntity = _dataContext.Players.FirstOrDefault(p =>
+            p.Id == byPlayer.PlayerUID && p.ServerId == _config.ServerId
+        );
         if (playerEntity == null)
         {
             playerEntity = new PlayerEntity()
@@ -98,7 +101,9 @@ public class PlayerSessionTracker
             var sessionIdStr = sessionIdObj?.ToString();
             if (Guid.TryParse(sessionIdStr, out var sessionGuid))
             {
-                var playerSessionEntity = _dataContext.PlayerSessions.Find(sessionGuid);
+                var playerSessionEntity = _dataContext.PlayerSessions.FirstOrDefault(ps =>
+                    ps.Id == sessionGuid
+                );
                 if (playerSessionEntity != null)
                 {
                     playerSessionEntity.LeaveDate = DateTime.UtcNow;

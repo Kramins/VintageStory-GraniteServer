@@ -4,9 +4,9 @@ namespace GraniteServerMod.Data.Entities;
 
 public class PlayerEntity
 {
-    public string Id { get; internal set; }
-    public string Name { get; internal set; }
-    public DateTime FirstJoinDate { get; internal set; }
-    public DateTime LastJoinDate { get; internal set; }
-    public Guid ServerId { get; internal set; }
+    public string Id { get; set; }
+    public Guid ServerId { get; set; }
+    public string Name { get; set; }
+    public DateTime FirstJoinDate { get; set; }
+    public DateTime LastJoinDate { get; set; }
 }
