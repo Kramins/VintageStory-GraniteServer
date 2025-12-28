@@ -1,9 +1,15 @@
 ﻿using System;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using GraniteServer.Api;
+using GraniteServer.Api.Services;
 using GraniteServerMod.Data;
+using GraniteServerMod.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Sieve.Services;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 
@@ -20,6 +26,7 @@ namespace GraniteServer
     {
         private readonly string _modConfigFileName = "graniteserverconfig.json";
         private WebApi? _webApi;
+        private ServiceProvider? _serviceProvider;
 
         public override bool ShouldLoad(EnumAppSide side)
         {
@@ -69,10 +76,143 @@ namespace GraniteServer
 
             api.StoreModConfig<GraniteServerConfig>(config, _modConfigFileName);
 
-            _webApi = new WebApi(api, config, Mod);
+            _serviceProvider = BuildServiceProvider(api, config);
+            InitializeDatabase(_serviceProvider, config, api);
+
+            _webApi = new WebApi(api, config, Mod, _serviceProvider);
             _webApi.Initialize();
         }
 
-        public override void Dispose() { }
+        public override void Dispose()
+        {
+            _serviceProvider?.Dispose();
+        }
+
+        private ServiceProvider BuildServiceProvider(ICoreServerAPI api, GraniteServerConfig config)
+        {
+            var services = new ServiceCollection();
+
+            services.AddSingleton(api);
+            services.AddSingleton<ILogger>(api.Logger);
+
+            services.Configure<Sieve.Models.SieveOptions>(options =>
+            {
+                options.DefaultPageSize = 20;
+                options.MaxPageSize = 100;
+            });
+
+            services.AddSingleton<ServerCommandService>();
+            services.AddScoped<PlayerService>();
+            services.AddScoped<SieveProcessor>();
+            services.AddSingleton<PlayerSessionTracker>();
+            services.AddSingleton<WorldService>();
+            services.AddSingleton<ServerService>();
+            services.AddSingleton<BasicAuthService>();
+            services.AddSingleton<JwtTokenService>();
+            services.AddSingleton(config);
+
+            RegisterDatabaseContext(services, api, config, api.Logger);
+
+            return services.BuildServiceProvider();
+        }
+
+        private void RegisterDatabaseContext(
+            IServiceCollection services,
+            ICoreServerAPI api,
+            GraniteServerConfig config,
+            ILogger logger
+        )
+        {
+            var dbType = config.DatabaseType?.ToLowerInvariant();
+
+            if (dbType == "postgresql")
+            {
+                var connectionString =
+                    $"Host={config.DatabaseHost};Port={config.DatabasePort};Database={config.DatabaseName};Username={config.DatabaseUsername};Password={config.DatabasePassword}";
+
+                services.AddDbContext<GraniteDataContextPostgres>(options =>
+                    options.UseNpgsql(connectionString)
+                );
+                services.AddScoped<GraniteDataContext>(sp =>
+                    sp.GetRequiredService<GraniteDataContextPostgres>()
+                );
+                logger.Notification("[WebAPI] Using PostgreSQL provider");
+            }
+            else if (dbType == "sqlite")
+            {
+                string dbPath;
+
+                try
+                {
+                    var basePath = api.DataBasePath
+                        ?? throw new InvalidOperationException("Server API database path unavailable");
+                    var configuredName = string.IsNullOrWhiteSpace(config.DatabaseName)
+                        ? "graniteserver"
+                        : config.DatabaseName!;
+                    var databaseName =
+                        Path.GetExtension(configuredName) == ".db"
+                            ? configuredName
+                            : $"{configuredName}.db";
+                    dbPath = Path.Combine(basePath, databaseName);
+                }
+                catch
+                {
+                    throw new InvalidOperationException("Failed to determine SQLite database path");
+                }
+
+                Directory.CreateDirectory(
+                    Path.GetDirectoryName(dbPath) ?? AppContext.BaseDirectory
+                );
+
+                services.AddDbContext<GraniteDataContextSqlite>(options =>
+                    options.UseSqlite($"Data Source={dbPath}")
+                );
+                services.AddScoped<GraniteDataContext>(sp =>
+                    sp.GetRequiredService<GraniteDataContextSqlite>()
+                );
+                logger.Notification($"[WebAPI] Using SQLite provider at: {dbPath}");
+            }
+            else
+            {
+                throw new NotSupportedException(
+                    $"Database type '{config.DatabaseType}' is not supported. Use 'PostgreSQL' or 'SQLite'."
+                );
+            }
+        }
+
+        private void InitializeDatabase(
+            ServiceProvider serviceProvider,
+            GraniteServerConfig config,
+            ICoreServerAPI api
+        )
+        {
+            api.Logger.Notification("[WebAPI] Initializing database...");
+
+            var dataContext = serviceProvider.GetRequiredService<GraniteDataContext>();
+
+            dataContext.Database.EnsureCreated();
+            dataContext.Database.Migrate();
+
+            var serverEntity = dataContext.Servers.FirstOrDefault(x => x.Id == config.ServerId);
+
+            if (serverEntity == null)
+            {
+                serverEntity = new ServerEntity
+                {
+                    Id = config.ServerId,
+                    Name = api.Server.Config.ServerName,
+                    Description = string.Empty,
+                };
+                dataContext.Servers.Add(serverEntity);
+                dataContext.SaveChanges();
+                api.Logger.Notification("[WebAPI] Created new server entity in database.");
+            }
+            else
+            {
+                api.Logger.Notification("[WebAPI] Loaded existing server entity from database.");
+            }
+
+            api.Logger.Notification("[WebAPI] Database initialization complete.");
+        }
     }
 }
