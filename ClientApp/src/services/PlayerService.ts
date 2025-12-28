@@ -3,6 +3,7 @@ import type { PlayerDTO } from '../types/PlayerDTO';
 import type { PlayerDetailsDTO } from '../types/PlayerDetailsDTO';
 import type { UpdateInventorySlotRequestDTO } from '../types/UpdateInventorySlotRequestDTO';
 import type { PlayerNameIdDTO } from '../types/PlayerNameIdDTO';
+import type { PlayerSessionDTO } from '../types/PlayerSessionDTO';
 
 const API_BASE = '/api/players';
 
@@ -55,6 +56,11 @@ export const PlayerService = {
 
     async findPlayerByName(name: string): Promise<PlayerNameIdDTO> {
         const response = await axios.get(`${API_BASE}/find`, { params: { name } });
+        return response.data;
+    },
+
+    async getPlayerSessions(playerId: string, page = 0, pageSize = 20): Promise<PlayerSessionDTO[]> {
+        const response = await axios.get(`${API_BASE}/id/${playerId}/sessions`, { params: { page, pageSize } });
         return response.data;
     }
 
