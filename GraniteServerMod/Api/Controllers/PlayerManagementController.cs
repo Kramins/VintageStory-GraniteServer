@@ -10,6 +10,8 @@ using GraniteServer.Api.Extensions;
 using GraniteServer.Api.Models;
 using GraniteServer.Api.Models.JsonApi;
 using GraniteServer.Api.Services;
+using Sieve.Models;
+using Sieve.Services;
 using Vintagestory.API.Server;
 
 namespace GraniteServer.Api;
@@ -22,21 +24,17 @@ public class PlayerManagementController
 {
     private readonly ICoreServerAPI _api;
     private readonly PlayerService _playerService;
+    private readonly SieveProcessor _sieve;
 
-    public PlayerManagementController(PlayerService playerService, ICoreServerAPI api)
+    public PlayerManagementController(
+        PlayerService playerService,
+        SieveProcessor sieve,
+        ICoreServerAPI api
+    )
     {
         _playerService = playerService ?? throw new ArgumentNullException(nameof(playerService));
+        _sieve = sieve ?? throw new ArgumentNullException(nameof(sieve));
         _api = api ?? throw new ArgumentNullException(nameof(api));
-    }
-
-    /// <summary>
-    /// Lists all whitelisted players.
-    /// </summary>
-    /// <returns>A list of all whitelisted players.</returns>
-    [ResourceMethod(RequestMethod.Get, "/whitelisted")]
-    public async Task<IList<PlayerDTO>> GetWhitelistedPlayers()
-    {
-        return await _playerService.GetWhitelistedPlayersAsync();
     }
 
     /// <summary>
@@ -71,28 +69,50 @@ public class PlayerManagementController
     /// </summary>
     /// <returns>A list of all connected players.</returns>
     [ResourceMethod(RequestMethod.Get)]
-    public async Task<Result<IList<PlayerDTO>>> GetAllPlayers()
+    public async Task<JsonApiDocument<IList<PlayerDTO>>> GetAllPlayers(
+        int page = 0,
+        int pageSize = 20,
+        string sorts = "id",
+        string filters = ""
+    )
     {
         try
         {
-            var result = await _playerService.GetAllPlayersAsync();
-            return new Result<IList<PlayerDTO>>(result);
+            var sieveModel = new SieveModel
+            {
+                Filters = filters,
+                Sorts = sorts,
+                Page = page,
+                PageSize = pageSize,
+            };
+            var completeList = await _playerService.GetAllPlayersAsync();
+            var query = completeList.AsQueryable();
+
+            var totalCount = query.Count();
+            query = _sieve.Apply(sieveModel, query);
+            var paged = query.ToList();
+
+            return new JsonApiDocument<IList<PlayerDTO>>
+            {
+                Data = paged,
+                Meta = new JsonApiMeta
+                {
+                    Pagination = new PaginationMeta
+                    {
+                        Page = page,
+                        PageSize = pageSize,
+                        HasMore = paged.Count >= pageSize,
+                        TotalCount = totalCount,
+                    },
+                },
+            };
         }
         catch (Exception ex)
         {
             _api.Logger.Warning("Error retrieving all players: " + ex.Message);
+            // Preserve existing behavior by rethrowing; clients will receive an error status
             throw;
         }
-    }
-
-    /// <summary>
-    /// Lists all banned players.
-    /// </summary>
-    /// <returns>A list of all banned players.</returns>
-    [ResourceMethod(RequestMethod.Get, "/banned")]
-    public async Task<IList<PlayerDTO>> GetBannedPlayers()
-    {
-        return await _playerService.GetBannedPlayersAsync();
     }
 
     [ResourceMethod(RequestMethod.Get, "/id/:playerId")]
@@ -168,18 +188,28 @@ public class PlayerManagementController
     /// <param name="playerId">Player ID</param>
     /// <param name="page">Zero-based page index</param>
     /// <param name="pageSize">Items per page</param>
-    /// <param name="sort">Sort column (id, joinDate, leaveDate, serverName). Defaults to id.</param>
+    /// <param name="sorts">Sort column (id, joinDate, leaveDate, serverName). Defaults to id.</param>
+    /// <param name="filters">Filter expression</param>
     [ResourceMethod(RequestMethod.Get, "/id/:playerId/sessions")]
     public JsonApiDocument<IList<PlayerSessionDTO>> GetPlayerSessions(
         string playerId,
         int page = 0,
         int pageSize = 20,
-        string sort = "id"
+        string sorts = "id",
+        string filters = ""
     )
     {
-        var completeQuery = _playerService.GetPlayerSessions(playerId);
-        var query = completeQuery.ApplySort(sort, "Id").ApplyPaging(page, pageSize);
+        var sieveModel = new SieveModel
+        {
+            Filters = filters,
+            Sorts = sorts,
+            Page = page,
+            PageSize = pageSize,
+        };
 
+        var completeQuery = _playerService.GetPlayerSessions(playerId);
+        var totalCount = completeQuery.Count();
+        var query = _sieve.Apply(sieveModel, completeQuery);
         var sessions = query.ToList();
 
         return new JsonApiDocument<IList<PlayerSessionDTO>>
@@ -192,7 +222,7 @@ public class PlayerManagementController
                     Page = page,
                     PageSize = pageSize,
                     HasMore = sessions.Count >= pageSize,
-                    TotalCount = completeQuery.Count(),
+                    TotalCount = totalCount,
                 },
             },
         };

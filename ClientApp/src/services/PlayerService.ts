@@ -10,8 +10,27 @@ const API_BASE = '/api/players';
 
 export const PlayerService = {
     async getAllPlayers(): Promise<PlayerDTO[]> {
-        const response = await axios.get(`${API_BASE}/`);
-        return response.data;
+        const response = await axios.get<JsonApiDocument<PlayerDTO[]>>(`${API_BASE}/`);
+        const document = response.data;
+        return document?.data ?? [];
+    },
+
+    async getAllPlayersPaged(
+        page = 0,
+        pageSize = 20,
+        sortField = 'id',
+        sortDirection: 'asc' | 'desc' = 'asc',
+        filters = ''
+    ): Promise<{ players: PlayerDTO[]; pagination?: PaginationMeta; errors?: JsonApiError[] }> {
+        const sorts = sortDirection === 'desc' ? `-${sortField}` : sortField;
+        const response = await axios.get<JsonApiDocument<PlayerDTO[]>>(`${API_BASE}/`, { 
+            params: { page, pageSize, sorts, filters } 
+        });
+        const document = response.data;
+        const players = document?.data ?? [];
+        const pagination = document?.meta?.pagination;
+        const errors = document?.errors ?? [];
+        return { players, pagination, errors };
     },
 
     async getWhitelistedPlayers(): Promise<PlayerDTO[]> {
@@ -65,12 +84,13 @@ export const PlayerService = {
         page = 0,
         pageSize = 20,
         sortField = 'joinDate',
-        sortDirection: 'asc' | 'desc' = 'desc'
+        sortDirection: 'asc' | 'desc' = 'desc',
+        filters = ''
     ): Promise<{ sessions: PlayerSessionDTO[]; pagination?: PaginationMeta; errors?: JsonApiError[] }> {
-        const sort = sortDirection === 'desc' ? `-${sortField}` : sortField;
+        const sorts = sortDirection === 'desc' ? `-${sortField}` : sortField;
         const response = await axios.get<JsonApiDocument<PlayerSessionDTO[]>>(
             `${API_BASE}/id/${playerId}/sessions`,
-            { params: { page, pageSize, sort } }
+            { params: { page, pageSize, sorts, filters } }
         );
 
         const document = response.data;

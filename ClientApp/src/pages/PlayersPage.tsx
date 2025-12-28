@@ -56,11 +56,19 @@ const PlayersPage: React.FC = () => {
     const toast = useToast();
 
     useEffect(() => {
+        // Load data for All Players tab from server (paged)
+        fetchPlayersPaged(0, 20, 'id', 'asc');
+        // Also load the aggregate list for other tabs (e.g., Online)
         dispatch(fetchAllPlayers());
-    }, [dispatch]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleRefresh = () => {
-        dispatch(fetchAllPlayers());
+        if (tabValue === 0) {
+            fetchPlayersPaged(paginationModel.page, paginationModel.pageSize, sortField, sortDirection);
+        } else {
+            dispatch(fetchAllPlayers());
+        }
     };
 
     const handleToggleWhitelist = async (playerId: string) => {
@@ -172,6 +180,11 @@ const PlayersPage: React.FC = () => {
 
     const [tabValue, setTabValue] = React.useState(0);
     const [paginationModel, setPaginationModel] = React.useState({ page: 0, pageSize: 20 });
+    const [sortField, setSortField] = React.useState<string>('id');
+    const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
+    const [serverPlayers, setServerPlayers] = React.useState<PlayerDTO[]>([]);
+    const [serverRowCount, setServerRowCount] = React.useState<number>(0);
+    const [serverLoading, setServerLoading] = React.useState<boolean>(false);
     const [whitelistedPlayers, setWhitelistedPlayers] = React.useState<PlayerDTO[]>([]);
     const [bannedPlayers, setBannedPlayers] = React.useState<PlayerDTO[]>([]);
     const [whitelistedLoading, setWhitelistedLoading] = React.useState(false);
@@ -205,8 +218,21 @@ const PlayersPage: React.FC = () => {
         }
     };
 
+    const fetchPlayersPaged = async (page = 0, pageSize = 20, sortF = 'id', sortD: 'asc' | 'desc' = 'asc') => {
+        setServerLoading(true);
+        try {
+            const { players, pagination } = await PlayerService.getAllPlayersPaged(page, pageSize, sortF, sortD);
+            setServerPlayers(players);
+            setServerRowCount(pagination?.totalCount ?? players.length);
+        } catch (err) {
+            console.error('Failed to fetch paged players', err);
+        } finally {
+            setServerLoading(false);
+        }
+    };
+
     const getDisplayPlayers = () => {
-        if (tabValue === 0) return players;
+        if (tabValue === 0) return serverPlayers;
         if (tabValue === 1) return players.filter(p => p.connectionState === 'Connected');
         if (tabValue === 2) return whitelistedPlayers;
         if (tabValue === 3) return bannedPlayers;
@@ -214,7 +240,7 @@ const PlayersPage: React.FC = () => {
     };
 
     const getDisplayLoading = () => {
-        if (tabValue === 0) return loading;
+        if (tabValue === 0) return serverLoading;
         if (tabValue === 1) return loading;
         if (tabValue === 2) return whitelistedLoading;
         if (tabValue === 3) return bannedLoading;
@@ -299,11 +325,16 @@ const PlayersPage: React.FC = () => {
         const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
             setTabValue(newValue);
             setPaginationModel({ page: 0, pageSize: 20 });
+            setSortField('id');
+            setSortDirection('asc');
             if (newValue === 2 && whitelistedPlayers.length === 0) {
                 fetchWhitelistedPlayers();
             }
             if (newValue === 3 && bannedPlayers.length === 0) {
                 fetchBannedPlayers();
+            }
+            if (newValue === 0) {
+                fetchPlayersPaged(0, 20, 'id', 'asc');
             }
         };
 
@@ -349,8 +380,27 @@ const PlayersPage: React.FC = () => {
                             loading={displayLoading}
                             pagination
                             paginationModel={paginationModel}
-                            onPaginationModelChange={setPaginationModel}
+                            onPaginationModelChange={(model) => {
+                                setPaginationModel(model);
+                                if (tabValue === 0) {
+                                    fetchPlayersPaged(model.page, model.pageSize, sortField, sortDirection);
+                                }
+                            }}
                             pageSizeOptions={[20, 50, 100]}
+                            sortingMode={tabValue === 0 ? 'server' : undefined}
+                            sortModel={tabValue === 0 ? [{ field: sortField, sort: sortDirection }] : []}
+                            onSortModelChange={(model) => {
+                                if (model.length > 0 && tabValue === 0) {
+                                    const { field, sort } = model[0] as any;
+                                    if (sort) {
+                                        setSortField(field);
+                                        setSortDirection(sort);
+                                        fetchPlayersPaged(paginationModel.page, paginationModel.pageSize, field, sort);
+                                    }
+                                }
+                            }}
+                            rowCount={tabValue === 0 ? serverRowCount : undefined}
+                            paginationMode={tabValue === 0 ? 'server' : undefined}
                             disableRowSelectionOnClick
                         />
                         

@@ -23,6 +23,7 @@ using GraniteServerMod.Data;
 using GraniteServerMod.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Sieve.Services;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 using Vintagestory.Common;
@@ -107,9 +108,18 @@ public class WebApi
             var services = new ServiceCollection();
             services.AddSingleton<ICoreServerAPI>(_api);
             services.AddSingleton<ILogger>(_logger);
+
+            // Configure Sieve options
+            services.Configure<Sieve.Models.SieveOptions>(options =>
+            {
+                options.DefaultPageSize = 20;
+                options.MaxPageSize = 100;
+            });
+
             // Register application services, might need to be scoped or transient based on actual usage
             services.AddSingleton<ServerCommandService>();
             services.AddScoped<PlayerService>();
+            services.AddScoped<SieveProcessor>();
             services.AddSingleton<PlayerSessionTracker>();
             services.AddSingleton<WorldService>();
             services.AddSingleton<ServerService>();
@@ -148,7 +158,7 @@ public class WebApi
 
         _dataContext = _serviceProvider.GetRequiredService<GraniteDataContext>();
 
-        _dataContext.Database.EnsureDeleted();
+        // _dataContext.Database.EnsureDeleted();
         _dataContext.Database.EnsureCreated();
         _dataContext.Database.Migrate();
 
