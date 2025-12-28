@@ -9,6 +9,7 @@ using GenHTTP.Modules.Authentication;
 using GenHTTP.Modules.Authentication.ApiKey;
 using GenHTTP.Modules.Controllers;
 using GenHTTP.Modules.DependencyInjection;
+using GenHTTP.Modules.ErrorHandling;
 using GenHTTP.Modules.IO;
 using GenHTTP.Modules.Layouting;
 using GenHTTP.Modules.Practices;
@@ -16,6 +17,7 @@ using GenHTTP.Modules.Security;
 using GenHTTP.Modules.StaticWebsites;
 using GenHTTP.Modules.Webservices;
 using GraniteServer.Api.Controllers;
+using GraniteServer.Api.Handlers;
 using GraniteServer.Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Vintagestory.API.Common;
@@ -74,6 +76,8 @@ public class WebApi
             _logger.Notification("[WebAPI] Starting server...");
             _logger.Notification($"[WebAPI] Serving web client from: {webClientPath}");
 
+            var errorHandling = ErrorHandler.From(new JsonApiErrorMapper());
+
             var protectedControllers = Layout
                 .Create()
                 .AddDependentService<ServerController>("server")
@@ -86,6 +90,7 @@ public class WebApi
 
             var controllers = Layout
                 .Create()
+                .Add(errorHandling)
                 .Add(protectedControllers)
                 .Add(CorsPolicy.Permissive());
 
