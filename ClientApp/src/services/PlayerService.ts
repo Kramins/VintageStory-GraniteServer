@@ -33,14 +33,40 @@ export const PlayerService = {
         return { players, pagination, errors };
     },
 
-    async getWhitelistedPlayers(): Promise<PlayerDTO[]> {
-        const response = await axios.get(`${API_BASE}/whitelisted`);
-        return response.data;
+    async getOnlinePlayers(
+        page = 0,
+        pageSize = 20,
+        sortField = 'id',
+        sortDirection: 'asc' | 'desc' = 'asc',
+        filters = ''
+    ): Promise<{ players: PlayerDTO[]; pagination?: PaginationMeta; errors?: JsonApiError[] }> {
+        // Add ConnectionState=='Connected' to the filter
+        const onlineFilter = filters ? `ConnectionState=='Connected'&&${filters}` : `ConnectionState=='Connected'`;
+        return this.getAllPlayersPaged(page, pageSize, sortField, sortDirection, onlineFilter);
     },
 
-    async getBannedPlayers(): Promise<PlayerDTO[]> {
-        const response = await axios.get(`${API_BASE}/banned`);
-        return response.data;
+    async getWhitelistedPlayers(
+        page = 0,
+        pageSize = 20,
+        sortField = 'id',
+        sortDirection: 'asc' | 'desc' = 'asc',
+        filters = ''
+    ): Promise<{ players: PlayerDTO[]; pagination?: PaginationMeta; errors?: JsonApiError[] }> {
+        // Add IsWhitelisted==true to the filter
+        const whitelistFilter = filters ? `IsWhitelisted==true&&${filters}` : 'IsWhitelisted==true';
+        return this.getAllPlayersPaged(page, pageSize, sortField, sortDirection, whitelistFilter);
+    },
+
+    async getBannedPlayers(
+        page = 0,
+        pageSize = 20,
+        sortField = 'id',
+        sortDirection: 'asc' | 'desc' = 'asc',
+        filters = ''
+    ): Promise<{ players: PlayerDTO[]; pagination?: PaginationMeta; errors?: JsonApiError[] }> {
+        // Add IsBanned==true to the filter
+        const bannedFilter = filters ? `IsBanned==true&&${filters}` : 'IsBanned==true';
+        return this.getAllPlayersPaged(page, pageSize, sortField, sortDirection, bannedFilter);
     },
 
     async kickPlayer(playerId: string, reason?: string): Promise<void> {
