@@ -109,7 +109,7 @@ public class WebApi
             services.AddSingleton<ILogger>(_logger);
             // Register application services, might need to be scoped or transient based on actual usage
             services.AddSingleton<ServerCommandService>();
-            services.AddSingleton<PlayerService>();
+            services.AddScoped<PlayerService>();
             services.AddSingleton<PlayerSessionTracker>();
             services.AddSingleton<WorldService>();
             services.AddSingleton<ServerService>();
@@ -159,7 +159,7 @@ public class WebApi
             ServerEntity = new ServerEntity
             {
                 Id = _config.ServerId,
-                Name = string.Empty,
+                Name = _api.Server.Config.ServerName,
                 Description = string.Empty,
             };
             _dataContext.Servers.Add(ServerEntity);

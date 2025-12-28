@@ -1,6 +1,9 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using GraniteServer.Api.Models;
+using GraniteServerMod.Data;
+using Microsoft.EntityFrameworkCore;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 
@@ -10,11 +13,20 @@ public class ServerService
 {
     private readonly ICoreServerAPI _api;
     private readonly ServerCommandService _commandService;
+    private readonly GraniteDataContext _dataContext;
+    private readonly GraniteServerConfig _config;
 
-    public ServerService(ICoreServerAPI api, ServerCommandService commandService)
+    public ServerService(
+        ICoreServerAPI api,
+        ServerCommandService commandService,
+        GraniteServerConfig config,
+        GraniteDataContext dataContext
+    )
     {
         _api = api;
         _commandService = commandService;
+        _config = config;
+        _dataContext = dataContext;
     }
 
     public async Task<ServerConfigDTO> GetServerConfig()
@@ -38,9 +50,14 @@ public class ServerService
 
     public async Task UpdateConfigAsync(ServerConfigDTO config)
     {
+        var serverEntity = await _dataContext.Servers.FirstOrDefaultAsync(s =>
+            s.Id == _config.ServerId
+        );
+
         if (config.ServerName != null)
         {
             _api.Server.Config.ServerName = config.ServerName;
+            serverEntity.Name = config.ServerName;
         }
 
         if (config.WelcomeMessage != null)
@@ -90,7 +107,8 @@ public class ServerService
 
         // Save the updated configuration
         _api.Server.MarkConfigDirty();
-
+        _dataContext.Servers.Update(serverEntity);
+        await _dataContext.SaveChangesAsync();
         await Task.CompletedTask;
     }
 

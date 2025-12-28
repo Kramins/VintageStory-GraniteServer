@@ -17,16 +17,22 @@ public class PlayerService
 {
     private readonly ICoreServerAPI _api;
     private readonly ServerCommandService _commandService;
+    private readonly GraniteDataContext _dataContext;
     private readonly ConcurrentDictionary<string, string> _nameToIdCache =
         new ConcurrentDictionary<string, string>();
 
     private readonly ConcurrentDictionary<string, string> _idToNameCache =
         new ConcurrentDictionary<string, string>();
 
-    public PlayerService(ICoreServerAPI api, ServerCommandService commandService)
+    public PlayerService(
+        ICoreServerAPI api,
+        ServerCommandService commandService,
+        GraniteDataContext dataContext
+    )
     {
         _api = api ?? throw new ArgumentNullException(nameof(api));
         _commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
+        _dataContext = dataContext ?? throw new ArgumentNullException(nameof(dataContext));
     }
 
     private PlayerDataManager PlayerDataManager => (PlayerDataManager)_api.PlayerData;
@@ -183,11 +189,12 @@ public class PlayerService
         var serverPlayer = _api.World.AllPlayers.FirstOrDefault(sp => sp.PlayerUID == playerId);
         if (serverPlayer != null)
         {
+            var validInventoryClass = new HashSet<string> { "hotbar", "backpack", "character" };
             var inventoryManager = serverPlayer.InventoryManager;
 
             foreach (var inventoryEntry in inventoryManager.Inventories)
             {
-                if (inventoryEntry.Value.ClassName == "creative")
+                if (!validInventoryClass.Contains(inventoryEntry.Value.ClassName))
                 {
                     // Skip creative inventory
                     continue;
@@ -201,6 +208,36 @@ public class PlayerService
         }
 
         return playerDetails;
+    }
+
+    /// <summary>
+    /// Retrieves player sessions for a given player ID, ordered by join date descending.
+    /// Supports pagination via page and pageSize.
+    /// </summary>
+    /// <param name="playerId">The player ID to filter sessions.</param>
+    /// <param name="page">Zero-based page index.</param>
+    /// <param name="pageSize">Number of items per page.</param>
+    /// <returns>A list of PlayerSessionDTO.</returns>
+    public IQueryable<PlayerSessionDTO> GetPlayerSessions(string playerId)
+    {
+        var query =
+            from ps in _dataContext.PlayerSessions
+            join s in _dataContext.Servers on ps.ServerId equals s.Id into ss
+            from s in ss.DefaultIfEmpty()
+            where ps.PlayerId == playerId
+            select new PlayerSessionDTO
+            {
+                Id = ps.Id,
+                PlayerId = ps.PlayerId,
+                ServerId = ps.ServerId,
+                ServerName = s != null ? s.Name : string.Empty,
+                JoinDate = ps.JoinDate,
+                LeaveDate = ps.LeaveDate,
+                IpAddress = ps.IpAddress,
+                PlayerName = ps.PlayerName,
+            };
+
+        return query;
     }
 
     /// <summary>

@@ -6,7 +6,9 @@ using GenHTTP.Api.Protocol;
 using GenHTTP.Modules.Controllers;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
+using GraniteServer.Api.Extensions;
 using GraniteServer.Api.Models;
+using GraniteServer.Api.Models.JsonApi;
 using GraniteServer.Api.Services;
 using Vintagestory.API.Server;
 
@@ -158,5 +160,42 @@ public class PlayerManagementController
     )
     {
         await _playerService.UpdatePlayerInventorySlotAsync(playerId, inventoryName, request);
+    }
+
+    /// <summary>
+    /// Lists sessions for a given player.
+    /// </summary>
+    /// <param name="playerId">Player ID</param>
+    /// <param name="page">Zero-based page index</param>
+    /// <param name="pageSize">Items per page</param>
+    /// <param name="sort">Sort column (id, joinDate, leaveDate, serverName). Defaults to id.</param>
+    [ResourceMethod(RequestMethod.Get, "/id/:playerId/sessions")]
+    public JsonApiDocument<IList<PlayerSessionDTO>> GetPlayerSessions(
+        string playerId,
+        int page = 0,
+        int pageSize = 20,
+        string sort = "id"
+    )
+    {
+        var query = _playerService
+            .GetPlayerSessions(playerId)
+            .ApplySort(sort, "Id")
+            .ApplyPaging(page, pageSize);
+
+        var sessions = query.ToList();
+
+        return new JsonApiDocument<IList<PlayerSessionDTO>>
+        {
+            Data = sessions,
+            Meta = new JsonApiMeta
+            {
+                Pagination = new PaginationMeta
+                {
+                    Page = page,
+                    PageSize = pageSize,
+                    HasMore = sessions.Count >= pageSize,
+                },
+            },
+        };
     }
 }

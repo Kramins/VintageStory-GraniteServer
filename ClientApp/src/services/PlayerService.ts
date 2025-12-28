@@ -4,6 +4,7 @@ import type { PlayerDetailsDTO } from '../types/PlayerDetailsDTO';
 import type { UpdateInventorySlotRequestDTO } from '../types/UpdateInventorySlotRequestDTO';
 import type { PlayerNameIdDTO } from '../types/PlayerNameIdDTO';
 import type { PlayerSessionDTO } from '../types/PlayerSessionDTO';
+import type { JsonApiDocument, PaginationMeta, JsonApiError } from '../types/JsonApi';
 
 const API_BASE = '/api/players';
 
@@ -59,9 +60,22 @@ export const PlayerService = {
         return response.data;
     },
 
-    async getPlayerSessions(playerId: string, page = 0, pageSize = 20): Promise<PlayerSessionDTO[]> {
-        const response = await axios.get(`${API_BASE}/id/${playerId}/sessions`, { params: { page, pageSize } });
-        return response.data;
+    async getPlayerSessions(
+        playerId: string,
+        page = 0,
+        pageSize = 20
+    ): Promise<{ sessions: PlayerSessionDTO[]; pagination?: PaginationMeta; errors?: JsonApiError[] }> {
+        const response = await axios.get<JsonApiDocument<PlayerSessionDTO[]>>(
+            `${API_BASE}/id/${playerId}/sessions`,
+            { params: { page, pageSize } }
+        );
+
+        const document = response.data;
+        const sessions = document?.data ?? [];
+        const pagination = document?.meta?.pagination;
+        const errors = document?.errors ?? [];
+
+        return { sessions, pagination, errors };
     }
 
 

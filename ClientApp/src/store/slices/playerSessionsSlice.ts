@@ -2,6 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { PlayerService } from '../../services/PlayerService';
 import type { PlayerSessionDTO } from '../../types/PlayerSessionDTO';
+import type { JsonApiError, PaginationMeta } from '../../types/JsonApi';
 import type { AppDispatch } from '../store';
 
 interface PlayerSessionsState {
@@ -11,6 +12,8 @@ interface PlayerSessionsState {
   page: number;
   pageSize: number;
   hasMore: boolean;
+  pagination?: PaginationMeta | null;
+  apiErrors?: JsonApiError[];
 }
 
 const initialState: PlayerSessionsState = {
@@ -20,6 +23,8 @@ const initialState: PlayerSessionsState = {
   page: 0,
   pageSize: 20,
   hasMore: true,
+  pagination: null,
+  apiErrors: [],
 };
 
 const playerSessionsSlice = createSlice({
@@ -30,11 +35,16 @@ const playerSessionsSlice = createSlice({
       state.loading = true;
       state.error = null;
     },
-    fetchSessionsSuccess(state: PlayerSessionsState, action: PayloadAction<{ data: PlayerSessionDTO[]; append: boolean }>) {
+    fetchSessionsSuccess(
+      state: PlayerSessionsState,
+      action: PayloadAction<{ data: PlayerSessionDTO[]; pagination?: PaginationMeta; errors?: JsonApiError[]; append: boolean }>
+    ) {
       state.loading = false;
-      const { data, append } = action.payload;
+      const { data, append, pagination, errors } = action.payload;
       state.sessions = append ? [...state.sessions, ...data] : data;
-      state.hasMore = data.length >= state.pageSize;
+      state.pagination = pagination ?? state.pagination;
+      state.hasMore = pagination?.hasMore ?? data.length >= state.pageSize;
+      state.apiErrors = errors ?? [];
     },
     fetchSessionsFailure(state: PlayerSessionsState, action: PayloadAction<string>) {
       state.loading = false;
@@ -51,6 +61,8 @@ const playerSessionsSlice = createSlice({
       state.page = 0;
       state.hasMore = true;
       state.error = null;
+      state.pagination = null;
+      state.apiErrors = [];
     },
   },
 });
@@ -71,8 +83,19 @@ export const fetchPlayerSessions = (playerId: string, page?: number) => async (d
 
   dispatch(fetchSessionsStart());
   try {
-    const data = await PlayerService.getPlayerSessions(playerId, currentPage, pageSize);
-    dispatch(fetchSessionsSuccess({ data, append: currentPage > 0 }));
+    const { sessions, pagination, errors } = await PlayerService.getPlayerSessions(
+      playerId,
+      currentPage,
+      pageSize
+    );
+    dispatch(
+      fetchSessionsSuccess({
+        data: sessions,
+        pagination,
+        errors,
+        append: currentPage > 0,
+      })
+    );
     dispatch(setPage(currentPage));
   } catch (error: any) {
     dispatch(fetchSessionsFailure(error?.message ?? 'Failed to load sessions'));
