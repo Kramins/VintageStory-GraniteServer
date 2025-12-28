@@ -2,6 +2,7 @@ export interface PaginationMeta {
   page: number;
   pageSize: number;
   hasMore: boolean;
+  totalCount: number;
 }
 
 export interface JsonApiMeta {

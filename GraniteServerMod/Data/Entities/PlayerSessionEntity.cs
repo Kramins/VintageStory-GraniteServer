@@ -11,4 +11,5 @@ public class PlayerSessionEntity
     public string IpAddress { get; set; }
     public string PlayerName { get; set; }
     public DateTime? LeaveDate { get; set; }
+    public double? Duration { get; set; }
 }

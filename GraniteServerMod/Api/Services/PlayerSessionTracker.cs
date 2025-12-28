@@ -107,6 +107,9 @@ public class PlayerSessionTracker
                 if (playerSessionEntity != null)
                 {
                     playerSessionEntity.LeaveDate = DateTime.UtcNow;
+                    playerSessionEntity.Duration = (
+                        playerSessionEntity.LeaveDate - playerSessionEntity.JoinDate
+                    )?.TotalSeconds;
                     _dataContext.PlayerSessions.Update(playerSessionEntity);
                     _dataContext.SaveChanges();
                 }

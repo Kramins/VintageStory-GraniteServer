@@ -7,6 +7,6 @@ export interface PlayerSessionDTO {
   leaveDate?: string; // ISO string or undefined if active
   ipAddress: string;
   playerName: string;
-  durationMinutes?: number;
+  duration?: number; // in seconds
   isActive: boolean;
 }

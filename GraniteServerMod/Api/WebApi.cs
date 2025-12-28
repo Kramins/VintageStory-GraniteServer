@@ -148,7 +148,7 @@ public class WebApi
 
         _dataContext = _serviceProvider.GetRequiredService<GraniteDataContext>();
 
-        // _dataContext.Database.EnsureDeleted();
+        _dataContext.Database.EnsureDeleted();
         _dataContext.Database.EnsureCreated();
         _dataContext.Database.Migrate();
 

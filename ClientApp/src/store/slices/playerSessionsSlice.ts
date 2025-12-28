@@ -14,6 +14,8 @@ interface PlayerSessionsState {
   hasMore: boolean;
   pagination?: PaginationMeta | null;
   apiErrors?: JsonApiError[];
+  sortField?: string;
+  sortDirection?: 'asc' | 'desc';
 }
 
 const initialState: PlayerSessionsState = {
@@ -25,6 +27,8 @@ const initialState: PlayerSessionsState = {
   hasMore: true,
   pagination: null,
   apiErrors: [],
+  sortField: 'joinDate',
+  sortDirection: 'desc',
 };
 
 const playerSessionsSlice = createSlice({
@@ -64,6 +68,11 @@ const playerSessionsSlice = createSlice({
       state.pagination = null;
       state.apiErrors = [];
     },
+    setSort(state: PlayerSessionsState, action: PayloadAction<{ field: string; direction: 'asc' | 'desc' }>) {
+      state.sortField = action.payload.field;
+      state.sortDirection = action.payload.direction;
+      state.page = 0;
+    },
   },
 });
 
@@ -74,19 +83,24 @@ export const {
   setPage,
   setPageSize,
   clearSessions,
+  setSort,
 } = playerSessionsSlice.actions;
 
 export const fetchPlayerSessions = (playerId: string, page?: number) => async (dispatch: AppDispatch, getState: () => any) => {
   const { playerSessions } = getState();
   const currentPage = page ?? playerSessions.page;
   const pageSize = playerSessions.pageSize;
+  const sortField = playerSessions.sortField ?? 'joinDate';
+  const sortDirection = playerSessions.sortDirection ?? 'desc';
 
   dispatch(fetchSessionsStart());
   try {
     const { sessions, pagination, errors } = await PlayerService.getPlayerSessions(
       playerId,
       currentPage,
-      pageSize
+      pageSize,
+      sortField,
+      sortDirection
     );
     dispatch(
       fetchSessionsSuccess({

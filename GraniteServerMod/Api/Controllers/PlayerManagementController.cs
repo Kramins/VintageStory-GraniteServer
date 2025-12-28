@@ -177,10 +177,8 @@ public class PlayerManagementController
         string sort = "id"
     )
     {
-        var query = _playerService
-            .GetPlayerSessions(playerId)
-            .ApplySort(sort, "Id")
-            .ApplyPaging(page, pageSize);
+        var completeQuery = _playerService.GetPlayerSessions(playerId);
+        var query = completeQuery.ApplySort(sort, "Id").ApplyPaging(page, pageSize);
 
         var sessions = query.ToList();
 
@@ -194,6 +192,7 @@ public class PlayerManagementController
                     Page = page,
                     PageSize = pageSize,
                     HasMore = sessions.Count >= pageSize,
+                    TotalCount = completeQuery.Count(),
                 },
             },
         };

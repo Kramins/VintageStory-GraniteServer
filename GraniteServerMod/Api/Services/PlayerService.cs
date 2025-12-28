@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using GraniteServer.Api.Models;
 using GraniteServerMod.Data;
 using GraniteServerMod.Data.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Sqlite;
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.Server;
@@ -34,6 +36,8 @@ public class PlayerService
         _commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
         _dataContext = dataContext ?? throw new ArgumentNullException(nameof(dataContext));
     }
+
+    public bool IsSqliteProvider() => _dataContext.Database.IsSqlite();
 
     private PlayerDataManager PlayerDataManager => (PlayerDataManager)_api.PlayerData;
 
@@ -235,6 +239,8 @@ public class PlayerService
                 LeaveDate = ps.LeaveDate,
                 IpAddress = ps.IpAddress,
                 PlayerName = ps.PlayerName,
+                Duration = ps.Duration,
+                IsActive = !ps.LeaveDate.HasValue,
             };
 
         return query;

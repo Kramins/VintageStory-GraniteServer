@@ -13,23 +13,7 @@ public class PlayerSessionDTO
     public string IpAddress { get; set; } = string.Empty;
     public string PlayerName { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Duration of the session in minutes. Calculated as (LeaveDate - JoinDate) or null if still active.
-    /// </summary>
-    public int? DurationMinutes
-    {
-        get
-        {
-            if (LeaveDate.HasValue)
-            {
-                return (int)(LeaveDate.Value - JoinDate).TotalMinutes;
-            }
-            return null;
-        }
-    }
+    public double? Duration { get; set; }
 
-    /// <summary>
-    /// Indicates if the session is currently active (no LeaveDate).
-    /// </summary>
-    public bool IsActive => !LeaveDate.HasValue;
+    public bool IsActive { get; set; }
 }

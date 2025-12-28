@@ -63,11 +63,14 @@ export const PlayerService = {
     async getPlayerSessions(
         playerId: string,
         page = 0,
-        pageSize = 20
+        pageSize = 20,
+        sortField = 'joinDate',
+        sortDirection: 'asc' | 'desc' = 'desc'
     ): Promise<{ sessions: PlayerSessionDTO[]; pagination?: PaginationMeta; errors?: JsonApiError[] }> {
+        const sort = sortDirection === 'desc' ? `-${sortField}` : sortField;
         const response = await axios.get<JsonApiDocument<PlayerSessionDTO[]>>(
             `${API_BASE}/id/${playerId}/sessions`,
-            { params: { page, pageSize } }
+            { params: { page, pageSize, sort } }
         );
 
         const document = response.data;

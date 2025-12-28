@@ -1,7 +1,10 @@
 import React, { useEffect } from 'react';
-import { Box, Typography, TableContainer, Paper, Table, TableHead, TableRow, TableCell, TableBody, Alert, CircularProgress, Button } from '@mui/material';
+import { Box, Typography, Alert, CircularProgress, Button, IconButton } from '@mui/material';
+import { DataGrid } from '@mui/x-data-grid';
+import type { GridRenderCellParams } from '@mui/x-data-grid';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useAppDispatch, useAppSelector } from '../../store/store';
-import { fetchPlayerSessions, clearSessions } from '../../store/slices/playerSessionsSlice';
+import { fetchPlayerSessions, clearSessions, setSort } from '../../store/slices/playerSessionsSlice';
 
 interface Props {
   playerId: string;
@@ -9,7 +12,8 @@ interface Props {
 
 const PlayerSessionsTab: React.FC<Props> = ({ playerId }) => {
   const dispatch = useAppDispatch();
-  const { sessions, loading, error, page, hasMore, pagination, apiErrors } = useAppSelector(state => state.playerSessions);
+  const { sessions, loading, error, page, hasMore, pagination, apiErrors, sortField, sortDirection } = useAppSelector(state => state.playerSessions);
+  const pageSize = pagination?.pageSize ?? 20;
 
   useEffect(() => {
     dispatch(clearSessions());
@@ -19,6 +23,65 @@ const PlayerSessionsTab: React.FC<Props> = ({ playerId }) => {
   const handleLoadMoreSessions = () => {
     dispatch(fetchPlayerSessions(playerId, page + 1) as any);
   };
+
+  const formatDate = (dateString: string): string => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const columns = [
+    { field: 'serverName', headerName: 'Server', width: 150 },
+    { 
+      field: 'joinDate', 
+      headerName: 'Join Date', 
+      width: 200,
+      valueGetter: (value: string) => formatDate(value)
+    },
+    { 
+      field: 'leaveDate', 
+      headerName: 'Leave Date', 
+      width: 200,
+      valueGetter: (value: string) => formatDate(value)
+    },
+    { 
+      field: 'duration', 
+      headerName: 'Duration', 
+      width: 150,
+      valueGetter: (value: number) => formatDuration(value)
+    },
+    { field: 'ipAddress', headerName: 'IP', width: 150 },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 100,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams) => (
+        <IconButton 
+          size="small" 
+          color="primary"
+          onClick={() => console.log('View session:', params.row)}
+          aria-label="view session"
+        >
+          <VisibilityIcon />
+        </IconButton>
+      ),
+    },
+  ];
 
   return (
     <Box sx={{ p: 2 }}>
@@ -36,42 +99,34 @@ const PlayerSessionsTab: React.FC<Props> = ({ playerId }) => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableCell>Join Date</TableCell>
-                <TableCell>Leave Date</TableCell>
-                <TableCell>Duration</TableCell>
-                <TableCell>IP</TableCell>
-                <TableCell>Server</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {sessions.map((s) => {
-                const join = new Date(s.joinDate);
-                const leave = s.leaveDate ? new Date(s.leaveDate) : null;
-                const duration = s.durationMinutes ?? (leave ? Math.round((leave.getTime() - join.getTime()) / 60000) : undefined);
-                return (
-                  <TableRow key={s.id}>
-                    <TableCell>{join.toLocaleString()}</TableCell>
-                    <TableCell>{leave ? leave.toLocaleString() : 'Active'}</TableCell>
-                    <TableCell>{duration !== undefined ? `${duration} min` : '-'}</TableCell>
-                    <TableCell>{s.ipAddress}</TableCell>
-                    <TableCell>{s.serverName || s.serverId}</TableCell>
-                  </TableRow>
-                );
-              })}
-              {sessions.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5}>
-                    <Alert severity="info">No sessions found.</Alert>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <Box sx={{ height: 400, width: '100%' }}>
+          <DataGrid
+            rows={sessions}
+            columns={columns}
+            paginationModel={{ page: page, pageSize: pageSize }}
+            pageSizeOptions={[20, 50, 100]}
+            pagination
+            onPaginationModelChange={(model) => {
+              if (model.page !== page) {
+                dispatch(fetchPlayerSessions(playerId, model.page + 1) as any);
+              }
+            }}
+            sortingMode="server"
+            sortModel={sortField && sortDirection ? [{ field: sortField, sort: sortDirection }] : [{ field: 'joinDate', sort: 'desc' }]}
+            onSortModelChange={(model) => {
+              if (model.length > 0) {
+                const { field, sort } = model[0];
+                if (sort && (field !== sortField || sort !== sortDirection)) {
+                  dispatch(setSort({ field, direction: sort }) as any);
+                  dispatch(fetchPlayerSessions(playerId, 0) as any);
+                }
+              }
+            }}
+            rowCount={pagination?.totalCount ?? 0}
+            loading={loading}
+            paginationMode="server"
+          />
+        </Box>
       )}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
         <Typography variant="body2" color="text.secondary">
