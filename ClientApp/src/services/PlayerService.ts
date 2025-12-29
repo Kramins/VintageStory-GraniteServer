@@ -16,16 +16,22 @@ export const PlayerService = {
     },
 
     async getAllPlayersPaged(
-        page = 0,
+        page = 1,
         pageSize = 20,
         sortField = 'id',
         sortDirection: 'asc' | 'desc' = 'asc',
         filters = ''
     ): Promise<{ players: PlayerDTO[]; pagination?: PaginationMeta; errors?: JsonApiError[] }> {
         const sorts = sortDirection === 'desc' ? `-${sortField}` : sortField;
-        const response = await axios.get<JsonApiDocument<PlayerDTO[]>>(`${API_BASE}/`, { 
-            params: { page, pageSize, sorts, filters } 
+
+        // API expects 1-based page
+        const apiPage = page < 1 ? 1 : page;
+        const apiPageSize = pageSize <= 0 ? 1 : pageSize;
+
+        const response = await axios.get<JsonApiDocument<PlayerDTO[]>>(`${API_BASE}/`, {
+            params: { page: apiPage, pageSize: apiPageSize, sorts, filters },
         });
+
         const document = response.data;
         const players = document?.data ?? [];
         const pagination = document?.meta?.pagination;
@@ -107,16 +113,20 @@ export const PlayerService = {
 
     async getPlayerSessions(
         playerId: string,
-        page = 0,
+        page = 1,
         pageSize = 20,
         sortField = 'joinDate',
         sortDirection: 'asc' | 'desc' = 'desc',
         filters = ''
     ): Promise<{ sessions: PlayerSessionDTO[]; pagination?: PaginationMeta; errors?: JsonApiError[] }> {
         const sorts = sortDirection === 'desc' ? `-${sortField}` : sortField;
+
+        const apiPage = page < 1 ? 1 : page;
+        const apiPageSize = pageSize <= 0 ? 1 : pageSize;
+
         const response = await axios.get<JsonApiDocument<PlayerSessionDTO[]>>(
             `${API_BASE}/id/${playerId}/sessions`,
-            { params: { page, pageSize, sorts, filters } }
+            { params: { page: apiPage, pageSize: apiPageSize, sorts, filters } }
         );
 
         const document = response.data;

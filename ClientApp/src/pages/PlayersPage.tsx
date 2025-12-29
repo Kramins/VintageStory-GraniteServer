@@ -54,8 +54,8 @@ const PlayersPage: React.FC = () => {
     const toast = useToast();
 
     useEffect(() => {
-        // Load data for All Players tab from server (paged)
-        fetchPlayersPaged(0, 20, 'id', 'asc');
+        // Load data for All Players tab from server (paged); API is 1-based
+        fetchPlayersPaged(1, 20, 'id', 'asc');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -195,10 +195,11 @@ const PlayersPage: React.FC = () => {
     const [addWhitelistSubmitting, setAddWhitelistSubmitting] = React.useState(false);
     const [addWhitelistSuccess, setAddWhitelistSuccess] = React.useState(false);
 
-    const fetchWhitelistedPlayers = async (page = 0, pageSize = 20, sortF = 'id', sortD: 'asc' | 'desc' = 'asc') => {
+    const fetchWhitelistedPlayers = async (page = 1, pageSize = 20, sortF = 'id', sortD: 'asc' | 'desc' = 'asc') => {
         setWhitelistedLoading(true);
         try {
-            const { players, pagination } = await PlayerService.getWhitelistedPlayers(page, pageSize, sortF, sortD);
+            const apiPage = page < 1 ? 1 : page; // API expects 1-based
+            const { players, pagination } = await PlayerService.getWhitelistedPlayers(apiPage, pageSize, sortF, sortD);
             setWhitelistedPlayers(players);
             setWhitelistedRowCount(pagination?.totalCount ?? players.length);
         } catch (err) {
@@ -208,10 +209,11 @@ const PlayersPage: React.FC = () => {
         }
     };
 
-    const fetchBannedPlayers = async (page = 0, pageSize = 20, sortF = 'id', sortD: 'asc' | 'desc' = 'asc') => {
+    const fetchBannedPlayers = async (page = 1, pageSize = 20, sortF = 'id', sortD: 'asc' | 'desc' = 'asc') => {
         setBannedLoading(true);
         try {
-            const { players, pagination } = await PlayerService.getBannedPlayers(page, pageSize, sortF, sortD);
+            const apiPage = page < 1 ? 1 : page; // API expects 1-based
+            const { players, pagination } = await PlayerService.getBannedPlayers(apiPage, pageSize, sortF, sortD);
             setBannedPlayers(players);
             setBannedRowCount(pagination?.totalCount ?? players.length);
         } catch (err) {
@@ -221,10 +223,11 @@ const PlayersPage: React.FC = () => {
         }
     };
 
-    const fetchPlayersPaged = async (page = 0, pageSize = 20, sortF = 'id', sortD: 'asc' | 'desc' = 'asc') => {
+    const fetchPlayersPaged = async (page = 1, pageSize = 20, sortF = 'id', sortD: 'asc' | 'desc' = 'asc') => {
         setServerLoading(true);
         try {
-            const { players, pagination } = await PlayerService.getAllPlayersPaged(page, pageSize, sortF, sortD);
+            const apiPage = page < 1 ? 1 : page; // API expects 1-based
+            const { players, pagination } = await PlayerService.getAllPlayersPaged(apiPage, pageSize, sortF, sortD);
             setServerPlayers(players);
             setServerRowCount(pagination?.totalCount ?? players.length);
         } catch (err) {
@@ -234,10 +237,11 @@ const PlayersPage: React.FC = () => {
         }
     };
 
-    const fetchOnlinePlayers = async (page = 0, pageSize = 20, sortF = 'id', sortD: 'asc' | 'desc' = 'asc') => {
+    const fetchOnlinePlayers = async (page = 1, pageSize = 20, sortF = 'id', sortD: 'asc' | 'desc' = 'asc') => {
         setOnlineLoading(true);
         try {
-            const { players, pagination } = await PlayerService.getOnlinePlayers(page, pageSize, sortF, sortD);
+            const apiPage = page < 1 ? 1 : page; // API expects 1-based
+            const { players, pagination } = await PlayerService.getOnlinePlayers(apiPage, pageSize, sortF, sortD);
             setOnlinePlayers(players);
             setOnlineRowCount(pagination?.totalCount ?? players.length);
         } catch (err) {
@@ -344,16 +348,16 @@ const PlayersPage: React.FC = () => {
             setSortField('id');
             setSortDirection('asc');
             if (newValue === 1) {
-                fetchOnlinePlayers(0, 20, 'id', 'asc');
+                fetchOnlinePlayers(1, 20, 'id', 'asc');
             }
             if (newValue === 2) {
-                fetchWhitelistedPlayers(0, 20, 'id', 'asc');
+                fetchWhitelistedPlayers(1, 20, 'id', 'asc');
             }
             if (newValue === 3) {
-                fetchBannedPlayers(0, 20, 'id', 'asc');
+                fetchBannedPlayers(1, 20, 'id', 'asc');
             }
             if (newValue === 0) {
-                fetchPlayersPaged(0, 20, 'id', 'asc');
+                fetchPlayersPaged(1, 20, 'id', 'asc');
             }
         };
 
@@ -366,9 +370,9 @@ const PlayersPage: React.FC = () => {
                             startIcon={<RefreshIcon />}
                             onClick={() => {
                                 handleRefresh();
-                                if (tabValue === 1) fetchOnlinePlayers(paginationModel.page, paginationModel.pageSize, sortField, sortDirection);
-                                if (tabValue === 2) fetchWhitelistedPlayers(paginationModel.page, paginationModel.pageSize, sortField, sortDirection);
-                                if (tabValue === 3) fetchBannedPlayers(paginationModel.page, paginationModel.pageSize, sortField, sortDirection);
+                                if (tabValue === 1) fetchOnlinePlayers(paginationModel.page + 1, paginationModel.pageSize, sortField, sortDirection);
+                                if (tabValue === 2) fetchWhitelistedPlayers(paginationModel.page + 1, paginationModel.pageSize, sortField, sortDirection);
+                                if (tabValue === 3) fetchBannedPlayers(paginationModel.page + 1, paginationModel.pageSize, sortField, sortDirection);
                             }}
                             disabled={displayLoading}
                         >
@@ -403,13 +407,13 @@ const PlayersPage: React.FC = () => {
                             onPaginationModelChange={(model) => {
                                 setPaginationModel(model);
                                 if (tabValue === 0) {
-                                    fetchPlayersPaged(model.page, model.pageSize, sortField, sortDirection);
+                                    fetchPlayersPaged(model.page + 1, model.pageSize, sortField, sortDirection);
                                 } else if (tabValue === 1) {
-                                    fetchOnlinePlayers(model.page, model.pageSize, sortField, sortDirection);
+                                    fetchOnlinePlayers(model.page + 1, model.pageSize, sortField, sortDirection);
                                 } else if (tabValue === 2) {
-                                    fetchWhitelistedPlayers(model.page, model.pageSize, sortField, sortDirection);
+                                    fetchWhitelistedPlayers(model.page + 1, model.pageSize, sortField, sortDirection);
                                 } else if (tabValue === 3) {
-                                    fetchBannedPlayers(model.page, model.pageSize, sortField, sortDirection);
+                                    fetchBannedPlayers(model.page + 1, model.pageSize, sortField, sortDirection);
                                 }
                             }}
                             pageSizeOptions={[20, 50, 100]}
@@ -422,13 +426,13 @@ const PlayersPage: React.FC = () => {
                                         setSortField(field);
                                         setSortDirection(sort);
                                         if (tabValue === 0) {
-                                            fetchPlayersPaged(paginationModel.page, paginationModel.pageSize, field, sort);
+                                            fetchPlayersPaged(paginationModel.page + 1, paginationModel.pageSize, field, sort);
                                         } else if (tabValue === 1) {
-                                            fetchOnlinePlayers(paginationModel.page, paginationModel.pageSize, field, sort);
+                                            fetchOnlinePlayers(paginationModel.page + 1, paginationModel.pageSize, field, sort);
                                         } else if (tabValue === 2) {
-                                            fetchWhitelistedPlayers(paginationModel.page, paginationModel.pageSize, field, sort);
+                                            fetchWhitelistedPlayers(paginationModel.page + 1, paginationModel.pageSize, field, sort);
                                         } else if (tabValue === 3) {
-                                            fetchBannedPlayers(paginationModel.page, paginationModel.pageSize, field, sort);
+                                            fetchBannedPlayers(paginationModel.page + 1, paginationModel.pageSize, field, sort);
                                         }
                                     }
                                 }

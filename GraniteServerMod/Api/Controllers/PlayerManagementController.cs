@@ -70,7 +70,7 @@ public class PlayerManagementController
     /// <returns>A list of all connected players.</returns>
     [ResourceMethod(RequestMethod.Get)]
     public async Task<JsonApiDocument<IList<PlayerDTO>>> GetAllPlayers(
-        int page = 0,
+        int page = 1,
         int pageSize = 20,
         string sorts = "id",
         string filters = ""
@@ -193,7 +193,7 @@ public class PlayerManagementController
     [ResourceMethod(RequestMethod.Get, "/id/:playerId/sessions")]
     public JsonApiDocument<IList<PlayerSessionDTO>> GetPlayerSessions(
         string playerId,
-        int page = 0,
+        int page = 1,
         int pageSize = 20,
         string sorts = "id",
         string filters = ""

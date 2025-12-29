@@ -130,7 +130,7 @@ const PlayerSessionsTab: React.FC<Props> = ({ playerId }) => {
       )}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
         <Typography variant="body2" color="text.secondary">
-          Page {(pagination?.page ?? page) + 1} • Page size {pagination?.pageSize ?? ''}
+          Page {pagination?.page ?? page + 1} • Page size {pagination?.pageSize ?? ''}
         </Typography>
         <Button variant="contained" onClick={handleLoadMoreSessions} disabled={!hasMore || loading}>
           {loading ? 'Loading…' : hasMore ? 'Load More' : 'No More'}

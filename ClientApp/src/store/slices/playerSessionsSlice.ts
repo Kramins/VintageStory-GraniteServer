@@ -88,6 +88,7 @@ export const {
 
 export const fetchPlayerSessions = (playerId: string, page?: number) => async (dispatch: AppDispatch, getState: () => any) => {
   const { playerSessions } = getState();
+  // UI and state use 0-based; API expects 1-based
   const currentPage = page ?? playerSessions.page;
   const pageSize = playerSessions.pageSize;
   const sortField = playerSessions.sortField ?? 'joinDate';
@@ -95,9 +96,10 @@ export const fetchPlayerSessions = (playerId: string, page?: number) => async (d
 
   dispatch(fetchSessionsStart());
   try {
+    const apiPage = currentPage < 0 ? 1 : currentPage + 1;
     const { sessions, pagination, errors } = await PlayerService.getPlayerSessions(
       playerId,
-      currentPage,
+      apiPage,
       pageSize,
       sortField,
       sortDirection
