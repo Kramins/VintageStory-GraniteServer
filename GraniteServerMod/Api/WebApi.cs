@@ -19,6 +19,7 @@ using GenHTTP.Modules.Webservices;
 using GraniteServer.Api.Controllers;
 using GraniteServer.Api.Handlers;
 using GraniteServer.Api.Services;
+using GraniteServerMod.Api.Controllers;
 using GraniteServerMod.Api.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 using Vintagestory.API.Common;
@@ -84,6 +85,7 @@ public class WebApi
                 .AddDependentService<ServerController>("server")
                 .AddDependentService<PlayerManagementController>("players")
                 .AddDependentService<WorldController>("world")
+                .AddDependentService<ModManagementController>("mods")
                 .Add(CorsPolicy.Permissive())
                 .AddSwaggerUi()
                 .AddScalar()

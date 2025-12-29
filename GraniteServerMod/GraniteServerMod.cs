@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using GraniteServer.Api;
 using GraniteServer.Api.Services;
+using GraniteServerMod.Api.Services;
 using GraniteServerMod.Data;
 using GraniteServerMod.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -104,9 +105,11 @@ namespace GraniteServer
             services.AddSingleton<ServerCommandService>();
             services.AddScoped<PlayerService>();
             services.AddScoped<SieveProcessor>();
+            services.AddScoped<ModManagementService>();
             services.AddSingleton<PlayerSessionTracker>();
             services.AddSingleton<WorldService>();
             services.AddSingleton<ServerService>();
+
             services.AddSingleton<BasicAuthService>();
             services.AddSingleton<JwtTokenService>();
             services.AddSingleton(config);
