@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using GraniteServer.Data.Entities;
 using GraniteServerMod.Api.Models;
 using GraniteServerMod.Api.Models.ModDatabase;
 using GraniteServerMod.Data;
 using Microsoft.EntityFrameworkCore;
+using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 
 namespace GraniteServerMod.Api.Services;
@@ -155,18 +157,29 @@ public class ModManagementService
     {
         // Placeholder implementation
 
-        var mods = _api
-            .ModLoader.Mods.Where(mod => mod.Info.CoreMod == false)
-            .Select(mod => new ModDTO
-            {
-                Id = mod.Info.ModID,
-                Name = mod.Info.Name,
-                Version = mod.Info.Version,
-                Description = mod.Info.Description,
-                Author = mod.Info.Authors != null ? string.Join(", ", mod.Info.Authors) : "Unknown",
-            })
-            .ToList();
+        var mods = _api.ModLoader.Mods.Where(mod => mod.Info.CoreMod == false);
+        var modDtoList = new List<ModDTO>();
+        foreach (var mod in mods)
+        {
+            var modData = await GetModAsync(mod.Info.ModID);
 
-        return await Task.FromResult(mods);
+            var modDto = MapModEntityToDto(mod, modData);
+            modDtoList.Add(modDto);
+        }
+        return modDtoList;
+    }
+
+    private ModDTO MapModEntityToDto(Mod mod, ModEntity modData)
+    {
+        return new ModDTO
+        {
+            Id = mod.Info.ModID,
+            CurrentVersion = modData
+                .Releases.OrderByDescending(r => r.Created)
+                .LastOrDefault()
+                ?.ModVersion,
+            InstalledVersion = mod.Info.Version,
+            Name = mod.Info.Name,
+        };
     }
 }
