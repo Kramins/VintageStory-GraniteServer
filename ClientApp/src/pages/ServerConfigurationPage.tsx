@@ -157,8 +157,8 @@ const ServerConfigurationPage: React.FC = () => {
                             <FormControlLabel
                                 control={
                                     <Switch
-                                        checked={formData.allowPvp ?? false}
-                                        onChange={e => handleInputChange('allowPvp', e.target.checked)}
+                                        checked={formData.allowPvP ?? false}
+                                        onChange={e => handleInputChange('allowPvP', e.target.checked)}
                                         disabled={isSaving}
                                     />
                                 }

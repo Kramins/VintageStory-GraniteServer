@@ -6,7 +6,7 @@ export interface ServerConfigDTO {
     password?: string;
     maxChunkRadius?: number;
     whitelistMode?: string;
-    allowPvp?: boolean;
+    allowPvP?: boolean;
     allowFireSpread?: boolean;
     allowFallingBlocks?: boolean;
 }

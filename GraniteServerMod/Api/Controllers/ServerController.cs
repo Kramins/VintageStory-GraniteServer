@@ -1,11 +1,13 @@
 using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using GenHTTP.Api.Protocol;
 using GenHTTP.Engine.Internal;
 using GenHTTP.Modules.Controllers;
 using GenHTTP.Modules.Webservices;
 using GraniteServer.Api.Models;
+using GraniteServer.Api.Models.JsonApi;
 using GraniteServer.Api.Services;
 using Vintagestory.API.Server;
 
@@ -60,14 +62,17 @@ public class ServerController
     // Stop server endpoint removed
 
     [ResourceMethod(RequestMethod.Get, "/config")]
-    public async Task<ServerConfigDTO> GetServerConfigAsync()
+    public async Task<JsonApiDocument<ServerConfigDTO>> GetServerConfigAsync()
     {
-        return await _serverService.GetServerConfig();
+        var result = await _serverService.GetServerConfig();
+
+        return new JsonApiDocument<ServerConfigDTO>(result);
     }
 
     [ResourceMethod(RequestMethod.Post, "/config")]
-    public async Task UpdateConfigAsync(ServerConfigDTO config)
+    public async Task<JsonApiDocument<string>> UpdateConfigAsync(ServerConfigDTO config)
     {
-        await _serverService.UpdateConfigAsync(config);
+        var result = await _serverService.UpdateConfigAsync(config);
+        return new JsonApiDocument<string>(result);
     }
 }

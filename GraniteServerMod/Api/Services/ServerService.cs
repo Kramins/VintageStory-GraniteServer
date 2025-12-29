@@ -48,7 +48,7 @@ public class ServerService
         return await Task.FromResult(config);
     }
 
-    public async Task UpdateConfigAsync(ServerConfigDTO config)
+    public async Task<string> UpdateConfigAsync(ServerConfigDTO config)
     {
         var serverEntity = await _dataContext.Servers.FirstOrDefaultAsync(s =>
             s.Id == _config.ServerId
@@ -110,6 +110,7 @@ public class ServerService
         _dataContext.Servers.Update(serverEntity);
         await _dataContext.SaveChangesAsync();
         await Task.CompletedTask;
+        return "Server configuration updated successfully.";
     }
 
     public async Task<string> AnnounceMessageAsync(string message)

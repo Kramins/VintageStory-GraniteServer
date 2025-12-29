@@ -1,16 +1,17 @@
 import axios from 'axios';
 import type { ServerConfigDTO } from '../types/ServerConfigDTO';
+import type { JsonApiDocument } from '../types/JsonApi';
 
 const API_BASE = '/api/server';
 
 export const ServerConfigurationService = {
     async getConfig(): Promise<ServerConfigDTO> {
-        const response = await axios.get<ServerConfigDTO>(`${API_BASE}/config`);
-        return response.data;
+        const response = await axios.get<JsonApiDocument<ServerConfigDTO>>(`${API_BASE}/config`);
+        return response.data.data;
     },
 
     async updateConfig(config: ServerConfigDTO): Promise<void> {
-        await axios.post(`${API_BASE}/config`, config);
+        await axios.post<JsonApiDocument<string>>(`${API_BASE}/config`, config);
     },
 
     async updateServerName(serverName: string): Promise<void> {
@@ -37,8 +38,8 @@ export const ServerConfigurationService = {
         await this.updateConfig({ whitelistMode });
     },
 
-    async updateAllowPvp(allowPvp: boolean): Promise<void> {
-        await this.updateConfig({ allowPvp });
+    async updateAllowPvP(allowPvP: boolean): Promise<void> {
+        await this.updateConfig({ allowPvP });
     },
 
     async updateAllowFireSpread(allowFireSpread: boolean): Promise<void> {
