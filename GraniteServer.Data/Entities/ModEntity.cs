@@ -27,4 +27,6 @@ public class ModEntity
     public string? LastModified { get; set; }
     public List<string> Tags { get; set; } = new();
     public DateTime LastChecked { get; set; }
+
+    public List<ModReleaseEntity> Releases { get; set; } = new();
 }
