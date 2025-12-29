@@ -97,14 +97,7 @@ public sealed class JsonApiErrorMapper : IErrorMapper<Exception>
 
     private static string GetMessage(Exception error)
     {
-        if (error is ProviderException providerException)
-        {
-            return string.IsNullOrWhiteSpace(providerException.Message)
-                ? "Request could not be processed"
-                : providerException.Message;
-        }
-
-        return "An unexpected error occurred while processing the request.";
+        return error.Message;
     }
 
     private static string GetErrorCode(ResponseStatus status)
