@@ -127,8 +127,20 @@ namespace GraniteServer
 
             if (dbType == "postgresql")
             {
+                if (string.IsNullOrWhiteSpace(config.DatabaseHost))
+                {
+                    throw new InvalidOperationException(
+                        "PostgreSQL DatabaseHost is required but not configured. "
+                            + "Set it in the config file or via GS_DATABASEHOST environment variable."
+                    );
+                }
+
                 var connectionString =
                     $"Host={config.DatabaseHost};Port={config.DatabasePort};Database={config.DatabaseName};Username={config.DatabaseUsername};Password={config.DatabasePassword}";
+
+                logger.Notification(
+                    $"[Database] Using PostgreSQL provider (Host: {config.DatabaseHost}, Port: {config.DatabasePort}, Database: {config.DatabaseName})"
+                );
 
                 services.AddDbContext<GraniteDataContextPostgres>(options =>
                     options.UseNpgsql(connectionString)
@@ -136,7 +148,6 @@ namespace GraniteServer
                 services.AddScoped<GraniteDataContext>(sp =>
                     sp.GetRequiredService<GraniteDataContextPostgres>()
                 );
-                logger.Notification("[WebAPI] Using PostgreSQL provider");
             }
             else if (dbType == "sqlite")
             {
@@ -144,8 +155,11 @@ namespace GraniteServer
 
                 try
                 {
-                    var basePath = api.DataBasePath
-                        ?? throw new InvalidOperationException("Server API database path unavailable");
+                    var basePath =
+                        api.DataBasePath
+                        ?? throw new InvalidOperationException(
+                            "Server API database path unavailable"
+                        );
                     var configuredName = string.IsNullOrWhiteSpace(config.DatabaseName)
                         ? "graniteserver"
                         : config.DatabaseName!;
@@ -170,7 +184,7 @@ namespace GraniteServer
                 services.AddScoped<GraniteDataContext>(sp =>
                     sp.GetRequiredService<GraniteDataContextSqlite>()
                 );
-                logger.Notification($"[WebAPI] Using SQLite provider at: {dbPath}");
+                logger.Notification($"[Database] Using SQLite provider at: {dbPath}");
             }
             else
             {
@@ -186,33 +200,133 @@ namespace GraniteServer
             ICoreServerAPI api
         )
         {
-            api.Logger.Notification("[WebAPI] Initializing database...");
+            api.Logger.Notification("[Database] Initializing database...");
 
-            var dataContext = serviceProvider.GetRequiredService<GraniteDataContext>();
-
-            dataContext.Database.EnsureCreated();
-            dataContext.Database.Migrate();
-
-            var serverEntity = dataContext.Servers.FirstOrDefault(x => x.Id == config.ServerId);
-
-            if (serverEntity == null)
+            try
             {
-                serverEntity = new ServerEntity
+                var dataContext = serviceProvider.GetRequiredService<GraniteDataContext>();
+
+                // Check for pending migrations
+                var pendingMigrations = dataContext.Database.GetPendingMigrations().ToList();
+                var appliedMigrations = dataContext.Database.GetAppliedMigrations().ToList();
+
+                if (appliedMigrations.Any())
                 {
-                    Id = config.ServerId,
-                    Name = api.Server.Config.ServerName,
-                    Description = string.Empty,
-                };
-                dataContext.Servers.Add(serverEntity);
-                dataContext.SaveChanges();
-                api.Logger.Notification("[WebAPI] Created new server entity in database.");
-            }
-            else
-            {
-                api.Logger.Notification("[WebAPI] Loaded existing server entity from database.");
-            }
+                    api.Logger.Notification(
+                        $"[Database] Current migration: {appliedMigrations.Last()}"
+                    );
+                }
+                else
+                {
+                    api.Logger.Notification("[Database] No migrations applied yet (new database)");
+                }
 
-            api.Logger.Notification("[WebAPI] Database initialization complete.");
+                if (pendingMigrations.Any())
+                {
+                    api.Logger.Notification(
+                        $"[Database] Found {pendingMigrations.Count} pending migration(s):"
+                    );
+                    foreach (var migration in pendingMigrations)
+                    {
+                        api.Logger.Notification($"[Database]   - {migration}");
+                    }
+
+                    api.Logger.Notification("[Database] Applying migrations...");
+                    dataContext.Database.Migrate();
+                    api.Logger.Notification("[Database] Migrations applied successfully.");
+                }
+                else
+                {
+                    api.Logger.Notification(
+                        "[Database] Database is up to date. No pending migrations."
+                    );
+                    // Still call Migrate to ensure database is created if it doesn't exist
+                    dataContext.Database.Migrate();
+                }
+
+                var serverEntity = dataContext.Servers.FirstOrDefault(x => x.Id == config.ServerId);
+
+                if (serverEntity == null)
+                {
+                    serverEntity = new ServerEntity
+                    {
+                        Id = config.ServerId,
+                        Name = api.Server.Config.ServerName,
+                        Description = string.Empty,
+                    };
+                    dataContext.Servers.Add(serverEntity);
+                    dataContext.SaveChanges();
+                    api.Logger.Notification("[Database] Created new server entity in database.");
+                }
+                else
+                {
+                    api.Logger.Notification(
+                        "[Database] Loaded existing server entity from database."
+                    );
+                }
+
+                api.Logger.Notification("[Database] Database initialization complete.");
+            }
+            catch (System.Net.Sockets.SocketException ex)
+            {
+                var dbType = config.DatabaseType?.ToLowerInvariant();
+                api.Logger.Error(
+                    "[Database] Failed to connect to database server. Connection error: {0}",
+                    ex.Message
+                );
+
+                if (dbType == "postgresql")
+                {
+                    api.Logger.Error("[Database] PostgreSQL connection failed. Please check:");
+                    api.Logger.Error($"[Database]   - Host: {config.DatabaseHost}");
+                    api.Logger.Error($"[Database]   - Port: {config.DatabasePort}");
+                    api.Logger.Error(
+                        "[Database]   - Ensure the database server is running and accessible"
+                    );
+                    api.Logger.Error(
+                        "[Database]   - Verify network connectivity and firewall settings"
+                    );
+                    api.Logger.Error(
+                        "[Database]   - Check if the hostname resolves correctly (DNS)"
+                    );
+                }
+
+                throw new InvalidOperationException(
+                    $"Database connection failed: {ex.Message}. See logs for details.",
+                    ex
+                );
+            }
+            catch (Npgsql.NpgsqlException ex)
+            {
+                api.Logger.Error(
+                    "[Database] PostgreSQL error during initialization: {0}",
+                    ex.Message
+                );
+                api.Logger.Error($"[Database] Error Code: {ex.ErrorCode}");
+                api.Logger.Error("[Database] Check your database credentials and permissions.");
+                throw new InvalidOperationException($"PostgreSQL error: {ex.Message}", ex);
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+            {
+                api.Logger.Error("[Database] Failed to update database: {0}", ex.Message);
+                if (ex.InnerException != null)
+                {
+                    api.Logger.Error("[Database] Inner error: {0}", ex.InnerException.Message);
+                }
+                throw new InvalidOperationException($"Database update failed: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                api.Logger.Error(
+                    "[Database] Unexpected error during database initialization: {0}",
+                    ex.Message
+                );
+                api.Logger.Error("[Database] Stack trace: {0}", ex.StackTrace);
+                throw new InvalidOperationException(
+                    $"Database initialization failed: {ex.Message}",
+                    ex
+                );
+            }
         }
     }
 }

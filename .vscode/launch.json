@@ -65,7 +65,7 @@
             ],
             "env": {
                 "GS_DATABASETYPE": "PostgreSQL",
-                "GS_DATABASEHOST": "db",
+                "GS_DATABASEHOST": "postgres",
                 "GS_DATABASEPORT": "5432",
                 "GS_DATABASENAME": "graniteserver",
                 "GS_DATABASEUSERNAME": "postgres",
