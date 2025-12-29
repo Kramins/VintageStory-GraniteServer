@@ -19,6 +19,7 @@ using GenHTTP.Modules.Webservices;
 using GraniteServer.Api.Controllers;
 using GraniteServer.Api.Handlers;
 using GraniteServer.Api.Services;
+using GraniteServerMod.Api.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
@@ -117,7 +118,9 @@ public class WebApi
                 .Handler(app)
                 .Defaults()
                 .Development()
-                .Console();
+                .Companion(
+                    new WithMogLogging(_logger, _serviceProvider.GetService<JwtTokenService>())
+                );
 
             _host.StartAsync();
             _logger.Notification($"[WebAPI] Server started on port {_config.Port}");
