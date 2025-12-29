@@ -39,6 +39,9 @@
     <PackageReference Include="Sieve" Version="2.5.5" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="8.0.1" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GraniteServer.Data\GraniteServer.Data.csproj" />
+  </ItemGroup>
   <Target Name="PreClean" BeforeTargets="PreBuildEvent">
     <RemoveDir Directories="bin/mods" />
     <CallTarget Targets="Clean" />
