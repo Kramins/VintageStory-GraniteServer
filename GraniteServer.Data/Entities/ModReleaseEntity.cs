@@ -4,6 +4,7 @@ public class ModReleaseEntity
 {
     public long ReleaseId { get; set; } // Primary Key
     public long ModId { get; set; } // Foreign Key to ModEntity
+    public ModEntity? Mod { get; set; } // Navigation property
     public string? MainFile { get; set; }
     public string? Filename { get; set; }
     public long? FileId { get; set; }

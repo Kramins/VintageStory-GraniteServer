@@ -85,10 +85,15 @@ public class GraniteDataContext : DbContext
                 );
 
             entity
-                .HasOne<ModEntity>()
-                .WithMany()
+                .HasOne(e => e.Mod)
+                .WithMany(m => m.Releases)
                 .HasForeignKey(e => e.ModId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
     }
 }

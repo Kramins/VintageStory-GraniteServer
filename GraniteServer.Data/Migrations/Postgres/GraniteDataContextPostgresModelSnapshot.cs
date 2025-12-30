@@ -22,6 +22,152 @@ namespace GraniteServer.Data.Migrations.Postgres
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("GraniteServer.Data.Entities.ModEntity", b =>
+                {
+                    b.Property<long>("ModId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("ModId"));
+
+                    b.Property<string>("Author")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("Comments")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Created")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Downloads")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Follows")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("HomePageUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IssueTrackerUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("LastChecked")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastModified")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastReleased")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LogoFile")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LogoFileDb")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LogoFilename")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ModIdStr")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Side")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("SourceCodeUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Text")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TrailerVideoUrl")
+                        .HasColumnType("text");
+
+                    b.Property<int>("TrendingPoints")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Type")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("UrlAlias")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("WikiUrl")
+                        .HasColumnType("text");
+
+                    b.HasKey("ModId");
+
+                    b.HasIndex("ModIdStr")
+                        .IsUnique();
+
+                    b.ToTable("Mods");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.ModReleaseEntity", b =>
+                {
+                    b.Property<long>("ReleaseId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("ReleaseId"));
+
+                    b.Property<string>("Changelog")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Created")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Downloads")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("FileId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Filename")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("MainFile")
+                        .HasColumnType("text");
+
+                    b.Property<long>("ModId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ModIdStr")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ModVersion")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("ReleaseId");
+
+                    b.HasIndex("ModId");
+
+                    b.ToTable("ModReleases");
+                });
+
             modelBuilder.Entity("GraniteServerMod.Data.Entities.PlayerEntity", b =>
                 {
                     b.Property<string>("Id")
@@ -101,6 +247,22 @@ namespace GraniteServer.Data.Migrations.Postgres
                     b.HasKey("Id");
 
                     b.ToTable("Servers");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.ModReleaseEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.ModEntity", "Mod")
+                        .WithMany("Releases")
+                        .HasForeignKey("ModId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Mod");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.ModEntity", b =>
+                {
+                    b.Navigation("Releases");
                 });
 #pragma warning restore 612, 618
         }
