@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using GraniteServer.Data.Entities;
 using GraniteServerMod.Api.Models;
@@ -17,7 +18,7 @@ namespace GraniteServerMod.Api.Services;
 
 public class ModManagementService
 {
-    public TimeSpan ModDataCacheDuration { get; } = TimeSpan.FromHours(1);
+    public TimeSpan ModDataCacheDuration { get; } = TimeSpan.FromSeconds(300);
     private const string ModApiBaseAddress = "https://mods.vintagestory.at/api/";
     private const string UserAgent = "GraniteServerMod/1.0 (+github:GraniteServer)";
     private static readonly HttpClient HttpClient = CreateHttpClient();
@@ -42,15 +43,15 @@ public class ModManagementService
         return client;
     }
 
-    private async Task<ModDatabaseEntry> RetrieveModAsync(string modId)
+    private ModDatabaseEntry RetrieveMod(string modId)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, $"mod/{modId}");
-        var response = await HttpClient.SendAsync(request);
+        var request = new HttpRequestMessage(HttpMethod.Get, $"mod/{modId}");
+        var response = HttpClient.Send(request);
 
         ModDatabaseResponse? payload;
         try
         {
-            payload = await response.Content.ReadFromJsonAsync<ModDatabaseResponse>();
+            payload = response.Content.ReadFromJsonAsync<ModDatabaseResponse>().Result;
         }
         catch
         {
@@ -62,24 +63,20 @@ public class ModManagementService
 
     private async Task<ModEntity> GetModAsync(string modIdStr)
     {
-        var modEntity = await _dataContext.Mods.FirstOrDefaultAsync(m => m.ModIdStr == modIdStr);
+        var modEntity = _dataContext.Mods.FirstOrDefault(m => m.ModIdStr == modIdStr);
+        if (modEntity != null && modEntity.LastChecked.Add(ModDataCacheDuration) < DateTime.UtcNow)
+        {
+            _dataContext.Mods.Remove(modEntity);
+            _dataContext.SaveChanges();
+            modEntity = null;
+        }
         if (modEntity == null)
         {
-            var modData = await RetrieveModAsync(modIdStr);
+            var modData = RetrieveMod(modIdStr);
             modEntity = MapModDatabaseEntryToModEntity(modIdStr, modData, modEntity);
             modEntity.LastChecked = DateTime.UtcNow;
-            _dataContext.Mods.Update(modEntity);
-            await _dataContext.SaveChangesAsync();
-            return modEntity;
-        }
-
-        if (modEntity.LastChecked.Add(ModDataCacheDuration) < DateTime.UtcNow)
-        {
-            var modData = await RetrieveModAsync(modIdStr);
-            modEntity = MapModDatabaseEntryToModEntity(modIdStr, modData, modEntity);
-            modEntity.LastChecked = DateTime.UtcNow;
-            _dataContext.Mods.Update(modEntity);
-            await _dataContext.SaveChangesAsync();
+            _dataContext.Add(modEntity);
+            _dataContext.SaveChanges();
         }
         return modEntity;
     }
@@ -117,18 +114,9 @@ public class ModManagementService
         entity.Tags = modData.Tags ?? new List<string>();
 
         // Map releases
-        if (modData.Releases != null && modData.Releases.Count > 0)
-        {
-            // Remove existing releases for this mod if needed, then add new ones
-            var existingReleases = _dataContext
-                .ModReleases.Where(r => r.ModId == entity.ModId)
-                .ToList();
-            _dataContext.ModReleases.RemoveRange(existingReleases);
-            var newReleases = modData
-                .Releases.Select(r => MapModReleaseToEntity(r, entity.ModId))
-                .ToList();
-            _dataContext.ModReleases.AddRange(newReleases);
-        }
+        entity.Releases = modData
+            .Releases.Select(release => MapModReleaseToEntity(release, entity.ModId))
+            .ToList();
 
         return entity;
     }
@@ -157,7 +145,7 @@ public class ModManagementService
     {
         // Placeholder implementation
 
-        var mods = _api.ModLoader.Mods.Where(mod => mod.Info.CoreMod == false);
+        var mods = _api.ModLoader.Mods.Where(mod => mod.Info.CoreMod == false).ToList();
         var modDtoList = new List<ModDTO>();
         foreach (var mod in mods)
         {
