@@ -86,10 +86,7 @@ public class WebApi
                 .AddDependentService<PlayerManagementController>("players")
                 .AddDependentService<WorldController>("world")
                 .AddDependentService<ModManagementController>("mods")
-                .Add(CorsPolicy.Permissive())
-                .AddSwaggerUi()
-                .AddScalar()
-                .AddRedoc();
+                .Add(CorsPolicy.Permissive());
 
             var controllers = Layout
                 .Create()
