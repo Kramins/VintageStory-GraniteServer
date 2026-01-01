@@ -11,6 +11,7 @@ using GraniteServerMod.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Sieve.Services;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
@@ -78,10 +79,21 @@ namespace GraniteServer
             api.StoreModConfig<GraniteServerConfig>(config, _modConfigFileName);
 
             _host = Host.CreateDefaultBuilder()
+                .ConfigureLogging(logging =>
+                {
+                    logging.AddFilter(
+                        "Microsoft.EntityFrameworkCore",
+                        Microsoft.Extensions.Logging.LogLevel.Warning
+                    );
+                    logging.AddFilter(
+                        "Microsoft.EntityFrameworkCore.Database.Command",
+                        Microsoft.Extensions.Logging.LogLevel.Warning
+                    );
+                })
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton(api);
-                    services.AddSingleton<ILogger>(api.Logger);
+                    services.AddSingleton<Vintagestory.API.Common.ILogger>(api.Logger);
 
                     services.Configure<Sieve.Models.SieveOptions>(options =>
                     {
@@ -102,6 +114,7 @@ namespace GraniteServer
 
                     // Register hosted Web API service
                     services.AddHostedService<GenHttpHostedService>();
+                    services.AddHostedService<PlayerSessionHostedService>();
 
                     RegisterDatabaseContext(services, api, config, api.Logger);
                 })
@@ -139,7 +152,7 @@ namespace GraniteServer
             IServiceCollection services,
             ICoreServerAPI api,
             GraniteServerConfig config,
-            ILogger logger
+            Vintagestory.API.Common.ILogger logger
         )
         {
             var dbType = config.DatabaseType?.ToLowerInvariant();
@@ -162,8 +175,13 @@ namespace GraniteServer
                 );
 
                 services.AddDbContext<GraniteDataContextPostgres>(options =>
-                    options.UseNpgsql(connectionString)
-                );
+                {
+                    options.UseNpgsql(connectionString);
+                    options.LogTo(
+                        msg => logger.Warning(msg),
+                        Microsoft.Extensions.Logging.LogLevel.Warning
+                    );
+                });
                 services.AddScoped<GraniteDataContext>(sp =>
                     sp.GetRequiredService<GraniteDataContextPostgres>()
                 );
@@ -198,8 +216,13 @@ namespace GraniteServer
                 );
 
                 services.AddDbContext<GraniteDataContextSqlite>(options =>
-                    options.UseSqlite($"Data Source={dbPath}")
-                );
+                {
+                    options.UseSqlite($"Data Source={dbPath}");
+                    options.LogTo(
+                        msg => logger.Warning(msg),
+                        Microsoft.Extensions.Logging.LogLevel.Warning
+                    );
+                });
                 services.AddScoped<GraniteDataContext>(sp =>
                     sp.GetRequiredService<GraniteDataContextSqlite>()
                 );

@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using GraniteServer.Api.Services;
@@ -8,7 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 
-namespace GraniteServerMod.Api.HostedServices;
+namespace GraniteServer.Api.HostedServices;
 
 public class PlayerSessionHostedService : IHostedService, IDisposable
 {
@@ -16,12 +16,17 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
     private readonly IServiceProvider _services;
 
     private CancellationTokenSource? _cts;
-    private readonly ConcurrentBag<Task> _pending = new();
 
-    public PlayerSessionHostedService(IServiceProvider services, ICoreServerAPI api)
+    // private readonly List<Task> _pending = new();
+    private readonly object _lockObject = new();
+    private bool _isShuttingDown;
+    private readonly ILogger _logger;
+
+    public PlayerSessionHostedService(IServiceProvider services, ICoreServerAPI api, ILogger logger)
     {
         _services = services ?? throw new ArgumentNullException(nameof(services));
         _api = api ?? throw new ArgumentNullException(nameof(api));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -34,13 +39,14 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
 
     private void OnPlayerLeave(IServerPlayer byPlayer)
     {
+        if (_isShuttingDown)
+            return;
+
         RunScoped(
-            async (sp, player, ct) =>
+            (sp, player) =>
             {
                 var tracker = sp.GetRequiredService<PlayerSessionTracker>();
-                // If your tracker has async API prefer that; otherwise wrap sync call
                 tracker.OnPlayerLeave(player);
-                await Task.CompletedTask;
             },
             byPlayer
         );
@@ -48,13 +54,14 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
 
     private void OnPlayerJoin(IServerPlayer byPlayer)
     {
+        if (_isShuttingDown)
+            return;
+
         RunScoped(
-            async (sp, player, ct) =>
+            (sp, player) =>
             {
                 var tracker = sp.GetRequiredService<PlayerSessionTracker>();
-                // Prefer async if available
                 tracker.OnPlayerJoin(player);
-                await Task.CompletedTask;
             },
             byPlayer
         );
@@ -62,6 +69,7 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        _isShuttingDown = true;
         _api.Event.PlayerJoin -= OnPlayerJoin;
         _api.Event.PlayerLeave -= OnPlayerLeave;
 
@@ -69,47 +77,51 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
 
         try
         {
-            await Task.WhenAll(_pending.ToArray());
+            // lock (_lockObject)
+            // {
+            //     if (_pending.Count > 0)
+            //     {
+            //         _logger.Notification("Waiting for {0} pending tasks", _pending.Count);
+            //     }
+            // }
+
+            // await Task.WhenAll(_pending);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.Notification("Player session hosted service shutdown cancelled");
         }
         catch (Exception ex)
         {
-            _api.Logger.Error($"[PlayerSessionHostedService] Error awaiting pending tasks: {ex}");
+            _logger.Error($"Error awaiting pending tasks during shutdown: {ex}");
         }
     }
 
-    private void RunScoped(
-        System.Func<IServiceProvider, IServerPlayer, CancellationToken, Task> handler,
-        IServerPlayer player
-    )
+    private void RunScoped(Action<IServiceProvider, IServerPlayer> handler, IServerPlayer player)
     {
         var ct = _cts?.Token ?? CancellationToken.None;
 
-        var task = Task.Run(
-            async () =>
+        Task.Run(async () =>
+        {
+            try
             {
-                try
-                {
-                    using var scope = _services.CreateScope();
-                    await handler(scope.ServiceProvider, player, ct);
-                }
-                catch (OperationCanceledException) { }
-                catch (Exception ex)
-                {
-                    try
-                    {
-                        _api.Logger.Error($"[PlayerSessionHostedService] Handler error: {ex}");
-                    }
-                    catch { }
-                }
-            },
-            ct
-        );
-
-        _pending.Add(task);
+                using var scope = _services.CreateScope();
+                handler(scope.ServiceProvider, player);
+            }
+            catch (OperationCanceledException)
+            {
+                _api.Logger.Debug("Player session handler was cancelled");
+            }
+            catch (Exception ex)
+            {
+                _api.Logger.Error($"Error in player session handler: {ex}");
+            }
+        });
     }
 
     public void Dispose()
     {
         _cts?.Dispose();
+        // _pending.Clear();
     }
 }
