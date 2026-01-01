@@ -18,6 +18,7 @@ using GraniteServerMod.Api.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Vintagestory.API.Common;
+using Vintagestory.API.Server;
 using Vintagestory.Common;
 
 namespace GraniteServer.Api.HostedServices
@@ -26,6 +27,7 @@ namespace GraniteServer.Api.HostedServices
     {
         private readonly ILogger _logger;
         private readonly IServiceProvider _serviceProvider;
+        private readonly ICoreServerAPI _api;
         private readonly GraniteServerConfig _config;
         private readonly ModContainer _modContainer;
         private IServerHost? _host;
@@ -34,6 +36,9 @@ namespace GraniteServer.Api.HostedServices
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
+            _api =
+                serviceProvider.GetService<ICoreServerAPI>()
+                ?? throw new ArgumentNullException(nameof(ICoreServerAPI));
             _config =
                 _serviceProvider.GetService<GraniteServerConfig>()
                 ?? throw new ArgumentNullException(nameof(GraniteServerConfig));
@@ -56,6 +61,8 @@ namespace GraniteServer.Api.HostedServices
             {
                 // Initialize and start the web api host. Initialization itself starts the host.
                 InitializeWebApi();
+                _api.Event.ServerRunPhase(EnumServerRunPhase.RunGame, RunGame);
+                _api.Event.ServerRunPhase(EnumServerRunPhase.Shutdown, Shutdown);
             }
             catch (OperationCanceledException)
             {
@@ -65,6 +72,17 @@ namespace GraniteServer.Api.HostedServices
             {
                 _logger.Error($"[WebAPI] Error during StartAsync: {ex}");
             }
+        }
+
+        private void Shutdown()
+        {
+            _ = StopAsync(CancellationToken.None);
+        }
+
+        private void RunGame()
+        {
+            _ = _host.StartAsync();
+            _logger.Notification($"[WebAPI] Server started on port {_config.Port}");
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
@@ -167,9 +185,6 @@ namespace GraniteServer.Api.HostedServices
                     .Companion(
                         new WithMogLogging(_logger, _serviceProvider.GetService<JwtTokenService>()!)
                     );
-
-                _host.StartAsync();
-                _logger.Notification($"[WebAPI] Server started on port {_config.Port}");
             }
             catch (Exception ex)
             {
