@@ -2,8 +2,9 @@ namespace GraniteServer.Data.Entities;
 
 public class ModReleaseEntity
 {
-    public long ReleaseId { get; set; } // Primary Key
-    public long ModId { get; set; } // Foreign Key to ModEntity
+    public Guid Id { get; set; } // Primary Key
+    public long ReleaseId { get; set; } // Unique Release ID from the mod database (unique index)
+    public Guid ModId { get; set; } // Foreign key to ModEntity 
     public ModEntity? Mod { get; set; } // Navigation property
     public string? MainFile { get; set; }
     public string? Filename { get; set; }

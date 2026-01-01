@@ -2,8 +2,9 @@ namespace GraniteServer.Data.Entities;
 
 public class ModEntity
 {
-    public long ModId { get; set; } // Primary Key
-    public string ModIdStr { get; set; } = string.Empty; // Unique Mod Identifier, indexed
+    public Guid Id { get; set; } // Primary Key
+    public long ModId { get; set; } // Unique Mod ID from the mod database (unique index)
+    public string ModIdStr { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Text { get; set; }
     public string? Author { get; set; }

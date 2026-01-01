@@ -2,7 +2,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace GraniteServerMod.Data.DesignTime;
+namespace GraniteServer.Data.DesignTime;
 
 public class PostgresContextFactory : IDesignTimeDbContextFactory<GraniteDataContextPostgres>
 {
