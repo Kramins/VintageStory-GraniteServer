@@ -4,11 +4,14 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using GraniteServer.Api;
+using GraniteServer.Api.HostedServices;
 using GraniteServer.Api.Services;
 using GraniteServerMod.Data;
 using GraniteServerMod.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Sieve.Services;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
@@ -25,8 +28,7 @@ namespace GraniteServer
     public class GraniteServerMod : ModSystem
     {
         private readonly string _modConfigFileName = "graniteserverconfig.json";
-        private WebApi? _webApi;
-        private ServiceProvider? _serviceProvider;
+        private IHost? _host;
 
         public override bool ShouldLoad(EnumAppSide side)
         {
@@ -76,51 +78,81 @@ namespace GraniteServer
 
             api.StoreModConfig<GraniteServerConfig>(config, _modConfigFileName);
 
-            _serviceProvider = BuildServiceProvider(api, config);
-            InitializeDatabase(_serviceProvider, config, api);
+            _host = Host.CreateDefaultBuilder()
+                .ConfigureLogging(logging =>
+                {
+                    logging.AddFilter(
+                        "Microsoft.EntityFrameworkCore",
+                        Microsoft.Extensions.Logging.LogLevel.Warning
+                    );
+                    logging.AddFilter(
+                        "Microsoft.EntityFrameworkCore.Database.Command",
+                        Microsoft.Extensions.Logging.LogLevel.Warning
+                    );
+                })
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton(api);
+                    services.AddSingleton<Vintagestory.API.Common.ILogger>(api.Logger);
 
-            _webApi = new WebApi(api, config, Mod, _serviceProvider);
-            _webApi.Initialize();
+                    services.Configure<Sieve.Models.SieveOptions>(options =>
+                    {
+                        options.DefaultPageSize = 20;
+                        options.MaxPageSize = 100;
+                    });
+
+                    services.AddSingleton<ServerCommandService>();
+                    services.AddScoped<PlayerService>();
+                    services.AddScoped<SieveProcessor>();
+                    services.AddSingleton<PlayerSessionTracker>();
+                    services.AddSingleton<WorldService>();
+                    services.AddSingleton<ServerService>();
+                    services.AddSingleton<BasicAuthService>();
+                    services.AddSingleton<JwtTokenService>();
+                    services.AddSingleton<Mod>(Mod);
+                    services.AddSingleton(config);
+
+                    // Register hosted Web API service
+                    services.AddHostedService<GenHttpHostedService>();
+                    services.AddHostedService<PlayerSessionHostedService>();
+
+                    RegisterDatabaseContext(services, api, config, api.Logger);
+                })
+                .Build();
+            InitializeDatabase(_host.Services, config, api);
+
+            _host.StartAsync();
         }
 
         public override void Dispose()
         {
-            _serviceProvider?.Dispose();
-        }
-
-        private ServiceProvider BuildServiceProvider(ICoreServerAPI api, GraniteServerConfig config)
-        {
-            var services = new ServiceCollection();
-
-            services.AddSingleton(api);
-            services.AddSingleton<ILogger>(api.Logger);
-
-            services.Configure<Sieve.Models.SieveOptions>(options =>
+            try
             {
-                options.DefaultPageSize = 20;
-                options.MaxPageSize = 100;
-            });
+                if (_host != null)
+                {
+                    try
+                    {
+                        _host.StopAsync().GetAwaiter().GetResult();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"[WebAPI] Error stopping host: {ex}");
+                    }
 
-            services.AddSingleton<ServerCommandService>();
-            services.AddScoped<PlayerService>();
-            services.AddScoped<SieveProcessor>();
-            services.AddSingleton<PlayerSessionTracker>();
-            services.AddSingleton<WorldService>();
-            services.AddSingleton<ServerService>();
-            services.AddSingleton<BasicAuthService>();
-            services.AddSingleton<JwtTokenService>();
-            services.AddSingleton(config);
-
-            RegisterDatabaseContext(services, api, config, api.Logger);
-
-            return services.BuildServiceProvider();
+                    _host = null;
+                }
+            }
+            finally
+            {
+                base.Dispose();
+            }
         }
 
         private void RegisterDatabaseContext(
             IServiceCollection services,
             ICoreServerAPI api,
             GraniteServerConfig config,
-            ILogger logger
+            Vintagestory.API.Common.ILogger logger
         )
         {
             var dbType = config.DatabaseType?.ToLowerInvariant();
@@ -143,8 +175,13 @@ namespace GraniteServer
                 );
 
                 services.AddDbContext<GraniteDataContextPostgres>(options =>
-                    options.UseNpgsql(connectionString)
-                );
+                {
+                    options.UseNpgsql(connectionString);
+                    options.LogTo(
+                        msg => logger.Warning(msg),
+                        Microsoft.Extensions.Logging.LogLevel.Warning
+                    );
+                });
                 services.AddScoped<GraniteDataContext>(sp =>
                     sp.GetRequiredService<GraniteDataContextPostgres>()
                 );
@@ -179,8 +216,13 @@ namespace GraniteServer
                 );
 
                 services.AddDbContext<GraniteDataContextSqlite>(options =>
-                    options.UseSqlite($"Data Source={dbPath}")
-                );
+                {
+                    options.UseSqlite($"Data Source={dbPath}");
+                    options.LogTo(
+                        msg => logger.Warning(msg),
+                        Microsoft.Extensions.Logging.LogLevel.Warning
+                    );
+                });
                 services.AddScoped<GraniteDataContext>(sp =>
                     sp.GetRequiredService<GraniteDataContextSqlite>()
                 );
@@ -195,7 +237,7 @@ namespace GraniteServer
         }
 
         private void InitializeDatabase(
-            ServiceProvider serviceProvider,
+            IServiceProvider serviceProvider,
             GraniteServerConfig config,
             ICoreServerAPI api
         )
