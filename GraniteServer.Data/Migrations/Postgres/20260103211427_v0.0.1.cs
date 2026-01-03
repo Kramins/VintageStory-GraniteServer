@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace GraniteServer.Data.Migrations.Sqlite
+namespace GraniteServer.Data.Migrations.Postgres
 {
     /// <inheritdoc />
-    public partial class v101 : Migration
+    public partial class v001 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -15,32 +15,32 @@ namespace GraniteServer.Data.Migrations.Sqlite
                 name: "Mods",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ModId = table.Column<long>(type: "INTEGER", nullable: false),
-                    ModIdStr = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    Text = table.Column<string>(type: "TEXT", nullable: true),
-                    Author = table.Column<string>(type: "TEXT", maxLength: 255, nullable: true),
-                    UrlAlias = table.Column<string>(type: "TEXT", maxLength: 255, nullable: true),
-                    LogoFilename = table.Column<string>(type: "TEXT", nullable: true),
-                    LogoFile = table.Column<string>(type: "TEXT", nullable: true),
-                    LogoFileDb = table.Column<string>(type: "TEXT", nullable: true),
-                    HomePageUrl = table.Column<string>(type: "TEXT", nullable: true),
-                    SourceCodeUrl = table.Column<string>(type: "TEXT", nullable: true),
-                    TrailerVideoUrl = table.Column<string>(type: "TEXT", nullable: true),
-                    IssueTrackerUrl = table.Column<string>(type: "TEXT", nullable: true),
-                    WikiUrl = table.Column<string>(type: "TEXT", nullable: true),
-                    Downloads = table.Column<int>(type: "INTEGER", nullable: false),
-                    Follows = table.Column<int>(type: "INTEGER", nullable: false),
-                    TrendingPoints = table.Column<int>(type: "INTEGER", nullable: false),
-                    Comments = table.Column<int>(type: "INTEGER", nullable: false),
-                    Side = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    Type = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    Created = table.Column<string>(type: "TEXT", nullable: true),
-                    LastReleased = table.Column<string>(type: "TEXT", nullable: true),
-                    LastModified = table.Column<string>(type: "TEXT", nullable: true),
-                    Tags = table.Column<string>(type: "TEXT", nullable: false),
-                    LastChecked = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ModId = table.Column<long>(type: "bigint", nullable: false),
+                    ModIdStr = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    Name = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    Text = table.Column<string>(type: "text", nullable: true),
+                    Author = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    UrlAlias = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    LogoFilename = table.Column<string>(type: "text", nullable: true),
+                    LogoFile = table.Column<string>(type: "text", nullable: true),
+                    LogoFileDb = table.Column<string>(type: "text", nullable: true),
+                    HomePageUrl = table.Column<string>(type: "text", nullable: true),
+                    SourceCodeUrl = table.Column<string>(type: "text", nullable: true),
+                    TrailerVideoUrl = table.Column<string>(type: "text", nullable: true),
+                    IssueTrackerUrl = table.Column<string>(type: "text", nullable: true),
+                    WikiUrl = table.Column<string>(type: "text", nullable: true),
+                    Downloads = table.Column<int>(type: "integer", nullable: false),
+                    Follows = table.Column<int>(type: "integer", nullable: false),
+                    TrendingPoints = table.Column<int>(type: "integer", nullable: false),
+                    Comments = table.Column<int>(type: "integer", nullable: false),
+                    Side = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    Type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    Created = table.Column<string>(type: "text", nullable: true),
+                    LastReleased = table.Column<string>(type: "text", nullable: true),
+                    LastModified = table.Column<string>(type: "text", nullable: true),
+                    Tags = table.Column<string>(type: "text", nullable: false),
+                    LastChecked = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -51,18 +51,18 @@ namespace GraniteServer.Data.Migrations.Sqlite
                 name: "ModReleases",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ReleaseId = table.Column<long>(type: "INTEGER", nullable: false),
-                    ModId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    MainFile = table.Column<string>(type: "TEXT", nullable: true),
-                    Filename = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    FileId = table.Column<long>(type: "INTEGER", nullable: true),
-                    Downloads = table.Column<int>(type: "INTEGER", nullable: false),
-                    Tags = table.Column<string>(type: "TEXT", nullable: false),
-                    ModIdStr = table.Column<string>(type: "TEXT", maxLength: 255, nullable: true),
-                    ModVersion = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    Created = table.Column<string>(type: "TEXT", nullable: true),
-                    Changelog = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ReleaseId = table.Column<long>(type: "bigint", nullable: false),
+                    ModId = table.Column<Guid>(type: "uuid", nullable: false),
+                    MainFile = table.Column<string>(type: "text", nullable: true),
+                    Filename = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    FileId = table.Column<long>(type: "bigint", nullable: true),
+                    Downloads = table.Column<int>(type: "integer", nullable: false),
+                    Tags = table.Column<string>(type: "text", nullable: false),
+                    ModIdStr = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    ModVersion = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    Created = table.Column<string>(type: "text", nullable: true),
+                    Changelog = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -79,11 +79,11 @@ namespace GraniteServer.Data.Migrations.Sqlite
                 name: "ModServers",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ServerId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ModId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    InstalledReleaseId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    RunningReleaseId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ServerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ModId = table.Column<Guid>(type: "uuid", nullable: false),
+                    InstalledReleaseId = table.Column<Guid>(type: "uuid", nullable: true),
+                    RunningReleaseId = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {

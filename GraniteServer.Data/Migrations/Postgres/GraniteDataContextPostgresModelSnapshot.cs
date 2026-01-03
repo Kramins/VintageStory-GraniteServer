@@ -183,14 +183,12 @@ namespace GraniteServer.Data.Migrations.Postgres
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("InstalledReleaseId")
-                        .IsRequired()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ModId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("RunningReleaseId")
-                        .IsRequired()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ServerId")
@@ -307,8 +305,7 @@ namespace GraniteServer.Data.Migrations.Postgres
                     b.HasOne("GraniteServer.Data.Entities.ModReleaseEntity", "InstalledRelease")
                         .WithMany()
                         .HasForeignKey("InstalledReleaseId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GraniteServer.Data.Entities.ModEntity", "Mod")
                         .WithMany()
@@ -319,8 +316,7 @@ namespace GraniteServer.Data.Migrations.Postgres
                     b.HasOne("GraniteServer.Data.Entities.ModReleaseEntity", "RunningRelease")
                         .WithMany()
                         .HasForeignKey("RunningReleaseId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
                         .WithMany()

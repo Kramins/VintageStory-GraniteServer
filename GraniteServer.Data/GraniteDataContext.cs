@@ -104,8 +104,8 @@ public class GraniteDataContext : DbContext
             entity.HasIndex(e => new { e.ServerId, e.ModId }).IsUnique();
             entity.Property(e => e.ServerId).IsRequired();
             entity.Property(e => e.ModId).IsRequired();
-            entity.Property(e => e.InstalledReleaseId).IsRequired();
-            entity.Property(e => e.RunningReleaseId).IsRequired();
+            entity.Property(e => e.InstalledReleaseId);
+            entity.Property(e => e.RunningReleaseId);
 
             entity
                 .HasOne(e => e.Server)

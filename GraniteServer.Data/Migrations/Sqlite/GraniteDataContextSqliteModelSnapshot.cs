@@ -178,14 +178,12 @@ namespace GraniteServer.Data.Migrations.Sqlite
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("InstalledReleaseId")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("ModId")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("RunningReleaseId")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("ServerId")
@@ -302,8 +300,7 @@ namespace GraniteServer.Data.Migrations.Sqlite
                     b.HasOne("GraniteServer.Data.Entities.ModReleaseEntity", "InstalledRelease")
                         .WithMany()
                         .HasForeignKey("InstalledReleaseId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GraniteServer.Data.Entities.ModEntity", "Mod")
                         .WithMany()
@@ -314,8 +311,7 @@ namespace GraniteServer.Data.Migrations.Sqlite
                     b.HasOne("GraniteServer.Data.Entities.ModReleaseEntity", "RunningRelease")
                         .WithMany()
                         .HasForeignKey("RunningReleaseId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
                         .WithMany()
