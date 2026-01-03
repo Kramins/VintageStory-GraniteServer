@@ -58,6 +58,7 @@
     <PackageReference Include="GenHTTP.Modules.DependencyInjection" Version="10.2.0" />
     <PackageReference Include="GenHTTP.Modules.StaticWebsites" Version="10.2.0" />
     <PackageReference Include="GenHTTP.Modules.Webservices" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.ServerSentEvents" Version="10.2.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <!-- <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.13" /> -->

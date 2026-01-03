@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using GraniteServer.Api;
+using GraniteServer.Api.Controllers;
 using GraniteServer.Api.HostedServices;
 using GraniteServer.Api.Services;
 using GraniteServer.Data;
@@ -105,11 +106,13 @@ namespace GraniteServer
                     services.AddScoped<PlayerService>();
                     services.AddScoped<SieveProcessor>();
                     services.AddScoped<ModManagementService>();
+                    services.AddScoped<EventStreamHandler>();
                     services.AddSingleton<PlayerSessionTracker>();
                     services.AddSingleton<WorldService>();
                     services.AddSingleton<ServerService>();
                     services.AddSingleton<BasicAuthService>();
                     services.AddSingleton<JwtTokenService>();
+                    services.AddSingleton<EventBusService>();
                     services.AddSingleton<Mod>(Mod);
                     services.AddSingleton(config);
 
@@ -117,6 +120,7 @@ namespace GraniteServer
                     services.AddHostedService<GenHttpHostedService>();
                     services.AddHostedService<PlayerSessionHostedService>();
                     services.AddHostedService<ModSystemHostedService>();
+                    services.AddHostedService<EventBridgeHostedService>();
 
                     RegisterDatabaseContext(services, api, config, api.Logger);
                 })
