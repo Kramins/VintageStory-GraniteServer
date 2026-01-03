@@ -104,19 +104,49 @@ namespace GraniteServer
                     services.AddSingleton<ServerCommandService>();
                     services.AddScoped<PlayerService>();
                     services.AddScoped<SieveProcessor>();
+                    services.AddScoped<ModManagementService>();
                     services.AddSingleton<PlayerSessionTracker>();
                     services.AddSingleton<WorldService>();
                     services.AddSingleton<ServerService>();
                     services.AddSingleton<BasicAuthService>();
                     services.AddSingleton<JwtTokenService>();
+                    services.AddSingleton<Mod>(Mod);
                     services.AddSingleton(config);
+
+                    // Register hosted Web API service
+                    services.AddHostedService<GenHttpHostedService>();
+                    services.AddHostedService<PlayerSessionHostedService>();
+                    services.AddHostedService<ModSystemHostedService>();
 
                     RegisterDatabaseContext(services, api, config, api.Logger);
                 })
                 .Build();
-            InitializeDatabase(_host.Services, config, api);
+            try
+            {
+                InitializeDatabase(_host.Services, config, api);
 
-            _host.StartAsync();
+                _host.StartAsync();
+            }
+            catch (Exception ex)
+            {
+                api.Logger.Error(
+                    "[Database] Initialization failed; not starting hosted services: {0}",
+                    ex.Message
+                );
+                try
+                {
+                    _host?.Dispose();
+                }
+                catch (Exception disposeEx)
+                {
+                    api.Logger.Warning(
+                        "[WebAPI] Error disposing host after failed DB init: {0}",
+                        disposeEx.Message
+                    );
+                }
+
+                _host = null;
+            }
         }
 
         public override void Dispose()

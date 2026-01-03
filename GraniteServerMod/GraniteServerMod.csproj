@@ -4,21 +4,48 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <Nullable>enable</Nullable>
+    <RootNamespace>GraniteServer</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Vintagestory" HintPath="$(VINTAGE_STORY)/Vintagestory.dll" Private="false" />
+    <Reference
+      Include="Vintagestory"
+      HintPath="$(VINTAGE_STORY)/Vintagestory.dll"
+      Private="false"
+    />
     <Reference Include="VintagestoryAPI">
       <HintPath>$(VINTAGE_STORY)/VintagestoryAPI.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="VintagestoryLib" HintPath="$(VINTAGE_STORY)/VintagestoryLib.dll" Private="false" />
-    <Reference Include="VintagestoryServer" HintPath="$(VINTAGE_STORY)/VintagestoryServer.dll" Private="false" />
-    <Reference Include="Newtonsoft.Json" HintPath="$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll" Private="false" />
+    <Reference
+      Include="VintagestoryLib"
+      HintPath="$(VINTAGE_STORY)/VintagestoryLib.dll"
+      Private="false"
+    />
+    <Reference
+      Include="VintagestoryServer"
+      HintPath="$(VINTAGE_STORY)/VintagestoryServer.dll"
+      Private="false"
+    />
+    <Reference
+      Include="Newtonsoft.Json"
+      HintPath="$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll"
+      Private="false"
+    />
     <!-- Only include non-wwwroot resources initially -->
-    <None Include="resources/modinfo.json" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="">
+    <None
+      Include="resources/modinfo.json"
+      CopyToOutputDirectory="PreserveNewest"
+      Pack="true"
+      PackagePath=""
+    >
       <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
     </None>
-    <None Include="resources/assets/**" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="">
+    <None
+      Include="resources/assets/**"
+      CopyToOutputDirectory="PreserveNewest"
+      Pack="true"
+      PackagePath=""
+    >
       <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
     </None>
   </ItemGroup>
@@ -59,12 +86,24 @@
     </ItemGroup>
     <Message Importance="high" Text="Found @(WwwrootFiles->Count()) files in wwwroot" />
   </Target>
-  <Target Name="CopyWwwrootToOutput" BeforeTargets="PostBuildEvent" DependsOnTargets="BuildWebApp" Condition=" '$(BuildWebApp)' == 'true' ">
+  <Target
+    Name="CopyWwwrootToOutput"
+    BeforeTargets="PostBuildEvent"
+    DependsOnTargets="BuildWebApp"
+    Condition=" '$(BuildWebApp)' == 'true' "
+  >
     <ItemGroup>
       <WwwrootFilesToCopy Include="resources/wwwroot/**/*" />
     </ItemGroup>
-    <Copy SourceFiles="@(WwwrootFilesToCopy)" DestinationFolder="$(TargetDir)wwwroot/%(RecursiveDir)" SkipUnchangedFiles="true" />
-    <Message Importance="high" Text="Copied @(WwwrootFilesToCopy->Count()) wwwroot files to output directory" />
+    <Copy
+      SourceFiles="@(WwwrootFilesToCopy)"
+      DestinationFolder="$(TargetDir)wwwroot/%(RecursiveDir)"
+      SkipUnchangedFiles="true"
+    />
+    <Message
+      Importance="high"
+      Text="Copied @(WwwrootFilesToCopy->Count()) wwwroot files to output directory"
+    />
   </Target>
   <Target Name="CleanupBeforeZip" BeforeTargets="PostBuildEvent">
     <!-- Remove runtimes folder if it exists (shouldn't since we removed the SQLite bundle) -->
@@ -72,9 +111,17 @@
   </Target>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <MakeDir Directories="bin/mods" />
-    <ZipDirectory DestinationFile="bin/mods/$(TargetName)-$(ConfigurationName)-$(modinfoVersion).zip" SourceDirectory="$(TargetDir)" Overwrite="true" />
+    <ZipDirectory
+      DestinationFile="bin/mods/$(TargetName)-$(ConfigurationName)-$(modinfoVersion).zip"
+      SourceDirectory="$(TargetDir)"
+      Overwrite="true"
+    />
   </Target>
-  <Target Name="UpdateModinfoVersion" BeforeTargets="BeforeBuild" Condition=" '$(modinfoVersion)' != '' ">
+  <Target
+    Name="UpdateModinfoVersion"
+    BeforeTargets="BeforeBuild"
+    Condition=" '$(modinfoVersion)' != '' "
+  >
     <Message Importance="high" Text="Updating modinfo.json version to $(modinfoVersion)" />
     <Exec Command="jq --arg v '$(modinfoVersion)' '.version = $v' resources/modinfo.json > resources/modinfo.tmp &amp;&amp; mv resources/modinfo.tmp resources/modinfo.json" />
   </Target>
@@ -83,7 +130,11 @@
     <ItemGroup>
       <DistFiles Include="../ClientApp/dist/**/*" />
     </ItemGroup>
-    <Copy SourceFiles="@(DistFiles)" DestinationFolder="resources/wwwroot/%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="@(DistFiles)"
+      DestinationFolder="resources/wwwroot/%(RecursiveDir)"
+      SkipUnchangedFiles="true"
+    />
     <Message Importance="high" Text="Copied @(DistFiles->Count()) files to resources/wwwroot." />
   </Target>
 </Project>
