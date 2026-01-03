@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace GraniteServerMod.Api.Models.ModDatabase;
+namespace GraniteServer.Api.Models.ModDatabase;
 
 public class ModDatabaseResponse
 {

@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
-using GraniteServerMod.Data;
-using GraniteServerMod.Data.Entities;
+using GraniteServer.Data;
+using GraniteServer.Data.Entities;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 

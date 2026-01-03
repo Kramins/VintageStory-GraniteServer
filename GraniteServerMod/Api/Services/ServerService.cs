@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using GraniteServer.Api.Models;
-using GraniteServerMod.Data;
+using GraniteServer.Data;
 using Microsoft.EntityFrameworkCore;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;

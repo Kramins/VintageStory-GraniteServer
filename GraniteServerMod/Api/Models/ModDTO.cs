@@ -1,4 +1,4 @@
-namespace GraniteServerMod.Api.Models;
+namespace GraniteServer.Api.Models;
 
 public class ModDTO
 {

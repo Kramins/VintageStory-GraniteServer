@@ -14,7 +14,6 @@ using GenHTTP.Modules.StaticWebsites;
 using GraniteServer.Api.Controllers;
 using GraniteServer.Api.Handlers;
 using GraniteServer.Api.Services;
-using GraniteServerMod.Api.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Vintagestory.API.Common;
@@ -183,7 +182,7 @@ namespace GraniteServer.Api.HostedServices
                     .Defaults()
                     .Development()
                     .Companion(
-                        new WithMogLogging(_logger, _serviceProvider.GetService<JwtTokenService>()!)
+                        new WithModLogging(_logger, _serviceProvider.GetService<JwtTokenService>()!)
                     );
             }
             catch (Exception ex)
