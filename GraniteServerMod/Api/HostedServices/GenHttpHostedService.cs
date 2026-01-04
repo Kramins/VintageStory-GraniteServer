@@ -152,6 +152,7 @@ namespace GraniteServer.Api.HostedServices
                     .AddDependentService<ServerController>("server")
                     .AddDependentService<PlayerManagementController>("players")
                     .AddDependentService<WorldController>("world")
+                    .AddDependentService<ModManagementController>("mods")
                     .Add("events", sse)
                     .Add(CorsPolicy.Permissive());
 

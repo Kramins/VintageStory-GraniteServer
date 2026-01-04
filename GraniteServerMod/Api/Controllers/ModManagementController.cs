@@ -19,9 +19,8 @@ public class ModManagementController
     [ResourceMethod(GenHTTP.Api.Protocol.RequestMethod.Get)]
     public async Task<JsonApiDocument<List<ModDTO>>> GetModsAsync()
     {
-        // var result = await _modManagementService.GetInstalledModsAsync();
-        // return new JsonApiDocument<List<ModDTO>>(result);
-        return new JsonApiDocument<List<ModDTO>>(new List<ModDTO>());
+        var result = _modManagementService.GetServerMods();
+        return new JsonApiDocument<List<ModDTO>>(result);
     }
 
     [ResourceMethod(GenHTTP.Api.Protocol.RequestMethod.Post)]

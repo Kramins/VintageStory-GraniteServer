@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using GraniteServer;
+using GraniteServer.Api.Models;
 using GraniteServer.Api.Models.ModDatabase;
 using GraniteServer.Data;
 using GraniteServer.Data.Entities;
@@ -83,6 +84,31 @@ public class ModManagementService
             modEntity = UpsertModWithReleases(modData, modIdStr);
         }
         return modEntity;
+    }
+
+    public List<ModDTO> GetServerMods()
+    {
+        var mods = _dataContext
+            .ModServers.Include(ms => ms.Mod)
+                .ThenInclude(m => m.Releases)
+            .Where(ms => ms.ServerId == _config.ServerId)
+            .ToList();
+
+        var modDtos = mods.Select(ms => new ModDTO
+            {
+                ModId = ms.ModId,
+                Name = ms.Mod.Name,
+                Author = ms.Mod.Author,
+                RunningVersion = ms
+                    .Mod.Releases.FirstOrDefault(r => r.Id == ms.RunningReleaseId)
+                    ?.ModVersion,
+                InstalledVersion = ms
+                    .Mod.Releases.FirstOrDefault(r => r.Id == ms.InstalledReleaseId)
+                    ?.ModVersion,
+            })
+            .ToList();
+
+        return modDtos;
     }
 
     public async Task<string> InstallOrUpdateModAsync(string modIdStr)
