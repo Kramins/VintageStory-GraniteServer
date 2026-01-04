@@ -10,12 +10,12 @@ public class EventDto
     /// <summary>
     /// Unique identifier for this event (used for SSE Last-Event-ID).
     /// </summary>
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     /// <summary>
     /// Identifier of the server where the event originated.
     /// </summary>
-    public string ServerId { get; set; } = string.Empty;
+    public Guid ServerId { get; set; } = Guid.Empty;
 
     /// <summary>
     /// Event type/name (e.g., "player.joined", "world.saved", "collectible.spawned").

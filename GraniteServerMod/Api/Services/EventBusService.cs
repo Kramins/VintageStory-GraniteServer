@@ -18,6 +18,7 @@ namespace GraniteServer.Api.Services
     public class EventBusService
     {
         private readonly ILogger _logger;
+        private readonly GraniteServerConfig _config;
         private readonly ISubject<EventDto> _subject;
 
         /// <summary>
@@ -25,9 +26,10 @@ namespace GraniteServer.Api.Services
         /// </summary>
         private const int ReplayBufferSize = 1000;
 
-        public EventBusService(ILogger logger)
+        public EventBusService(ILogger logger, GraniteServerConfig config)
         {
             _logger = logger;
+            _config = config;
             _subject = Subject.Synchronize(new ReplaySubject<EventDto>(ReplayBufferSize));
         }
 
@@ -42,7 +44,10 @@ namespace GraniteServer.Api.Services
                 _logger.Warning("[EventBus] Attempted to publish null event");
                 return;
             }
-
+            if (@event.ServerId == Guid.Empty)
+            {
+                @event.ServerId = _config.ServerId;
+            }
             try
             {
                 _subject.OnNext(@event);
