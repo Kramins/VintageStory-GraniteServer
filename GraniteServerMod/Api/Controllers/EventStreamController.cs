@@ -40,19 +40,22 @@ namespace GraniteServer.Api.Controllers
         /// </summary>
         public async ValueTask StreamEventsAsync(IEventConnection connection)
         {
-            var reader = _eventBus.Subscribe();
+            var observable = _eventBus.Subscribe();
+            var subscription = default(IDisposable);
 
             try
             {
                 _logger.Notification("[EventStream] New SSE client connected");
-                while (connection.Connected)
-                {
-                    // Stream events until the channel is closed or client disconnects
-                    await foreach (var @event in reader.ReadAllAsync())
+
+                var tcs = new TaskCompletionSource<bool>();
+
+                subscription = observable.Subscribe(
+                    onNext: async (@event) =>
                     {
                         try
                         {
-                            var success = await connection.DataAsync<EventDto>(@event);
+                            var jsonString = JsonSerializer.Serialize(@event);
+                            var success = await connection.DataAsync(jsonString);
 
                             // DataAsync returns false when send fails (client disconnected)
                             if (!success)
@@ -60,15 +63,29 @@ namespace GraniteServer.Api.Controllers
                                 _logger.Notification(
                                     "[EventStream] SSE client disconnected (send failed)"
                                 );
-                                break;
+                                tcs.TrySetResult(false);
                             }
                         }
                         catch (Exception ex)
                         {
                             _logger.Warning($"[EventStream] Error sending event: {ex.Message}");
+                            tcs.TrySetException(ex);
                         }
+                    },
+                    onError: (error) =>
+                    {
+                        _logger.Error($"[EventStream] Observable error: {error.Message}");
+                        tcs.TrySetException(error);
+                    },
+                    onCompleted: () =>
+                    {
+                        _logger.Notification("[EventStream] Observable completed");
+                        tcs.TrySetResult(true);
                     }
-                }
+                );
+
+                // Wait until subscription completes or client disconnects
+                await tcs.Task;
             }
             catch (OperationCanceledException)
             {
@@ -86,6 +103,10 @@ namespace GraniteServer.Api.Controllers
                 {
                     // If error reporting fails, just exit
                 }
+            }
+            finally
+            {
+                subscription?.Dispose();
             }
         }
     }

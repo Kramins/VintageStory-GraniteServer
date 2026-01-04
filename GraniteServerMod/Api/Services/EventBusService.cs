@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Channels;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using GraniteServer.Api.Models;
+using GraniteServer.Api.Models.Events;
 using Vintagestory.API.Common;
 
 namespace GraniteServer.Api.Services
@@ -11,31 +13,27 @@ namespace GraniteServer.Api.Services
     /// Centralized event bus service that allows any service to publish events
     /// and clients to subscribe to events via SSE or other mechanisms.
     ///
-    /// Thread-safe singleton using System.Threading.Channels for backpressure and multiple subscribers.
+    /// Thread-safe singleton using Rx.NET synchronized ReplaySubject for broadcast to all subscribers.
     /// </summary>
     public class EventBusService
     {
         private readonly ILogger _logger;
-        private readonly Channel<EventDto> _channel;
+        private readonly ISubject<EventDto> _subject;
 
         /// <summary>
-        /// Capacity of the event channel. If exceeded, oldest events may be dropped (BoundedChannelFullMode.DropOldest).
+        /// Capacity of the replay buffer. Stores up to this many events for new subscribers to catch up.
         /// </summary>
-        private const int ChannelCapacity = 1000;
+        private const int ReplayBufferSize = 1000;
 
         public EventBusService(ILogger logger)
         {
             _logger = logger;
-            var channelOptions = new BoundedChannelOptions(ChannelCapacity)
-            {
-                FullMode = BoundedChannelFullMode.DropOldest,
-            };
-            _channel = Channel.CreateBounded<EventDto>(channelOptions);
+            _subject = Subject.Synchronize(new ReplaySubject<EventDto>(ReplayBufferSize));
         }
 
         /// <summary>
         /// Publishes an event to the bus. This is thread-safe and non-blocking.
-        /// If the channel is at capacity, the oldest event will be dropped.
+        /// All current subscribers will receive the event immediately.
         /// </summary>
         public void Publish(EventDto @event)
         {
@@ -47,12 +45,7 @@ namespace GraniteServer.Api.Services
 
             try
             {
-                if (!_channel.Writer.TryWrite(@event))
-                {
-                    _logger.Warning(
-                        $"[EventBus] Failed to publish event {@event.EventType} (channel may be closed)"
-                    );
-                }
+                _subject.OnNext(@event);
             }
             catch (Exception ex)
             {
@@ -61,23 +54,24 @@ namespace GraniteServer.Api.Services
         }
 
         /// <summary>
-        /// Returns a ChannelReader that can be used by subscribers to read events asynchronously.
-        /// Each subscriber gets their own reader, so they can subscribe independently.
+        /// Returns an IObservable that can be subscribed to receive events.
+        /// Each subscriber will receive all events from the ReplaySubject (broadcast).
+        /// New subscribers also receive buffered past events up to ReplayBufferSize.
         /// </summary>
-        public ChannelReader<EventDto> Subscribe()
+        public IObservable<EventDto> Subscribe()
         {
-            return _channel.Reader;
+            return _subject.AsObservable();
         }
 
         /// <summary>
-        /// Graceful shutdown: completes the channel writer so no new events can be published.
-        /// Existing readers will continue to read until all queued events are consumed.
+        /// Graceful shutdown: completes the subject so no new events can be emitted.
+        /// Existing subscribers will complete once all events are consumed.
         /// </summary>
         public void Shutdown()
         {
             try
             {
-                _channel.Writer.Complete();
+                _subject.OnCompleted();
                 _logger.Notification("[EventBus] EventBus shutdown complete");
             }
             catch (Exception ex)

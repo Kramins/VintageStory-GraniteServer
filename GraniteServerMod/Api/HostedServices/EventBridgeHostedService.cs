@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using GraniteServer.Api.Models;
+using GraniteServer.Api.Models.Events;
 using GraniteServer.Api.Services;
 using Microsoft.Extensions.Hosting;
 using Vintagestory.API.Common;
@@ -81,15 +82,13 @@ namespace GraniteServer.Api.HostedServices
         {
             try
             {
-                var @event = new EventDto
+                var @event = new PlayerJoinEvent()
                 {
-                    EventType = "player.join",
-                    Source = "server",
-                    Data = new
+                    Data = new()
                     {
-                        playerName = player.PlayerName,
-                        playerId = player.PlayerUID,
-                        joinTime = DateTime.UtcNow,
+                        PlayerName = player.PlayerName,
+                        PlayerId = player.PlayerUID,
+                        TimeStamp = DateTime.UtcNow,
                     },
                 };
 
@@ -105,15 +104,13 @@ namespace GraniteServer.Api.HostedServices
         {
             try
             {
-                var @event = new EventDto
+                var @event = new PlayerLeaveEvent()
                 {
-                    EventType = "player.leave",
-                    Source = "server",
-                    Data = new
+                    Data = new()
                     {
-                        playerName = player.PlayerName,
-                        playerId = player.PlayerUID,
-                        leaveTime = DateTime.UtcNow,
+                        PlayerName = player.PlayerName,
+                        PlayerId = player.PlayerUID,
+                        TimeStamp = DateTime.UtcNow,
                     },
                 };
 
