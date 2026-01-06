@@ -26,8 +26,6 @@ public class ModManagementController
     [ResourceMethod(GenHTTP.Api.Protocol.RequestMethod.Post)]
     public async Task<JsonApiDocument<string>> InstallModAsync(InstallModRequest request)
     {
-        // var result = await _modManagementService.InstallModAsync(request.id);
-        // return new JsonApiDocument<string>(result);
         return new JsonApiDocument<string>("Not implemented");
     }
 }

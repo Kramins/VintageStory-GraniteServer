@@ -112,7 +112,7 @@ namespace GraniteServer
                     services.AddSingleton<ServerService>();
                     services.AddSingleton<BasicAuthService>();
                     services.AddSingleton<JwtTokenService>();
-                    services.AddSingleton<EventBusService>();
+                    services.AddSingleton<MessageBusService>();
                     services.AddSingleton<Mod>(Mod);
                     services.AddSingleton(config);
 

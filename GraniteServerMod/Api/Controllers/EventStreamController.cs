@@ -22,12 +22,12 @@ namespace GraniteServer.Api.Controllers
     /// </summary> </summary>
     public class EventStreamHandler
     {
-        private readonly EventBusService _eventBus;
+        private readonly MessageBusService _messageBus;
         private readonly ILogger _logger;
 
-        public EventStreamHandler(EventBusService eventBus, ILogger logger)
+        public EventStreamHandler(MessageBusService messageBus, ILogger logger)
         {
-            _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
+            _messageBus = messageBus ?? throw new ArgumentNullException(nameof(messageBus));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -40,7 +40,7 @@ namespace GraniteServer.Api.Controllers
         /// </summary>
         public async ValueTask StreamEventsAsync(IEventConnection connection)
         {
-            var observable = _eventBus.Subscribe();
+            var observable = _messageBus.Subscribe();
             var subscription = default(IDisposable);
 
             try

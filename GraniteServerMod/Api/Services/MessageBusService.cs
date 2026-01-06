@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
+using GraniteServer.Api.Messaging;
+using GraniteServer.Api.Messaging.Commands;
+using GraniteServer.Api.Messaging.Events;
 using GraniteServer.Api.Models;
-using GraniteServer.Api.Models.Events;
 using Vintagestory.API.Common;
 
 namespace GraniteServer.Api.Services
@@ -15,39 +17,41 @@ namespace GraniteServer.Api.Services
     ///
     /// Thread-safe singleton using Rx.NET synchronized ReplaySubject for broadcast to all subscribers.
     /// </summary>
-    public class EventBusService
+    public class MessageBusService
     {
         private readonly ILogger _logger;
         private readonly GraniteServerConfig _config;
-        private readonly ISubject<EventDto> _subject;
+        private readonly ISubject<MessageBusMessage> _subject;
 
         /// <summary>
         /// Capacity of the replay buffer. Stores up to this many events for new subscribers to catch up.
         /// </summary>
         private const int ReplayBufferSize = 1000;
 
-        public EventBusService(ILogger logger, GraniteServerConfig config)
+        public MessageBusService(ILogger logger, GraniteServerConfig config)
         {
             _logger = logger;
             _config = config;
-            _subject = Subject.Synchronize(new ReplaySubject<EventDto>(ReplayBufferSize));
+            _subject = Subject.Synchronize(new ReplaySubject<MessageBusMessage>(ReplayBufferSize));
         }
 
         /// <summary>
         /// Publishes an event to the bus. This is thread-safe and non-blocking.
         /// All current subscribers will receive the event immediately.
         /// </summary>
-        public void Publish(EventDto @event)
+        public void Publish(MessageBusMessage @event)
         {
             if (@event == null)
             {
                 _logger.Warning("[EventBus] Attempted to publish null event");
                 return;
             }
-            if (@event.ServerId == Guid.Empty)
+
+            if (@event.TargetServerId == Guid.Empty)
             {
-                @event.ServerId = _config.ServerId;
+                @event.TargetServerId = _config.ServerId;
             }
+
             try
             {
                 _subject.OnNext(@event);
@@ -58,14 +62,48 @@ namespace GraniteServer.Api.Services
             }
         }
 
+        public async Task<CommandResponse<TResponse>> PublishCommandAndWait<TCommand, TResponse>(
+            CommandMessage<TCommand> command
+        )
+        {
+            var tcs = new TaskCompletionSource<CommandResponse<TResponse>>();
+            _subject
+                .Where(msg =>
+                    msg is CommandResponse<TResponse> response
+                    && response.ParentCommandId == command.Id
+                )
+                .Take(1)
+                .Timeout(TimeSpan.FromSeconds(30))
+                .Catch<MessageBusMessage, TimeoutException>(ex =>
+                {
+                    var timeoutResponse = new CommandResponse<TResponse>()
+                    {
+                        ParentCommandId = command.Id,
+                        Success = false,
+                        ErrorMessage = "Command timed out waiting for response",
+                    };
+                    return Observable.Return(timeoutResponse);
+                })
+                .Subscribe(responseMsg =>
+                {
+                    var response = (CommandResponse<TResponse>)responseMsg;
+                    tcs.SetResult(response);
+                });
+            this.Publish(command);
+            return await tcs.Task;
+        }
+
         /// <summary>
         /// Returns an IObservable that can be subscribed to receive events.
         /// Each subscriber will receive all events from the ReplaySubject (broadcast).
         /// New subscribers also receive buffered past events up to ReplayBufferSize.
         /// </summary>
-        public IObservable<EventDto> Subscribe()
+        public IObservable<MessageBusMessage> Subscribe()
         {
-            return _subject.AsObservable();
+            // Only forward EventMessage instances that target this server.
+            return _subject
+            // .Where(e => e is EventMessage em && em.IssuerServerId == _config.ServerId)
+            .AsObservable();
         }
 
         /// <summary>

@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using GraniteServer;
 using GraniteServer.Api.Models;
+using GraniteServer.Api.Messaging.Commands;
+using GraniteServer.Api.Messaging.Contracts;
 using GraniteServer.Api.Models.ModDatabase;
 using GraniteServer.Data;
 using GraniteServer.Data.Entities;
@@ -29,6 +31,7 @@ public class ModManagementService
     private static readonly HttpClient HttpClient = CreateHttpClient();
 
     private readonly ICoreServerAPI _api;
+    private readonly MessageBusService _messageBus;
     private readonly ILogger _logger;
     private readonly GraniteDataContext _dataContext;
     private readonly GraniteServerConfig _config;
@@ -37,10 +40,12 @@ public class ModManagementService
         ICoreServerAPI api,
         GraniteServerConfig config,
         GraniteDataContext dataContext,
+        MessageBusService messageBus,
         ILogger logger
     )
     {
         _api = api;
+        _messageBus = messageBus;
         _logger = logger;
         _config = config;
         _dataContext = dataContext;
@@ -109,6 +114,25 @@ public class ModManagementService
             .ToList();
 
         return modDtos;
+    }
+
+    public async Task PublishInstallModCommandAsync(string modIdStr)
+    {
+        var modData = await GetAndUpdateModData(modIdStr);
+        var installedMod = _api.ModLoader.GetMod(modIdStr);
+        var modRelease = modData.Releases.OrderByDescending(r => r.Created).LastOrDefault();
+
+        if (installedMod != null && installedMod.Info.Version == modRelease?.ModVersion)
+        {
+            throw new Exception("Mod is already installed with the latest version.");
+        }
+
+        var modInstallEvent = new InstallModCommand
+        {
+            Data = new InstallModCommandData { ModId = modIdStr },
+        };
+
+        _messageBus.Publish(modInstallEvent);
     }
 
     public async Task<string> InstallOrUpdateModAsync(string modIdStr)

@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using GraniteServer.Api.Models;
-using GraniteServer.Api.Models.Events;
+using GraniteServer.Api.Messaging.Events;
 using GraniteServer.Api.Services;
 using Microsoft.Extensions.Hosting;
 using Vintagestory.API.Common;
@@ -22,17 +22,17 @@ namespace GraniteServer.Api.HostedServices
     public class EventBridgeHostedService : IHostedService
     {
         private readonly ILogger _logger;
-        private readonly EventBusService _eventBus;
+        private readonly MessageBusService _messageBus;
         private readonly ICoreServerAPI _api;
 
         public EventBridgeHostedService(
             ILogger logger,
-            EventBusService eventBus,
+            MessageBusService messageBus,
             ICoreServerAPI api
         )
         {
             _logger = logger;
-            _eventBus = eventBus;
+            _messageBus = messageBus;
             _api = api;
         }
 
@@ -41,10 +41,6 @@ namespace GraniteServer.Api.HostedServices
             try
             {
                 _logger.Notification("[EventBridge] Starting event bridge...");
-
-                // Subscribe to player session events (login, disconnect, etc.)
-                _api.Event.PlayerJoin += OnPlayerJoin;
-                _api.Event.PlayerLeave += OnPlayerLeave;
 
                 _logger.Notification(
                     "[EventBridge] Event bridge started, subscribed to server events"
@@ -64,10 +60,6 @@ namespace GraniteServer.Api.HostedServices
             {
                 _logger.Notification("[EventBridge] Stopping event bridge...");
 
-                // Unsubscribe from all events
-                _api.Event.PlayerJoin -= OnPlayerJoin;
-                _api.Event.PlayerLeave -= OnPlayerLeave;
-
                 _logger.Notification("[EventBridge] Event bridge stopped");
             }
             catch (Exception ex)
@@ -76,50 +68,6 @@ namespace GraniteServer.Api.HostedServices
             }
 
             return Task.CompletedTask;
-        }
-
-        private void OnPlayerJoin(IServerPlayer player)
-        {
-            try
-            {
-                var @event = new PlayerJoinEvent()
-                {
-                    Data = new()
-                    {
-                        PlayerName = player.PlayerName,
-                        PlayerId = player.PlayerUID,
-                        TimeStamp = DateTime.UtcNow,
-                    },
-                };
-
-                _eventBus.Publish(@event);
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning($"[EventBridge] Error publishing player.join event: {ex.Message}");
-            }
-        }
-
-        private void OnPlayerLeave(IServerPlayer player)
-        {
-            try
-            {
-                var @event = new PlayerLeaveEvent()
-                {
-                    Data = new()
-                    {
-                        PlayerName = player.PlayerName,
-                        PlayerId = player.PlayerUID,
-                        TimeStamp = DateTime.UtcNow,
-                    },
-                };
-
-                _eventBus.Publish(@event);
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning($"[EventBridge] Error publishing player.leave event: {ex.Message}");
-            }
         }
     }
 }

@@ -202,8 +202,8 @@ namespace GraniteServer.Api.HostedServices
         private async ValueTask StreamEventsAsync(IEventConnection connection)
         {
             using var scope = _serviceProvider.CreateScope();
-            var eventBusHandler = scope.ServiceProvider.GetRequiredService<EventStreamHandler>();
-            await eventBusHandler.StreamEventsAsync(connection);
+            var messageBusHandler = scope.ServiceProvider.GetRequiredService<EventStreamHandler>();
+            await messageBusHandler.StreamEventsAsync(connection);
         }
 
         private IConcernBuilder GetApiBearerAuth()
