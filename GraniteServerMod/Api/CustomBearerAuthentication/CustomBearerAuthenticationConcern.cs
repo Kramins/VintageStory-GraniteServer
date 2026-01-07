@@ -153,7 +153,7 @@ public sealed class CustomBearerAuthenticationConcern : IConcern
         {
             var configUrl = $"{issuer}/.well-known/openid-configuration";
 
-            using var httpClient = new HttpClient();
+            var httpClient = new HttpClient();
 
             var configResponse = await httpClient.GetStringAsync(configUrl);
 

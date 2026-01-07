@@ -4,6 +4,7 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <Nullable>enable</Nullable>
+    <RootNamespace>GraniteServer</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Vintagestory" HintPath="$(VINTAGE_STORY)/Vintagestory.dll" Private="false" />
@@ -31,6 +32,7 @@
     <PackageReference Include="GenHTTP.Modules.DependencyInjection" Version="10.2.0" />
     <PackageReference Include="GenHTTP.Modules.StaticWebsites" Version="10.2.0" />
     <PackageReference Include="GenHTTP.Modules.Webservices" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.ServerSentEvents" Version="10.2.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <!-- <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.13" /> -->
@@ -39,6 +41,7 @@
     <!-- <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" /> -->
     <PackageReference Include="Sieve" Version="2.5.5" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="8.0.1" />
+    <PackageReference Include="System.Reactive" Version="5.4.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\GraniteServer.Data\GraniteServer.Data.csproj" />

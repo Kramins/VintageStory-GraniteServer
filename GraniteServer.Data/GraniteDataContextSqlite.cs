@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace GraniteServerMod.Data;
+namespace GraniteServer.Data;
 
 public class GraniteDataContextSqlite : GraniteDataContext
 {

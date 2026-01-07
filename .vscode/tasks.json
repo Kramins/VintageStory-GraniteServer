@@ -92,6 +92,15 @@
                     "${cwd}"
                 ]
             }
+        },
+        {
+            "label" : "ef - create migration",
+            "type" : "shell",
+            "command" : "./scripts/ef-migration.sh",
+            "args" :[
+                "create",
+                "${input:migrationVersion}"
+            ]
         }
     ],
     "inputs": [
@@ -99,6 +108,12 @@
             "id": "versionNumber",
             "type": "promptString",
             "description": "Version number for the mod",
+            "default": "1.2.3"
+        },
+        {
+            "id": "migrationVersion",
+            "type": "promptString",
+            "description": "Version number for the migration",
             "default": "1.2.3"
         }
     ]

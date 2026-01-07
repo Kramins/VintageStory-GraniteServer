@@ -7,14 +7,14 @@ using GenHTTP.Api.Protocol;
 using GraniteServer.Api.Services;
 using Vintagestory.API.Common;
 
-namespace GraniteServerMod.Api.Handlers;
+namespace GraniteServer.Api.Handlers;
 
-public class WithMogLogging : IServerCompanion
+public class WithModLogging : IServerCompanion
 {
     private readonly ILogger _logger;
     private readonly JwtTokenService _jwtTokenService;
 
-    public WithMogLogging(ILogger logger, JwtTokenService jwtTokenService)
+    public WithModLogging(ILogger logger, JwtTokenService jwtTokenService)
     {
         _logger = logger;
         _jwtTokenService = jwtTokenService;

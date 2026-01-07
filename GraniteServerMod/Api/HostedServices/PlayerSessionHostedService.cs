@@ -2,6 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using GraniteServer.Api.Extensions;
+using GraniteServer.Api.Messaging.Events;
+using GraniteServer.Api.Messaging.Contracts;
+using GraniteServer.Api.Messaging.Commands;
 using GraniteServer.Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -13,7 +17,7 @@ namespace GraniteServer.Api.HostedServices;
 public class PlayerSessionHostedService : IHostedService, IDisposable
 {
     private readonly ICoreServerAPI _api;
-    private readonly IServiceProvider _services;
+    private readonly IServiceProvider _servicesProvider;
 
     private CancellationTokenSource? _cts;
 
@@ -22,19 +26,34 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
     private bool _isShuttingDown;
     private readonly ILogger _logger;
 
-    public PlayerSessionHostedService(IServiceProvider services, ICoreServerAPI api, ILogger logger)
+    public PlayerSessionHostedService(
+        IServiceProvider servicesProvider,
+        ICoreServerAPI api,
+        ILogger logger
+    )
     {
-        _services = services ?? throw new ArgumentNullException(nameof(services));
-        _api = api ?? throw new ArgumentNullException(nameof(api));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _servicesProvider = servicesProvider;
+        _api = api;
+        _logger = logger;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var scope = _servicesProvider.CreateScope();
+        var messageBus = scope.ServiceProvider.GetRequiredService<MessageBusService>();
+
+        messageBus.Subscribe<KickPlayerCommand>(PlayerKickCommandHandler);
+
         _api.Event.PlayerJoin += OnPlayerJoin;
         _api.Event.PlayerLeave += OnPlayerLeave;
+
         return Task.CompletedTask;
+    }
+
+    private void PlayerKickCommandHandler(KickPlayerCommand command)
+    {
+        throw new NotImplementedException();
     }
 
     private void OnPlayerLeave(IServerPlayer byPlayer)
@@ -105,7 +124,7 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
         {
             try
             {
-                using var scope = _services.CreateScope();
+                using var scope = _servicesProvider.CreateScope();
                 handler(scope.ServiceProvider, player);
             }
             catch (OperationCanceledException)

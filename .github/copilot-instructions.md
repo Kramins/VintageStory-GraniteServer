@@ -1,0 +1,1 @@
+- Logging is provided by Vintagestory.API.Common.ILogger. Use this for all logging needs.

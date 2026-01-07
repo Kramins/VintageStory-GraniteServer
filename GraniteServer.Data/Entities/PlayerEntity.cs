@@ -1,6 +1,6 @@
 using System;
 
-namespace GraniteServerMod.Data.Entities;
+namespace GraniteServer.Data.Entities;
 
 public class PlayerEntity
 {

@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
-using GraniteServerMod.Data;
-using GraniteServerMod.Data.Entities;
+using GraniteServer.Api.Messaging.Events;
+using GraniteServer.Api.Messaging.Contracts;
+using GraniteServer.Data;
+using GraniteServer.Data.Entities;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 
@@ -16,20 +18,22 @@ public class PlayerSessionTracker
     private readonly GraniteDataContext _dataContext;
     private readonly GraniteServerConfig _config;
     private readonly ICoreServerAPI _api;
-
+    private readonly MessageBusService _messageBus;
     private readonly ILogger _logger;
 
     public PlayerSessionTracker(
         GraniteDataContext dataContext,
         GraniteServerConfig config,
         ICoreServerAPI api,
+        MessageBusService messageBus,
         ILogger logger
     )
     {
-        _dataContext = dataContext ?? throw new ArgumentNullException(nameof(dataContext));
-        _config = config ?? throw new ArgumentNullException(nameof(config));
-        _api = api ?? throw new ArgumentNullException(nameof(api));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _dataContext = dataContext;
+        _config = config;
+        _api = api;
+        _messageBus = messageBus;
+        _logger = logger;
     }
 
     /// <summary>
@@ -79,6 +83,19 @@ public class PlayerSessionTracker
 
         _dataContext.PlayerSessions.Add(playerSessionEntity);
         _dataContext.SaveChanges();
+
+        _messageBus.Publish(
+            new PlayerJoinEvent()
+            {
+                Data = new()
+                {
+                    PlayerName = byPlayer.PlayerName,
+                    PlayerId = byPlayer.PlayerUID,
+                    SessionId = playerSessionId.ToString(),
+                    TimeStamp = DateTime.UtcNow,
+                },
+            }
+        );
     }
 
     /// <summary>
@@ -116,6 +133,19 @@ public class PlayerSessionTracker
             }
 
             byPlayer.ServerData.CustomPlayerData.Remove("GraniteSessionId");
+
+            _messageBus.Publish(
+                new PlayerLeaveEvent()
+                {
+                    Data = new()
+                    {
+                        PlayerName = byPlayer.PlayerName,
+                        PlayerId = byPlayer.PlayerUID,
+                        SessionId = sessionIdStr,
+                        TimeStamp = DateTime.UtcNow,
+                    },
+                }
+            );
         }
     }
 }

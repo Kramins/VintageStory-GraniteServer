@@ -23,7 +23,8 @@ public sealed class JsonApiErrorMapper : IErrorMapper<Exception>
         var document = CreateDocument(
             ResponseStatus.NotFound,
             "not_found",
-            "The requested resource was not found."
+            "The requested resource was not found.",
+            string.Empty
         );
 
         return new(BuildResponse(request, ResponseStatus.NotFound, document));
@@ -32,22 +33,38 @@ public sealed class JsonApiErrorMapper : IErrorMapper<Exception>
     public ValueTask<IResponse?> Map(IRequest request, IHandler handler, Exception error)
     {
         var status = GetStatus(error);
-        var document = CreateDocument(status, GetErrorCode(status), GetMessage(error));
+        var document = CreateDocument(
+            status,
+            GetErrorCode(status),
+            GetMessage(error),
+            GetStackTrace(error)
+        );
 
         return new(BuildResponse(request, status, document));
+    }
+
+    private string GetStackTrace(Exception error)
+    {
+        return error.StackTrace ?? string.Empty;
     }
 
     private static JsonApiDocument<object?> CreateDocument(
         ResponseStatus status,
         string code,
-        string message
+        string message,
+        string stackTrace
     )
     {
         return new JsonApiDocument<object?>
         {
             Errors =
             {
-                new JsonApiError { Code = code, Message = message },
+                new JsonApiError
+                {
+                    Code = code,
+                    Message = message,
+                    StackTrace = stackTrace,
+                },
             },
         };
     }
@@ -80,14 +97,7 @@ public sealed class JsonApiErrorMapper : IErrorMapper<Exception>
 
     private static string GetMessage(Exception error)
     {
-        if (error is ProviderException providerException)
-        {
-            return string.IsNullOrWhiteSpace(providerException.Message)
-                ? "Request could not be processed"
-                : providerException.Message;
-        }
-
-        return "An unexpected error occurred while processing the request.";
+        return error.Message;
     }
 
     private static string GetErrorCode(ResponseStatus status)

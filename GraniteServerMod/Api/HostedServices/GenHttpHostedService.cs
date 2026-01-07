@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.Tracing;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,11 +11,11 @@ using GenHTTP.Modules.IO;
 using GenHTTP.Modules.Layouting;
 using GenHTTP.Modules.Practices;
 using GenHTTP.Modules.Security;
+using GenHTTP.Modules.ServerSentEvents;
 using GenHTTP.Modules.StaticWebsites;
 using GraniteServer.Api.Controllers;
 using GraniteServer.Api.Handlers;
 using GraniteServer.Api.Services;
-using GraniteServerMod.Api.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Vintagestory.API.Common;
@@ -142,11 +143,17 @@ namespace GraniteServer.Api.HostedServices
 
                 var errorHandling = ErrorHandler.From(new JsonApiErrorMapper());
 
+                var sse = GenHTTP
+                    .Modules.ServerSentEvents.EventSource.Create()
+                    .Generator(StreamEventsAsync);
+
                 var protectedControllers = Layout
                     .Create()
                     .AddDependentService<ServerController>("server")
                     .AddDependentService<PlayerManagementController>("players")
                     .AddDependentService<WorldController>("world")
+                    .AddDependentService<ModManagementController>("mods")
+                    .Add("events", sse)
                     .Add(CorsPolicy.Permissive());
 
                 var controllers = Layout
@@ -183,13 +190,20 @@ namespace GraniteServer.Api.HostedServices
                     .Defaults()
                     .Development()
                     .Companion(
-                        new WithMogLogging(_logger, _serviceProvider.GetService<JwtTokenService>()!)
+                        new WithModLogging(_logger, _serviceProvider.GetService<JwtTokenService>()!)
                     );
             }
             catch (Exception ex)
             {
                 _logger.Error($"[WebAPI] Failed to start Web API: {ex.Message}\n{ex.StackTrace}");
             }
+        }
+
+        private async ValueTask StreamEventsAsync(IEventConnection connection)
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var messageBusHandler = scope.ServiceProvider.GetRequiredService<EventStreamHandler>();
+            await messageBusHandler.StreamEventsAsync(connection);
         }
 
         private IConcernBuilder GetApiBearerAuth()
