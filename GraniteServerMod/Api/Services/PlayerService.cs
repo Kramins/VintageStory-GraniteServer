@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using GraniteServer.Api.Messaging.Contracts;
+using GraniteServer.Api.Messaging.Events;
 using GraniteServer.Api.Models;
 using GraniteServer.Data;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +20,7 @@ public class PlayerService
 {
     private readonly ICoreServerAPI _api;
     private readonly ServerCommandService _commandService;
+    private readonly MessageBusService _messageBug;
     private readonly GraniteDataContext _dataContext;
     private readonly ConcurrentDictionary<string, string> _nameToIdCache =
         new ConcurrentDictionary<string, string>();
@@ -28,12 +31,14 @@ public class PlayerService
     public PlayerService(
         ICoreServerAPI api,
         ServerCommandService commandService,
+        MessageBusService messageBus,
         GraniteDataContext dataContext
     )
     {
-        _api = api ?? throw new ArgumentNullException(nameof(api));
-        _commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
-        _dataContext = dataContext ?? throw new ArgumentNullException(nameof(dataContext));
+        _api = api;
+        _commandService = commandService;
+        _messageBug = messageBus;
+        _dataContext = dataContext;
     }
 
     public bool IsSqliteProvider() => _dataContext.Database.IsSqlite();
@@ -71,6 +76,20 @@ public class PlayerService
         );
 
         PlayerDataManager.bannedListDirty = true;
+
+        _messageBug.Publish(
+            new PlayerBannedEvent()
+            {
+                Data = new PlayerBanEventData
+                {
+                    PlayerId = id,
+                    PlayerName = playerName,
+                    Reason = reason,
+                    IssuedBy = issuedBy,
+                    UntilDate = untilDate,
+                },
+            }
+        );
     }
 
     /// <summary>
@@ -86,6 +105,13 @@ public class PlayerService
         }
         var playerName = await ResolvePlayerNameById(id);
         PlayerDataManager.WhitelistPlayer(playerName, id, "Added via API");
+
+        _messageBug.Publish(
+            new PlayerWhitelistedEvent()
+            {
+                Data = new PlayerEventData { PlayerId = id, PlayerName = playerName },
+            }
+        );
     }
 
     public async Task<PlayerNameIdDTO> FindPlayerByNameAsync(string name)
@@ -314,6 +340,13 @@ public class PlayerService
         // TODO: revisit if PlayerDataManager.UnBanPlayer method changes from internal to public
         PlayerDataManager.BannedPlayers.RemoveAll(pe => pe.PlayerUID == id);
         PlayerDataManager.bannedListDirty = true;
+
+        _messageBug.Publish(
+            new PlayerUnBannedEvent()
+            {
+                Data = new PlayerBanEventData { PlayerId = id, PlayerName = playerName },
+            }
+        );
     }
 
     /// <summary>
@@ -329,6 +362,13 @@ public class PlayerService
         }
         var playerName = await ResolvePlayerNameById(id);
         PlayerDataManager.UnWhitelistPlayer(playerName, id);
+
+        _messageBug.Publish(
+            new PlayerUnWhitelistedEvent()
+            {
+                Data = new PlayerEventData { PlayerId = id, PlayerName = playerName },
+            }
+        );
     }
 
     public async Task RemovePlayerInventoryFromSlotAsync(
