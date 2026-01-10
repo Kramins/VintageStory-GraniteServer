@@ -12,6 +12,7 @@ using GenHTTP.Modules.Layouting;
 using GenHTTP.Modules.Practices;
 using GenHTTP.Modules.Security;
 using GenHTTP.Modules.ServerSentEvents;
+using GenHTTP.Modules.SinglePageApplications;
 using GenHTTP.Modules.StaticWebsites;
 using GraniteServer.Api.Controllers;
 using GraniteServer.Api.Handlers;
@@ -176,7 +177,8 @@ namespace GraniteServer.Api.HostedServices
                 }
 
                 var tree = ResourceTree.FromDirectory(webClientPath);
-                var clientApp = StaticWebsite.From(tree);
+                var clientApp = SinglePageApplication.From(tree);
+                clientApp.ServerSideRouting();
 
                 var app = Layout.Create().Add(clientApp).Add(["api"], controllers);
 
