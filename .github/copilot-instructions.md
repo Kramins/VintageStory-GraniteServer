@@ -1,1 +1,2 @@
 - Logging is provided by Vintagestory.API.Common.ILogger. Use this for all logging needs.
+- When subscribing to events from the EventBusService, make sure to store the IDisposable returned from the Subscribe() method, and dispose of it in StopAsync to prevent memory leaks.

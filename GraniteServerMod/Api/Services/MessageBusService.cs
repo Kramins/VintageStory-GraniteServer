@@ -62,6 +62,12 @@ namespace GraniteServer.Api.Services
             }
         }
 
+        /// <summary>
+        /// Publishes a command and waits for a corresponding response.
+        /// Times out after 30 seconds if no response is received.
+        /// NOTE: This method and design is still experimental and may be subject to change or removal.
+        /// I am still not convinced we need this level of complexity for command handling or commands at all.
+        /// </summary>
         public async Task<CommandResponse<TResponse>> PublishCommandAndWait<TCommand, TResponse>(
             CommandMessage<TCommand> command
         )

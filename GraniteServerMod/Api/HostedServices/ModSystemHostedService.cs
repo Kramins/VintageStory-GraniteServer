@@ -59,7 +59,7 @@ public class ModSystemHostedService : IHostedService, IDisposable
         using var scope = _serviceProvider.CreateScope();
         var modManagementService = scope.ServiceProvider.GetRequiredService<ModManagementService>();
 
-        modManagementService.SyncModsAsync(_cts.Token).Wait();
+        modManagementService.SyncRunningModsAsync(_cts.Token).Wait();
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

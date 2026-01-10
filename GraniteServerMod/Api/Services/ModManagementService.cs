@@ -8,9 +8,9 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using GraniteServer;
-using GraniteServer.Api.Models;
 using GraniteServer.Api.Messaging.Commands;
 using GraniteServer.Api.Messaging.Contracts;
+using GraniteServer.Api.Models;
 using GraniteServer.Api.Models.ModDatabase;
 using GraniteServer.Data;
 using GraniteServer.Data.Entities;
@@ -160,51 +160,67 @@ public class ModManagementService
         return "";
     }
 
-    public async Task SyncModsAsync(CancellationToken token)
+    public async Task SyncRunningModsAsync(CancellationToken token)
     {
         _logger.Notification("Starting mod synchronization...");
-        var runningMods = _api.ModLoader.Mods.Where(mod => mod.Info.CoreMod == false).ToList();
-        _logger.Notification($"Found {runningMods.Count} running mods.");
-        var modServerItems = _dataContext
+
+        var serverMods = _dataContext
             .ModServers.Where(ms => ms.ServerId == _config.ServerId)
+            .Include(ms => ms.Mod)
             .ToList();
 
-        // Update or insert mods
-        foreach (var mod in runningMods)
+        var runningMods = _api.ModLoader.Mods.Where(mod => mod.Info.CoreMod == false).ToList();
+
+        var removedMods = serverMods.Where(sm =>
+            !runningMods.Any(rm => rm.Info.ModID == sm.Mod.ModIdStr)
+        );
+
+        var addedMods = runningMods.Where(rm =>
+            !serverMods.Any(sm => sm.Mod.ModIdStr == rm.Info.ModID)
+        );
+
+        var updatedMods = runningMods.Where(rm =>
+            serverMods.Any(sm => sm.Mod.ModIdStr == rm.Info.ModID)
+        );
+
+        foreach (var mod in removedMods)
         {
-            _logger.Notification($"Processing mod: {mod.Info.ModID}");
-            var modEntity = await GetAndUpdateModData(mod.Info.ModID);
-
-            var RunningReleaseId = modEntity
-                .Releases.FirstOrDefault(r => r.ModVersion == mod.Info.Version)
-                ?.Id;
-
-            var modServerEntity = modServerItems.FirstOrDefault(ms => ms.ModId == modEntity.Id);
-
-            if (modServerEntity == null)
-            {
-                _logger.Notification($"Adding new mod server entity for mod: {mod.Info.ModID}");
-                modServerEntity = new ModServerEntity
-                {
-                    ServerId = _config.ServerId,
-                    ModId = modEntity.Id,
-                    RunningReleaseId = RunningReleaseId,
-                    InstalledReleaseId = RunningReleaseId,
-                };
-                _dataContext.ModServers.Add(modServerEntity);
-            }
-            else
-            {
-                _logger.Notification(
-                    $"Updating existing mod server entity for mod: {mod.Info.ModID}"
-                );
-                modServerEntity.RunningReleaseId = RunningReleaseId;
-                modServerEntity.InstalledReleaseId = RunningReleaseId;
-            }
-            _dataContext.SaveChanges();
-            _logger.Notification($"Finished processing mod: {mod.Info.ModID}");
+            _dataContext.ModServers.Remove(mod);
+            _logger.Notification($"Removed mod from server record: {mod.Mod.Name}");
         }
-        _logger.Notification("Mod synchronization completed.");
+
+        foreach (var mod in addedMods)
+        {
+            var modData = await GetAndUpdateModData(mod.Info.ModID);
+            var modRelease = modData
+                .Releases.OrderByDescending(r => r.Created)
+                .FirstOrDefault(r => r.ModVersion == mod.Info.Version);
+
+            var modServerEntity = new ModServerEntity
+            {
+                ServerId = _config.ServerId,
+                ModId = modData.Id,
+                InstalledReleaseId = modRelease?.Id,
+                RunningReleaseId = modRelease?.Id,
+            };
+
+            _dataContext.ModServers.Add(modServerEntity);
+            _logger.Notification($"Added mod to server record: {modData.Name}");
+        }
+
+        foreach (var mod in updatedMods)
+        {
+            var serverMod = serverMods.First(sm => sm.Mod.ModIdStr == mod.Info.ModID);
+            var modData = await GetAndUpdateModData(mod.Info.ModID);
+            var modRelease = modData
+                .Releases.OrderByDescending(r => r.Created)
+                .FirstOrDefault(r => r.ModVersion == mod.Info.Version);
+
+            serverMod.RunningReleaseId = modRelease?.Id;
+            _logger.Notification($"Updated running mod version: {modData.Name}");
+        }
+
+        _dataContext.SaveChanges();
     }
 
     private string DownloadModReleaseFile(ModReleaseEntity modReleaseEntity)
@@ -242,12 +258,6 @@ public class ModManagementService
         {
             var modEntity = MapModEntryToEntity(mod, ModIdStr);
 
-            foreach (var release in mod.Releases)
-            {
-                var modReleaseEntity = MapModReleaseEntryToEntity(release);
-                modEntity.Releases.Add(modReleaseEntity);
-            }
-
             _dataContext.Mods.Add(modEntity);
 
             existingMod = modEntity;
@@ -255,23 +265,40 @@ public class ModManagementService
         else
         {
             MapModEntryToEntity(mod, ModIdStr, existingMod);
+        }
 
-            // Upsert ModReleaseEntities
-            foreach (var release in mod.Releases)
-            {
-                var existingRelease = existingMod.Releases.FirstOrDefault(r =>
-                    r.ReleaseId == release.ReleaseId
-                );
-                if (existingRelease == null)
-                {
-                    var modReleaseEntity = MapModReleaseEntryToEntity(release);
-                    existingMod.Releases.Add(modReleaseEntity);
-                }
-                else
-                {
-                    MapModReleaseEntryToEntity(release, existingRelease);
-                }
-            }
+        var newReleases = mod.Releases.Where(r =>
+            !existingMod.Releases.Any(er => er.ReleaseId == r.ReleaseId)
+        );
+
+        var updatedReleases = mod.Releases.Where(r =>
+            existingMod.Releases.Any(er => er.ReleaseId == r.ReleaseId)
+        );
+
+        var removedReleases = existingMod.Releases.Where(er =>
+            !mod.Releases.Any(r => r.ReleaseId == er.ReleaseId)
+        );
+
+        // Add new releases
+        foreach (var release in newReleases)
+        {
+            var releaseEntity = MapModReleaseEntryToEntity(release);
+            existingMod.Releases.Add(releaseEntity);
+        }
+
+        // Update existing releases
+        foreach (var release in updatedReleases)
+        {
+            var existingReleaseEntity = existingMod.Releases.First(er =>
+                er.ReleaseId == release.ReleaseId
+            );
+            MapModReleaseEntryToEntity(release, existingReleaseEntity);
+        }
+
+        // Remove deleted releases
+        foreach (var release in removedReleases)
+        {
+            _dataContext.ModReleases.Remove(release);
         }
 
         _dataContext.SaveChanges();
