@@ -174,6 +174,70 @@ const PlayersPage: React.FC = () => {
         }
     };
 
+    const handleToggleBan = async (playerId: string) => {
+        try {
+            const isBanned = bannedPlayers.some(p => p.id === playerId);
+            if (isBanned) {
+                await PlayerService.unBanPlayer(playerId);
+            } else {
+                await PlayerService.banPlayer(playerId);
+            }
+            dispatch(fetchAllPlayers());
+            if (tabValue === 3) {
+                fetchBannedPlayers();
+            }
+        } catch (err) {
+            toast.show('Failed to update ban status.', 'error');
+        }
+    };
+
+    const handleToggleBanFromMenu = (playerId: string) => {
+        handleToggleBan(playerId);
+        handleMenuClose();
+    };
+
+    const handleAddBanOpen = () => {
+        setAddBanDialogOpen(true);
+        setAddBanSearchQuery('');
+        setAddBanSubmitting(false);
+        setAddBanSuccess(false);
+    };
+
+    const handleAddBanClose = () => {
+        setAddBanDialogOpen(false);
+        setAddBanSearchQuery('');
+        setAddBanSubmitting(false);
+        setAddBanSuccess(false);
+    };
+
+    const handleAddBanConfirm = async () => {
+        if (addBanSearchQuery.trim() === '') {
+            toast.show('Please enter a player name or ID.', 'warning');
+            return;
+        }
+
+        try {
+            setAddBanSubmitting(true);
+            setAddBanSuccess(false);
+            const result = await PlayerService.findPlayerByName(addBanSearchQuery);
+            if (result && !bannedPlayers.some(w => w.id === result.id)) {
+                await PlayerService.banPlayer(result.id);
+                dispatch(fetchAllPlayers());
+                fetchBannedPlayers();
+                setAddBanSubmitting(false);
+                setAddBanSuccess(true);
+                setTimeout(() => handleAddBanClose(), 600);
+            } else {
+                setAddBanSubmitting(false);
+                toast.show('Player not found or already banned.', 'info');
+            }
+        } catch (err) {
+            console.error('Failed to add player to ban list', err);
+            setAddBanSubmitting(false);
+            toast.show('Failed to add player to ban list.', 'error');
+        }
+    };
+
     const [tabValue, setTabValue] = React.useState(0);
     const [paginationModel, setPaginationModel] = React.useState({ page: 0, pageSize: 20 });
     const [sortField, setSortField] = React.useState<string>('id');
@@ -194,6 +258,10 @@ const PlayersPage: React.FC = () => {
     const [addWhitelistSearchQuery, setAddWhitelistSearchQuery] = React.useState('');
     const [addWhitelistSubmitting, setAddWhitelistSubmitting] = React.useState(false);
     const [addWhitelistSuccess, setAddWhitelistSuccess] = React.useState(false);
+    const [addBanDialogOpen, setAddBanDialogOpen] = React.useState(false);
+    const [addBanSearchQuery, setAddBanSearchQuery] = React.useState('');
+    const [addBanSubmitting, setAddBanSubmitting] = React.useState(false);
+    const [addBanSuccess, setAddBanSuccess] = React.useState(false);
 
     const fetchWhitelistedPlayers = async (page = 1, pageSize = 20, sortF = 'id', sortD: 'asc' | 'desc' = 'asc') => {
         setWhitelistedLoading(true);
@@ -396,6 +464,15 @@ const PlayersPage: React.FC = () => {
                                     Add Player
                                 </Button>
                             )}
+                            {tabValue === 3 && (
+                                <Button
+                                    variant="contained"
+                                    size="small"
+                                    onClick={handleAddBanOpen}
+                                >
+                                    Add Player
+                                </Button>
+                            )}
                         </Box>
                         
                         <DataGrid
@@ -486,8 +563,8 @@ const PlayersPage: React.FC = () => {
                     <MenuItem onClick={() => menuPlayerId && handleToggleWhitelistFromMenu(menuPlayerId)}>
                         {whitelistedPlayers.some(p => p.id === menuPlayerId) ? 'Remove from Whitelist' : 'Add to Whitelist'}
                     </MenuItem>
-                    <MenuItem onClick={() => toast.show('Ban feature - to be implemented', 'info')}>
-                        Ban
+                    <MenuItem onClick={() => menuPlayerId && handleToggleBanFromMenu(menuPlayerId)}>
+                        {bannedPlayers.some(p => p.id === menuPlayerId) ? 'Unban' : 'Ban'}
                     </MenuItem>
                 </Menu>
 
@@ -524,6 +601,40 @@ const PlayersPage: React.FC = () => {
                         </Button>
                     </DialogActions>
                 </Dialog>
+                <Dialog open={addBanDialogOpen} onClose={handleAddBanClose} maxWidth="sm" fullWidth>
+                    <DialogTitle>Add Player to Ban List</DialogTitle>
+                    <DialogContent>
+                        <Box sx={{ pt: 2 }}>
+                            <TextField
+                                fullWidth
+                                placeholder="Search by player name or ID..."
+                                value={addBanSearchQuery}
+                                onChange={(e) => setAddBanSearchQuery(e.target.value)}
+                                variant="outlined"
+                                size="small"
+                            />
+                        </Box>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleAddBanClose}>Cancel</Button>
+                        <Button 
+                            onClick={handleAddBanConfirm} 
+                            variant="contained" 
+                            color="primary"
+                            disabled={addBanSubmitting || addBanSuccess}
+                            startIcon={addBanSuccess ? <CheckIcon /> : undefined}
+                        >
+                            {addBanSubmitting && !addBanSuccess ? (
+                                <CircularProgress size={18} color="inherit" />
+                            ) : addBanSuccess ? (
+                                'Added'
+                            ) : (
+                                'Add'
+                            )}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
             </>
         );
 };
