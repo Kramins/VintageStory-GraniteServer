@@ -1,6 +1,5 @@
 # GraniteServer
 
-
 GraniteServer is a Vintage Story server mod that adds server and player administration, paired with a MUI-based React frontend for managing the server.
 
 ## Current Features
@@ -8,23 +7,50 @@ GraniteServer is a Vintage Story server mod that adds server and player administ
 - **Player management**: Whitelist, ban, kick, and inventory management
 - **Server configuration**: Change server settings from the web UI
 
----
+## Screenshots
 
+### Server Overview
+
+![Server Overview](docs/images/Server%20Overview.png)
+
+### Server Configuration
+
+![Server Config](docs/images/Server%20Config.png)
+
+### Players Management
+
+![Players](docs/images/Players.png)
+
+### Player Overview
+
+![Player Overview](docs/images/Player%20Overview.png)
+
+### Player Sessions
+
+![Player Sessions](docs/images/Player%20Sessions.png)
+
+### Player Inventory
+
+![Player Inventory](docs/images/Player%20Inventory.png)
+
+---
 
 ## Quickstart (Dev Container)
 
 The recommended way to develop GraniteServer is using the included devcontainer in VS Code. This provides a pre-configured environment with all dependencies.
 
 1. **Open in VS Code**
-  - Use "Open Folder in Container" or "Reopen in Container" if prompted.
+
+- Use "Open Folder in Container" or "Reopen in Container" if prompted.
 
 2. **Build and run using the Run/Debug panel**
-  - Open the Run/Debug panel (Ctrl+Shift+D or click the Run icon in the sidebar).
-  - Choose a launch configuration, such as:
-    - `Launch Server And ClientApp` (full server and client)
-    - `Launch Server with UI Dev` (server with UI in dev mode)
-    - `Launch Server (Postgres)` or `Launch Server (SQLite)` for specific DB setups
-  - Click the green play button to build and launch.
+
+- Open the Run/Debug panel (Ctrl+Shift+D or click the Run icon in the sidebar).
+- Choose a launch configuration, such as:
+  - `Launch Server And ClientApp` (full server and client)
+  - `Launch Server with UI Dev` (server with UI in dev mode)
+  - `Launch Server (Postgres)` or `Launch Server (SQLite)` for specific DB setups
+- Click the green play button to build and launch.
 
 3. **Frontend only**
    - The compound launch config can start both server and UI, but you can also run the frontend alone using the `npm dev` task or manually:
@@ -35,8 +61,6 @@ The recommended way to develop GraniteServer is using the included devcontainer 
      ```
    - When running in dev mode, the frontend will be available at http://localhost:3000.
    - When running the server with the built-in client (via launch configs), the web UI is served from the mod on http://localhost:5000 (the mod's server port).
-
-
 
 ---
 
@@ -62,6 +86,7 @@ npm run dev
 Configuration is stored in `graniteserverconfig.json` inside the mod directory and will be created automatically if missing. Environment variables prefixed with `GS_` can override any configuration property.
 
 Key points:
+
 - Switch database provider with `GS_DATABASETYPE` (`PostgreSQL` or `SQLite`).
 - For PostgreSQL, set `GS_DATABASEHOST`, `GS_DATABASEPORT` (default `5432`), `GS_DATABASENAME`, `GS_DATABASEUSERNAME`, `GS_DATABASEPASSWORD`.
 - For SQLite, set `GS_DATABASENAME` (default `graniteserver`) — the `.db` extension will be added automatically.
@@ -148,6 +173,7 @@ volumes:
 ## Usage
 
 GraniteServer is designed to work with the Kramins/container-vintagestory-server container, but it can also be used on a standalone Vintage Story server. For container usage, see that container's documentation.
+
 ## License
 
 GPLv3
