@@ -145,8 +145,7 @@ volumes:
 
 ## Usage
 
-GraniteServer is designed to work seamlessly with the Kramins/container-vintagestory-server container, but it can also be used on a standalone Vintage Story server. For container usage, see that container's documentation. For standalone setups, follow the manual build and run instructions above.
-
+GraniteServer is designed to work with the Kramins/container-vintagestory-server container, but it can also be used on a standalone Vintage Story server. For container usage, see that container's documentation.
 ## License
 
 GPLv3
