@@ -5,22 +5,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Server Only",
-            "type": "coreclr",
-            "request": "launch",
-            "program": "/app/VintagestoryServer.dll",
-            "preLaunchTask": "build-server",
-            "args": [
-                "--tracelog",
-                "--dataPath",
-                "/data",
-                "--addModPath",
-                "${workspaceFolder}/GraniteServerMod/bin/mods"
-            ],
-            "console": "internalConsole",
-            "stopAtEntry": false
-        },
-        {
             "name": "Launch Server And ClientApp",
             "type": "coreclr",
             "request": "launch",
