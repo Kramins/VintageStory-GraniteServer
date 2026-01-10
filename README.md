@@ -83,8 +83,9 @@ services:
   vintagestory:
     image: ghcr.io/kramins/vintagestory:latest
     ports:
-      - "42420:42420"
-      - "5000:5000"
+      - "5000:5000" # Web UI/API (HTTP)
+      - "42420:42420/tcp" # Game server (TCP)
+      - "42420:42420/udp" # Game server (UDP)
     environment:
       GS_PORT: 5000
       GS_DATABASETYPE: "SQLite"
@@ -106,8 +107,9 @@ services:
   vintagestory:
     image: ghcr.io/kramins/vintagestory:latest
     ports:
-      - "42420:42420"
-      - "5000:5000"
+      - "5000:5000" # Web UI/API (HTTP)
+      - "42420:42420/tcp" # Game server (TCP)
+      - "42420:42420/udp" # Game server (UDP)
     environment:
       GS_PORT: 5000
       GS_DATABASETYPE: "PostgreSQL"
