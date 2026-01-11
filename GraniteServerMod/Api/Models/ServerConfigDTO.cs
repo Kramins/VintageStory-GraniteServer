@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace GraniteServer.Api.Models;
 
 public class ServerConfigDTO
