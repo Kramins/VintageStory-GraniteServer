@@ -107,6 +107,7 @@ namespace GraniteServer
                     services.AddScoped<SieveProcessor>();
                     services.AddScoped<ModManagementService>();
                     services.AddScoped<EventStreamHandler>();
+                    services.AddScoped<PermissionsService>();
                     services.AddSingleton<PlayerSessionTracker>();
                     services.AddSingleton<WorldService>();
                     services.AddSingleton<ServerService>();
