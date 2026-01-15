@@ -2,11 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using GraniteServer.Api.Extensions;
-using GraniteServer.Api.Messaging.Commands;
-using GraniteServer.Api.Messaging.Contracts;
-using GraniteServer.Api.Messaging.Events;
 using GraniteServer.Api.Services;
+using GraniteServer.Messaging.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Vintagestory.API.Common;
@@ -17,8 +14,7 @@ namespace GraniteServer.Api.HostedServices;
 public class PlayerSessionHostedService : IHostedService, IDisposable
 {
     private readonly ICoreServerAPI _api;
-    private readonly IServiceProvider _servicesProvider;
-
+    private readonly MessageBusService _messageBus;
     private CancellationTokenSource? _cts;
 
     // private readonly List<Task> _pending = new();
@@ -27,23 +23,19 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
     private readonly ILogger _logger;
 
     public PlayerSessionHostedService(
-        IServiceProvider servicesProvider,
         ICoreServerAPI api,
+        MessageBusService messageBus,
         ILogger logger
     )
     {
-        _servicesProvider = servicesProvider;
         _api = api;
+        _messageBus = messageBus;
         _logger = logger;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var scope = _servicesProvider.CreateScope();
-        var messageBus = scope.ServiceProvider.GetRequiredService<MessageBusService>();
-
-        messageBus.Subscribe<KickPlayerCommand>(PlayerKickCommandHandler);
 
         _api.Event.PlayerJoin += OnPlayerJoin;
         _api.Event.PlayerLeave += OnPlayerLeave;
@@ -51,38 +43,44 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
         return Task.CompletedTask;
     }
 
-    private void PlayerKickCommandHandler(KickPlayerCommand command)
-    {
-        throw new NotImplementedException();
-    }
-
     private void OnPlayerLeave(IServerPlayer byPlayer)
     {
         if (_isShuttingDown)
             return;
 
-        RunScoped(
-            (sp, player) =>
+        var playerSessionId = byPlayer.ServerData.CustomPlayerData["GraniteSessionId"];
+        _messageBus.Publish(
+            new PlayerLeaveEvent()
             {
-                var tracker = sp.GetRequiredService<PlayerSessionTracker>();
-                tracker.OnPlayerLeave(player);
-            },
-            byPlayer
+                Data = new PlayerLeaveEventData
+                {
+                    PlayerId = byPlayer.PlayerUID,
+                    PlayerName = byPlayer.PlayerName,
+                    SessionId = playerSessionId.ToString(),
+                    IpAddress = byPlayer.IpAddress,
+                },
+            }
         );
+        byPlayer.ServerData.CustomPlayerData.Remove("GraniteSessionId");
     }
 
     private void OnPlayerJoin(IServerPlayer byPlayer)
     {
         if (_isShuttingDown)
             return;
-
-        RunScoped(
-            (sp, player) =>
+        var playerSessionId = Guid.NewGuid();
+        byPlayer.ServerData.CustomPlayerData["GraniteSessionId"] = playerSessionId.ToString();
+        _messageBus.Publish(
+            new PlayerJoinedEvent()
             {
-                var tracker = sp.GetRequiredService<PlayerSessionTracker>();
-                tracker.OnPlayerJoin(player);
-            },
-            byPlayer
+                Data = new PlayerJoinedEventData
+                {
+                    PlayerId = byPlayer.PlayerUID,
+                    PlayerName = byPlayer.PlayerName,
+                    SessionId = playerSessionId.ToString(),
+                    IpAddress = byPlayer.IpAddress,
+                },
+            }
         );
     }
 
@@ -114,28 +112,6 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
         {
             _logger.Error($"Error awaiting pending tasks during shutdown: {ex}");
         }
-    }
-
-    private void RunScoped(Action<IServiceProvider, IServerPlayer> handler, IServerPlayer player)
-    {
-        var ct = _cts?.Token ?? CancellationToken.None;
-
-        Task.Run(async () =>
-        {
-            try
-            {
-                using var scope = _servicesProvider.CreateScope();
-                handler(scope.ServiceProvider, player);
-            }
-            catch (OperationCanceledException)
-            {
-                _api.Logger.Debug("Player session handler was cancelled");
-            }
-            catch (Exception ex)
-            {
-                _api.Logger.Error($"Error in player session handler: {ex}");
-            }
-        });
     }
 
     public void Dispose()

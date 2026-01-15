@@ -2,6 +2,7 @@ using System;
 using System.Reactive.Linq;
 using GraniteServer.Api.Messaging;
 using GraniteServer.Api.Services;
+using GraniteServer.Messaging;
 
 namespace GraniteServer.Api.Extensions
 {
@@ -22,7 +23,7 @@ namespace GraniteServer.Api.Extensions
             where TMessage : MessageBusMessage
         {
             return messageBus
-                .Subscribe()
+                .GetObservable()
                 .Where(e => e is TMessage)
                 .Select(e => (TMessage)e)
                 .Subscribe(handler);

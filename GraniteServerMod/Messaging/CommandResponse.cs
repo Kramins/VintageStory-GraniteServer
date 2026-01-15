@@ -1,6 +1,6 @@
 using System;
 
-namespace GraniteServer.Api.Messaging;
+namespace GraniteServer.Messaging;
 
 /// <summary>
 /// Response envelope for commands. Command handlers can publish or return this
@@ -11,7 +11,6 @@ public class CommandResponse : MessageBusMessage
     public Guid ParentCommandId { get; set; }
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 }
 
 public class CommandResponse<T> : CommandResponse

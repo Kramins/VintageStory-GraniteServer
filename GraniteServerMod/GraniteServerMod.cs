@@ -2,13 +2,15 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
-using GraniteServer.Api;
 using GraniteServer.Api.Controllers;
 using GraniteServer.Api.HostedServices;
 using GraniteServer.Api.Services;
 using GraniteServer.Data;
 using GraniteServer.Data.Entities;
+using GraniteServer.Integration.Handlers.Commands;
+using GraniteServer.Messaging.Commands;
+using GraniteServer.Messaging.Handlers.Commands;
+using GraniteServer.Messaging.Handlers.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -107,7 +109,7 @@ namespace GraniteServer
                     services.AddScoped<SieveProcessor>();
                     services.AddScoped<ModManagementService>();
                     services.AddScoped<EventStreamHandler>();
-                    services.AddSingleton<PlayerSessionTracker>();
+
                     services.AddSingleton<WorldService>();
                     services.AddSingleton<ServerService>();
                     services.AddSingleton<BasicAuthService>();
@@ -116,11 +118,20 @@ namespace GraniteServer
                     services.AddSingleton<Mod>(Mod);
                     services.AddSingleton(config);
 
+                    // Register command handlers
+                    services.AddScoped<
+                        ICommandHandler<KickPlayerCommand>,
+                        KickPlayerCommandHandler
+                    >();
+
+                    // Register event handlers
+                    AutoDiscoverAndRegisterEventHandlers(services, api.Logger);
+
                     // Register hosted Web API service
                     services.AddHostedService<GenHttpHostedService>();
                     services.AddHostedService<PlayerSessionHostedService>();
                     services.AddHostedService<ModSystemHostedService>();
-                    services.AddHostedService<EventBridgeHostedService>();
+                    services.AddHostedService<MessageBridgeHostedService>();
 
                     RegisterDatabaseContext(services, api, config, api.Logger);
                 })
@@ -174,6 +185,60 @@ namespace GraniteServer
             finally
             {
                 base.Dispose();
+            }
+        }
+
+        private void AutoDiscoverAndRegisterEventHandlers(
+            IServiceCollection services,
+            Vintagestory.API.Common.ILogger logger
+        )
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var eventHandlerType = typeof(IEventHandler<>);
+
+            logger?.Notification(
+                $"[Events] Scanning assembly {assembly.GetName().Name} for event handlers..."
+            );
+
+            var handlerTypes = assembly
+                .GetTypes()
+                .Where(t =>
+                    !t.IsAbstract
+                    && !t.IsInterface
+                    && t.GetInterfaces()
+                        .Any(i =>
+                            i.IsGenericType && i.GetGenericTypeDefinition() == eventHandlerType
+                        )
+                )
+                .ToList();
+
+            logger?.Notification($"[Events] Found {handlerTypes.Count} event handler type(s).");
+
+            foreach (var handlerType in handlerTypes)
+            {
+                logger?.Notification($"[Events] Processing handler type: {handlerType.FullName}");
+
+                var eventHandlerInterfaces = handlerType
+                    .GetInterfaces()
+                    .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == eventHandlerType)
+                    .ToList();
+
+                foreach (var handlerInterface in eventHandlerInterfaces)
+                {
+                    try
+                    {
+                        services.AddScoped(handlerInterface, handlerType);
+                        logger?.Notification(
+                            $"[Events] Registered {handlerInterface.FullName} -> {handlerType.FullName}"
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.Warning(
+                            $"[Events] Failed to register handler {handlerType.FullName} for interface {handlerInterface.FullName}: {ex.Message}"
+                        );
+                    }
+                }
             }
         }
 

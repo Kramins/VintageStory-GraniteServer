@@ -1,12 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
-using GraniteServer.Api.Messaging;
-using GraniteServer.Api.Messaging.Commands;
-using GraniteServer.Api.Messaging.Events;
-using GraniteServer.Api.Models;
+using GraniteServer.Messaging;
+using GraniteServer.Messaging.Commands;
 using Vintagestory.API.Common;
 
 namespace GraniteServer.Api.Services
@@ -47,9 +44,14 @@ namespace GraniteServer.Api.Services
                 return;
             }
 
+            // Enrich event with server IDs if not set
             if (@event.TargetServerId == Guid.Empty)
             {
                 @event.TargetServerId = _config.ServerId;
+            }
+            if (@event.OriginServerId == Guid.Empty)
+            {
+                @event.OriginServerId = _config.ServerId;
             }
 
             try
@@ -98,7 +100,7 @@ namespace GraniteServer.Api.Services
         /// Each subscriber will receive all events from the ReplaySubject (broadcast).
         /// New subscribers also receive buffered past events up to ReplayBufferSize.
         /// </summary>
-        public IObservable<MessageBusMessage> Subscribe()
+        public IObservable<MessageBusMessage> GetObservable()
         {
             // Only forward EventMessage instances that target this server.
             return _subject

@@ -4,11 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using GraniteServer.Api.Messaging.Contracts;
-using GraniteServer.Api.Messaging.Events;
 using GraniteServer.Api.Models;
 using GraniteServer.Data;
+using GraniteServer.Messaging.Commands;
+using GraniteServer.Messaging.Events;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Sqlite;
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.Server;
@@ -20,7 +20,7 @@ public class PlayerService
 {
     private readonly ICoreServerAPI _api;
     private readonly ServerCommandService _commandService;
-    private readonly MessageBusService _messageBug;
+    private readonly MessageBusService _messageBus;
     private readonly GraniteDataContext _dataContext;
     private readonly ConcurrentDictionary<string, string> _nameToIdCache =
         new ConcurrentDictionary<string, string>();
@@ -37,7 +37,7 @@ public class PlayerService
     {
         _api = api;
         _commandService = commandService;
-        _messageBug = messageBus;
+        _messageBus = messageBus;
         _dataContext = dataContext;
     }
 
@@ -77,10 +77,10 @@ public class PlayerService
 
         PlayerDataManager.bannedListDirty = true;
 
-        _messageBug.Publish(
+        _messageBus.Publish(
             new PlayerBannedEvent()
             {
-                Data = new PlayerBanEventData
+                Data = new PlayerBannedEventData
                 {
                     PlayerId = id,
                     PlayerName = playerName,
@@ -105,11 +105,10 @@ public class PlayerService
         }
         var playerName = await ResolvePlayerNameById(id);
         PlayerDataManager.WhitelistPlayer(playerName, id, "Added via API");
-
-        _messageBug.Publish(
+        _messageBus.Publish(
             new PlayerWhitelistedEvent()
             {
-                Data = new PlayerEventData { PlayerId = id, PlayerName = playerName },
+                Data = new PlayerWhitelistedEventData { PlayerId = id, PlayerName = playerName },
             }
         );
     }
@@ -292,36 +291,49 @@ public class PlayerService
         bool waitForDisconnect = false
     )
     {
-        var player = _api.Server.Players.Where(p => p.PlayerUID == playerId).FirstOrDefault();
-        if (player != null)
+        var command = new KickPlayerCommand
         {
-            try
+            Data = new KickPlayerCommandData
             {
-                // player.Disconnect(reason);
-                var result = await _commandService.KickUserAsync(player.PlayerName, reason);
-            }
-            catch (Exception)
-            {
-                // Handle exception
-            }
+                PlayerId = playerId,
+                Reason = reason,
+                WaitForDisconnect = waitForDisconnect,
+            },
+        };
 
-            if (waitForDisconnect)
-            {
-                // Wait up to 5 seconds for the player to disconnect
-                int attempts = 0;
-                var isDisconnected = false;
-                do
-                {
-                    isDisconnected =
-                        (await GetAllPlayersAsync()).Single(p => p.Id == playerId).ConnectionState
-                        == "Offline";
-                    await Task.Delay(500);
-                    attempts++;
-                } while (!isDisconnected && attempts < 10);
-            }
-            return $"Player {playerId} kicked.";
-        }
-        return $"Player {playerId} not found or already offline.";
+        _messageBus.Publish(command);
+
+        return $"Kick command for player {playerId} has been issued.";
+        // var player = _api.Server.Players.Where(p => p.PlayerUID == playerId).FirstOrDefault();
+        // if (player != null)
+        // {
+        //     try
+        //     {
+        //         // player.Disconnect(reason);
+        //         var result = await _commandService.KickUserAsync(player.PlayerName, reason);
+        //     }
+        //     catch (Exception)
+        //     {
+        //         // Handle exception
+        //     }
+
+        //     if (waitForDisconnect)
+        //     {
+        //         // Wait up to 5 seconds for the player to disconnect
+        //         int attempts = 0;
+        //         var isDisconnected = false;
+        //         do
+        //         {
+        //             isDisconnected =
+        //                 (await GetAllPlayersAsync()).Single(p => p.Id == playerId).ConnectionState
+        //                 == "Offline";
+        //             await Task.Delay(500);
+        //             attempts++;
+        //         } while (!isDisconnected && attempts < 10);
+        //     }
+        //     return $"Player {playerId} kicked.";
+        // }
+        // return $"Player {playerId} not found or already offline.";
     }
 
     /// <summary>
@@ -341,10 +353,10 @@ public class PlayerService
         PlayerDataManager.BannedPlayers.RemoveAll(pe => pe.PlayerUID == id);
         PlayerDataManager.bannedListDirty = true;
 
-        _messageBug.Publish(
-            new PlayerUnBannedEvent()
+        _messageBus.Publish(
+            new PlayerUnbannedEvent()
             {
-                Data = new PlayerBanEventData { PlayerId = id, PlayerName = playerName },
+                Data = new PlayerUnbannedEventData { PlayerId = id, PlayerName = playerName },
             }
         );
     }
@@ -363,10 +375,10 @@ public class PlayerService
         var playerName = await ResolvePlayerNameById(id);
         PlayerDataManager.UnWhitelistPlayer(playerName, id);
 
-        _messageBug.Publish(
-            new PlayerUnWhitelistedEvent()
+        _messageBus.Publish(
+            new PlayerUnwhitelistedEvent()
             {
-                Data = new PlayerEventData { PlayerId = id, PlayerName = playerName },
+                Data = new PlayerUnwhitelistedEventData { PlayerId = id, PlayerName = playerName },
             }
         );
     }

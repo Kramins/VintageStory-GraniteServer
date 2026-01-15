@@ -1,1 +1,2 @@
+- Linter will reformat code on save. don't worry about formatting or if the file looks different.
 - Logging is provided by Vintagestory.API.Common.ILogger. Use this for all logging needs.

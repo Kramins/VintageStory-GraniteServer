@@ -40,7 +40,7 @@ namespace GraniteServer.Api.Controllers
         /// </summary>
         public async ValueTask StreamEventsAsync(IEventConnection connection)
         {
-            var observable = _messageBus.Subscribe();
+            var observable = _messageBus.GetObservable();
             var subscription = default(IDisposable);
 
             try
