@@ -5,6 +5,7 @@ using System.Reflection;
 using GraniteServer.Api.Controllers;
 using GraniteServer.Api.HostedServices;
 using GraniteServer.Api.Services;
+using GraniteServer.Common;
 using GraniteServer.Data;
 using GraniteServer.Data.Entities;
 using GraniteServer.Integration.Handlers.Commands;
@@ -105,6 +106,7 @@ namespace GraniteServer
                     });
 
                     services.AddSingleton<ServerCommandService>();
+                    services.AddScoped<VintageStoryProxyResolver>();
                     services.AddScoped<PlayerService>();
                     services.AddScoped<SieveProcessor>();
                     services.AddScoped<ModManagementService>();
@@ -119,10 +121,7 @@ namespace GraniteServer
                     services.AddSingleton(config);
 
                     // Register command handlers
-                    services.AddScoped<
-                        ICommandHandler<KickPlayerCommand>,
-                        KickPlayerCommandHandler
-                    >();
+                    services.AddScoped<ICommandHandler<KickPlayerCommand>, PlayerCommandHandlers>();
 
                     // Register event handlers
                     AutoDiscoverAndRegisterEventHandlers(services, api.Logger);

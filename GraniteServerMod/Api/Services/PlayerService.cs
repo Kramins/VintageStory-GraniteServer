@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using GraniteServer.Api.Messaging.Contracts;
 using GraniteServer.Api.Models;
+using GraniteServer.Common;
 using GraniteServer.Data;
 using GraniteServer.Messaging.Commands;
 using GraniteServer.Messaging.Events;
@@ -19,7 +20,7 @@ namespace GraniteServer.Api.Services;
 public class PlayerService
 {
     private readonly ICoreServerAPI _api;
-    private readonly ServerCommandService _commandService;
+    private readonly VintageStoryProxyResolver _proxyResolver;
     private readonly MessageBusService _messageBus;
     private readonly GraniteDataContext _dataContext;
     private readonly ConcurrentDictionary<string, string> _nameToIdCache =
@@ -30,63 +31,48 @@ public class PlayerService
 
     public PlayerService(
         ICoreServerAPI api,
-        ServerCommandService commandService,
+        VintageStoryProxyResolver vintageStoryProxyResolver,
         MessageBusService messageBus,
         GraniteDataContext dataContext
     )
     {
         _api = api;
-        _commandService = commandService;
+        _proxyResolver = vintageStoryProxyResolver;
         _messageBus = messageBus;
         _dataContext = dataContext;
     }
-
-    public bool IsSqliteProvider() => _dataContext.Database.IsSqlite();
 
     private PlayerDataManager PlayerDataManager => (PlayerDataManager)_api.PlayerData;
 
     /// <summary>
     /// Adds a player to the ban list.
     /// </summary>
-    /// <param name="id">The unique ID of the player to add to the ban list.</param>
+    /// <param name="playerId">The unique ID of the player to add to the ban list.</param>
     /// <param name="reason">The reason for banning the player.</param>
     public async Task AddPlayerToBanListAsync(
-        string id,
+        string playerId,
         string reason,
         string issuedBy = "API",
         DateTime? untilDate = null
     )
     {
         var currentBannedPlayers = await GetBannedPlayersAsync();
-        if (currentBannedPlayers.Any(p => p.Id == id))
+        if (currentBannedPlayers.Any(p => p.Id == playerId))
         {
             return;
         }
-        var playerName = await ResolvePlayerNameById(id);
-        // TODO: revisit if PlayerDataManager.BanPlayer method changes from internal to public
-        PlayerDataManager.BannedPlayers.Add(
-            new PlayerEntry
-            {
-                PlayerUID = id,
-                PlayerName = playerName,
-                Reason = reason,
-                IssuedByPlayerName = issuedBy,
-                UntilDate = untilDate ?? DateTime.MaxValue,
-            }
-        );
-
-        PlayerDataManager.bannedListDirty = true;
+        var playerName = await ResolvePlayerNameById(playerId);
 
         _messageBus.Publish(
-            new PlayerBannedEvent()
+            new BanPlayerCommand
             {
-                Data = new PlayerBannedEventData
+                Data = new BanPlayerCommandData
                 {
-                    PlayerId = id,
+                    PlayerId = playerId,
                     PlayerName = playerName,
                     Reason = reason,
                     IssuedBy = issuedBy,
-                    UntilDate = untilDate,
+                    ExpirationDate = untilDate,
                 },
             }
         );
@@ -125,37 +111,10 @@ public class PlayerService
     /// <returns>A list of PlayerDTO objects representing all players.</returns>
     public async Task<List<PlayerDTO>> GetAllPlayersAsync()
     {
-        var allPlayerData = _api.PlayerData.PlayerDataByUid;
-        var allServerPlayers = _api.Server.Players.ToDictionary(p => p.PlayerUID);
-        var allBannedPlayers = PlayerDataManager.BannedPlayers;
-        var allWhitelistedPlayers = PlayerDataManager.WhitelistedPlayers;
+        var proxy = _proxyResolver.GetProxy();
+        var snapshots = await proxy.GetAllPlayersAsync();
 
-        // Build quick lookups keyed by player ID
-        var bannedById = allBannedPlayers
-            .GroupBy(bp => bp.PlayerUID)
-            .ToDictionary(g => g.Key, g => g.First());
-        var whitelistedById = allWhitelistedPlayers
-            .GroupBy(wp => wp.PlayerUID)
-            .ToDictionary(g => g.Key, g => g.First());
-
-        // Union all known player IDs from any source (seen, online, banned, whitelisted)
-        var allIds = new HashSet<string>(allPlayerData.Keys);
-        allIds.UnionWith(allServerPlayers.Keys);
-        allIds.UnionWith(bannedById.Keys);
-        allIds.UnionWith(whitelistedById.Keys);
-
-        var fullList = allIds
-            .Select(id =>
-            {
-                allPlayerData.TryGetValue(id, out var pd);
-                allServerPlayers.TryGetValue(id, out var sp);
-                bannedById.TryGetValue(id, out var bp);
-                whitelistedById.TryGetValue(id, out var wp);
-                return MapToPlayerDTO(id, pd, sp, bp, wp);
-            })
-            .ToList();
-
-        return await Task.FromResult(fullList);
+        return snapshots.Select(MapSnapshotToPlayerDTO).ToList();
     }
 
     /// <summary>
@@ -304,36 +263,6 @@ public class PlayerService
         _messageBus.Publish(command);
 
         return $"Kick command for player {playerId} has been issued.";
-        // var player = _api.Server.Players.Where(p => p.PlayerUID == playerId).FirstOrDefault();
-        // if (player != null)
-        // {
-        //     try
-        //     {
-        //         // player.Disconnect(reason);
-        //         var result = await _commandService.KickUserAsync(player.PlayerName, reason);
-        //     }
-        //     catch (Exception)
-        //     {
-        //         // Handle exception
-        //     }
-
-        //     if (waitForDisconnect)
-        //     {
-        //         // Wait up to 5 seconds for the player to disconnect
-        //         int attempts = 0;
-        //         var isDisconnected = false;
-        //         do
-        //         {
-        //             isDisconnected =
-        //                 (await GetAllPlayersAsync()).Single(p => p.Id == playerId).ConnectionState
-        //                 == "Offline";
-        //             await Task.Delay(500);
-        //             attempts++;
-        //         } while (!isDisconnected && attempts < 10);
-        //     }
-        //     return $"Player {playerId} kicked.";
-        // }
-        // return $"Player {playerId} not found or already offline.";
     }
 
     /// <summary>
@@ -349,15 +278,8 @@ public class PlayerService
         }
         var playerName = await ResolvePlayerNameById(id);
 
-        // TODO: revisit if PlayerDataManager.UnBanPlayer method changes from internal to public
-        PlayerDataManager.BannedPlayers.RemoveAll(pe => pe.PlayerUID == id);
-        PlayerDataManager.bannedListDirty = true;
-
         _messageBus.Publish(
-            new PlayerUnbannedEvent()
-            {
-                Data = new PlayerUnbannedEventData { PlayerId = id, PlayerName = playerName },
-            }
+            new UnbanPlayerCommand { Data = new UnbanPlayerCommandData { PlayerId = id } }
         );
     }
 
@@ -513,45 +435,30 @@ public class PlayerService
         return new InventorySlotDTO { SlotIndex = slotIndex };
     }
 
-    private PlayerDTO MapToPlayerDTO(
-        string playerId,
-        IServerPlayerData? pd,
-        IServerPlayer? sp,
-        PlayerEntry? bp,
-        PlayerEntry? wp
-    )
+    private PlayerDTO MapSnapshotToPlayerDTO(DetailedPlayerSnapshot snapshot)
     {
-        var resolvedName =
-            pd?.LastKnownPlayername
-            ?? sp?.PlayerName
-            ?? bp?.PlayerName
-            ?? wp?.PlayerName
-            ?? playerId;
-
-        var playerDto = new PlayerDTO
+        return new PlayerDTO
         {
-            Id = playerId,
-            Name = resolvedName,
-            IpAddress = sp?.IpAddress ?? "Offline",
-            LanguageCode = sp?.LanguageCode ?? "N/A",
-            ConnectionState = sp?.ConnectionState.ToString() ?? "Offline",
-            Ping = sp == null || float.IsNaN(sp.Ping) ? 0 : sp.Ping,
-            RolesCode = sp?.Role.Code ?? "N/A",
-            FirstJoinDate = pd?.FirstJoinDate ?? string.Empty,
-            LastJoinDate = pd?.LastJoinDate ?? string.Empty,
-            Privileges = sp?.Privileges.ToArray() ?? Array.Empty<string>(),
-            IsAdmin = false,
-            IsBanned = bp != null,
-            BanReason = bp?.Reason,
-            BanBy = bp?.IssuedByPlayerName,
-            BanUntil = bp?.UntilDate,
-            IsWhitelisted = wp != null,
-            WhitelistedReason = wp?.Reason,
-            WhitelistedBy = wp?.IssuedByPlayerName,
-            WhitelistedUntil = wp?.UntilDate,
+            Id = snapshot.Id,
+            Name = snapshot.Name,
+            IpAddress = snapshot.IpAddress,
+            LanguageCode = snapshot.LanguageCode,
+            ConnectionState = snapshot.ConnectionState,
+            Ping = snapshot.Ping,
+            RolesCode = snapshot.RolesCode,
+            FirstJoinDate = snapshot.FirstJoinDate,
+            LastJoinDate = snapshot.LastJoinDate,
+            Privileges = snapshot.Privileges,
+            IsAdmin = snapshot.IsAdmin,
+            IsBanned = snapshot.IsBanned,
+            BanReason = snapshot.BanReason,
+            BanBy = snapshot.BanBy,
+            BanUntil = snapshot.BanUntil,
+            IsWhitelisted = snapshot.IsWhitelisted,
+            WhitelistedReason = snapshot.WhitelistedReason,
+            WhitelistedBy = snapshot.WhitelistedBy,
+            WhitelistedUntil = snapshot.WhitelistedUntil,
         };
-
-        return playerDto;
     }
 
     private async Task<string> ResolvePlayerIdByName(string name, bool useCache = true)

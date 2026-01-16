@@ -91,6 +91,14 @@ namespace GraniteServer.Api.HostedServices
                 eventMessage.GetType()
             );
 
+            if (eventMessage.Data == null)
+            {
+                _logger.Error(
+                    $"[EventBridge] Event {eventMessage.MessageType} has no data payload, skipping"
+                );
+                return;
+            }
+
             using (var scope = _serviceProvider.CreateScope())
             {
                 var handlers = scope.ServiceProvider.GetServices(handlerInterfaceType);
@@ -129,6 +137,14 @@ namespace GraniteServer.Api.HostedServices
         {
             _logger.Notification($"[EventBridge] Received command: {cmd.MessageType}");
             var handlerInterfaceType = typeof(ICommandHandler<>).MakeGenericType(cmd.GetType());
+
+            if (cmd.Data == null)
+            {
+                _logger.Error(
+                    $"[EventBridge] Command {cmd.MessageType} has no data payload, skipping"
+                );
+                return;
+            }
 
             using (var scope = _serviceProvider.CreateScope())
             {
