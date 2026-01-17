@@ -5,87 +5,81 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Server And ClientApp",
+            "name": "Launch Mod",
             "type": "coreclr",
             "request": "launch",
             "program": "/app/VintagestoryServer.dll",
-            "preLaunchTask": "build",
+            "preLaunchTask": "build-mod",
             "args": [
                 "--tracelog",
                 "--dataPath",
                 "/data",
                 "--addModPath",
-                "${workspaceFolder}/GraniteServerMod/bin/mods"
+                "${workspaceFolder}/Granite.Mod/bin/mods"
             ],
             "console": "internalConsole",
             "stopAtEntry": false
         },
         {
-            "name": "Launch Server with UI Dev",
+            "name": "Launch Granite Server (Postgres)",
             "type": "coreclr",
             "request": "launch",
-            "program": "/app/VintagestoryServer.dll",
             "preLaunchTask": "build-server",
-            "args": [
-                "--tracelog",
-                "--addModPath",
-                "${workspaceFolder}/GraniteServerMod/bin/mods"
-            ],
-            "console": "internalConsole",
-            "stopAtEntry": false
-        },
-        {
-            "name": "Launch Server (Postgres)",
-            "type": "coreclr",
-            "request": "launch",
-            "program": "/app/VintagestoryServer.dll",
-            "preLaunchTask": "build",
-            "args": [
-                "--tracelog",
-                "--dataPath",
-                "/data",
-                "--addModPath",
-                "${workspaceFolder}/GraniteServerMod/bin/mods"
-            ],
+            "program": "${workspaceFolder}/Granite.Server/bin/Debug/net9.0/Granite.Server.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Granite.Server",
             "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
                 "GS_DATABASETYPE": "PostgreSQL",
                 "GS_DATABASEHOST": "postgres",
                 "GS_DATABASEPORT": "5432",
-                "GS_DATABASENAME": "graniteserver",
+                "GS_DATABASENAME": "Granite",
                 "GS_DATABASEUSERNAME": "postgres",
                 "GS_DATABASEPASSWORD": "postgres"
             },
-            "console": "internalConsole",
+            "console": "integratedTerminal",
             "stopAtEntry": false
         },
         {
-            "name": "Launch Server (SQLite)",
+            "name": "Launch Granite Server (SQLite)",
             "type": "coreclr",
             "request": "launch",
-            "program": "/app/VintagestoryServer.dll",
-            "preLaunchTask": "build",
-            "args": [
-                "--tracelog",
-                "--dataPath",
-                "/data",
-                "--addModPath",
-                "${workspaceFolder}/GraniteServerMod/bin/mods"
-            ],
+            "preLaunchTask": "build-server",
+            "program": "${workspaceFolder}/Granite.Server/bin/Debug/net9.0/Granite.Server.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Granite.Server",
             "env": {
-                "GS_DATABASETYPE": "SQLite",
-                // "GS_SQLITEFILEPATH": "${workspaceFolder}/GraniteServerMod/graniteserver.db"
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "GS_DATABASETYPE": "SQLite"
+                // "GS_SQLITEFILEPATH": "${workspaceFolder}/Granite.Server/Granite.db"
             },
-            "console": "internalConsole",
+            "console": "integratedTerminal",
             "stopAtEntry": false
         }
     ],
     "compounds": [
         {
+            "name": "Mod + Granite Server (Postgres)",
+            "configurations": [
+                "Launch Mod",
+                "Launch Granite Server (Postgres)"
+            ],
+            "stopAll": true
+        },
+        {
+            "name": "Mod + Granite Server (SQLite)",
+            "configurations": [
+                "Launch Mod",
+                "Launch Granite Server (SQLite)"
+            ],
+            "stopAll": true
+        },
+        {
             "name": "Full Dev Environment",
             "configurations": [
-                "Launch Server with UI Dev"
+                "Launch Granite Server (Postgres)"
             ],
-            "preLaunchTask": "npm run dev",
+            "preLaunchTask": "npm dev",
             "stopAll": true
         }
     ]

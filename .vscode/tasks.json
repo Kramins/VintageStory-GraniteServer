@@ -2,27 +2,27 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "build-mod",
             "command": "dotnet",
             "type": "process",
             "args": [
                 "build",
                 "-c",
                 "Debug",
-                "${workspaceFolder}/GraniteServerMod/GraniteServerMod.csproj",
+                "${workspaceFolder}/Granite.Mod/Granite.Mod.csproj",
                 "/p:BuildWebApp=true"
             ],
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "build-release",
+            "label": "build-mod-release",
             "command": "dotnet",
             "type": "process",
             "args": [
                 "build",
                 "-c",
                 "Release",
-                "${workspaceFolder}/GraniteServerMod/GraniteServerMod.csproj",
+                "${workspaceFolder}/Granite.Mod/Granite.Mod.csproj",
                 "/p:BuildWebApp=true",
                 "/p:modinfoVersion=${input:versionNumber}"
             ],
@@ -36,30 +36,7 @@
                 "build",
                 "-c",
                 "Debug",
-                "${workspaceFolder}/GraniteServerMod/GraniteServerMod.csproj"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "package",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "run",
-                "--project",
-                "${workspaceFolder}/CakeBuild/CakeBuild.csproj"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "build (Cake)",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "build",
-                "-c",
-                "Debug",
-                "${workspaceFolder}/CakeBuild/CakeBuild.csproj"
+                "${workspaceFolder}/Granite.Server/Granite.Server.csproj"
             ],
             "problemMatcher": "$msCompile"
         },

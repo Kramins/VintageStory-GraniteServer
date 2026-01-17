@@ -1,0 +1,6 @@
+@Granite.Server_HostAddress = http://localhost:5122
+
+GET {{Granite.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

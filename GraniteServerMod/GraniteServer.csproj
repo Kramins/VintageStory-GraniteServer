@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <Nullable>enable</Nullable>
+    <RootNamespace>GraniteServer</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Vintagestory" HintPath="$(VINTAGE_STORY)/Vintagestory.dll" Private="false" />
+    <Reference Include="VintagestoryAPI">
+      <HintPath>$(VINTAGE_STORY)/VintagestoryAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VintagestoryLib" HintPath="$(VINTAGE_STORY)/VintagestoryLib.dll" Private="false" />
+    <Reference Include="VintagestoryServer" HintPath="$(VINTAGE_STORY)/VintagestoryServer.dll" Private="false" />
+    <Reference Include="Newtonsoft.Json" HintPath="$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll" Private="false" />
+    <!-- Only include non-wwwroot resources initially -->
+    <None Include="resources/modinfo.json" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="">
+      <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </None>
+    <None Include="resources/assets/**" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="">
+      <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="GenHTTP.Api" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Core" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.ApiBrowsing" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.Authentication" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.Controllers" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.DependencyInjection" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.SinglePageApplications" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.StaticWebsites" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.Webservices" Version="10.2.0" />
+    <PackageReference Include="GenHTTP.Modules.ServerSentEvents" Version="10.2.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageReference Include="Sieve" Version="2.5.5" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="8.0.1" />
+    <PackageReference Include="System.Reactive" Version="5.4.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GraniteServer.Data\GraniteServer.Data.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Integration/Services/" />
+  </ItemGroup>
+</Project>

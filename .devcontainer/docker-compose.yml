@@ -11,6 +11,9 @@ services:
     command: sleep infinity
     environment:
       - VINTAGE_STORY=/app
+      - GS_ACCESSTOKEN=devtoken
+      - GS_GRANITESERVERHOST=http://localhost:5000
+
       - GS_PASSWORD=password
       - GS_DATABASETYPE=PostgreSQL
       - GS_DATABASEHOST=postgres

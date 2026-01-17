@@ -1,0 +1,148 @@
+using System;
+using System.Collections.Concurrent;
+using System.Linq;
+using System.Reflection;
+using System.Text.Json;
+using System.Threading.Tasks;
+using GraniteServer.Messaging;
+using GraniteServer.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
+
+namespace Granite.Server.Hubs;
+
+/// <summary>
+/// SignalR hub for real-time bidirectional communication between server and clients.
+/// Supports command execution and event streaming via the message bus.
+/// </summary>
+[Authorize]
+public class GraniteHub : Hub
+{
+    private readonly MessageBusService _messageBus;
+    private readonly ILogger<GraniteHub> _logger;
+    private static readonly ConcurrentDictionary<string, IDisposable> _subscriptions = new();
+
+    public GraniteHub(MessageBusService messageBus, ILogger<GraniteHub> logger)
+    {
+        _messageBus = messageBus ?? throw new ArgumentNullException(nameof(messageBus));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    /// <summary>
+    /// Receives an event from a client and publishes it to the server's message bus.
+    /// </summary>
+    /// <param name="message">The message to publish</param>
+    public async Task PublishEvent(JsonElement payload)
+    {
+        try
+        {
+            var messageType =
+                payload.GetProperty("messageType").GetString()
+                ?? throw new InvalidOperationException("messageType is required");
+
+            var type = FindMessageTypeByName(messageType);
+            if (type == null)
+            {
+                _logger.LogError($"[SignalR] Could not find message type: {messageType}");
+                throw new InvalidOperationException($"Unknown messageType: {messageType}");
+            }
+
+            // Configure JSON options to handle property name case-insensitivity and nested types
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            };
+
+            var message =
+                (MessageBusMessage?)JsonSerializer.Deserialize(payload.GetRawText(), type, options)
+                ?? throw new InvalidOperationException("Failed to deserialize message");
+
+            _logger.LogTrace(
+                $"[SignalR] Publishing message to bus: {message.GetType().FullName}, Data: {message.Data?.GetType().FullName ?? "null"}"
+            );
+            _messageBus.Publish(message);
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[SignalR] Error publishing event from client");
+            throw;
+        }
+    }
+
+    private static Type? FindMessageTypeByName(string messageType)
+    {
+        return AppDomain
+            .CurrentDomain.GetAssemblies()
+            .SelectMany(assembly =>
+            {
+                try
+                {
+                    return assembly.GetTypes();
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    return ex.Types.Where(t => t != null)!;
+                }
+            })
+            .FirstOrDefault(t =>
+                t != null
+                && !t.IsAbstract
+                && typeof(MessageBusMessage).IsAssignableFrom(t)
+                && t.Name.Equals(messageType, StringComparison.OrdinalIgnoreCase)
+            );
+    }
+
+    /// <summary>
+    /// Called when a client connects. Subscribes the client to message bus events.
+    /// </summary>
+    public override async Task OnConnectedAsync()
+    {
+        var connectionId = Context.ConnectionId;
+
+        // Subscribe to all messages from the message bus
+        var subscription = _messageBus
+            .GetObservable()
+            .Subscribe(
+                message =>
+                {
+                    // Broadcast event to this specific client
+                    Clients
+                        .Client(connectionId)
+                        .SendAsync(SignalRHubMethods.ReceiveEvent, message);
+                },
+                error =>
+                {
+                    // Log error but don't terminate connection
+                    _logger.LogError(
+                        error,
+                        "[SignalR] Error in message bus subscription for {ConnectionId}",
+                        connectionId
+                    );
+                }
+            );
+
+        // Store subscription for cleanup
+        _subscriptions[connectionId] = subscription;
+
+        await base.OnConnectedAsync();
+    }
+
+    /// <summary>
+    /// Called when a client disconnects. Cleans up message bus subscription.
+    /// </summary>
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        var connectionId = Context.ConnectionId;
+
+        // Dispose and remove subscription
+        if (_subscriptions.TryRemove(connectionId, out var subscription))
+        {
+            subscription?.Dispose();
+        }
+
+        await base.OnDisconnectedAsync(exception);
+    }
+}
