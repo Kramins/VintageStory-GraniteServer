@@ -14,8 +14,7 @@ using Microsoft.Extensions.Logging;
 namespace Granite.Server.Hubs;
 
 /// <summary>
-/// SignalR hub for real-time bidirectional communication between server and clients.
-/// Supports command execution and event streaming via the message bus.
+/// SignalR Hub for Granite Mod communication
 /// </summary>
 [Authorize]
 public class GraniteHub : Hub

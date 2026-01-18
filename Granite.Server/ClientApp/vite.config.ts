@@ -12,7 +12,11 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 3000,
     proxy: {
-      '/api': 'http://localhost:5000'
+      '/api': 'http://localhost:5000',
+      '/hub/client': {
+        target: 'http://localhost:5000',
+        ws: true
+      }
     }
   }
 })

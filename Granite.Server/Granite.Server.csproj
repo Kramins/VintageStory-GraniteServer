@@ -4,17 +4,30 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <SpaRoot>ClientApp\</SpaRoot>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.9" />
+    <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Granite.Data\Granite.Data.csproj" />
     <ProjectReference Include="..\Granite.Common\Granite.Common.csproj" />
+  </ItemGroup>
+
+  <!-- Build ClientApp during build when BuildWebApp=true or in Release mode -->
+  <Target Name="BuildClientApp" BeforeTargets="Build" Condition="'$(BuildWebApp)' == 'true' OR '$(Configuration)' == 'Release'">
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm install" />
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
+  </Target>
+
+  <!-- Include built client files in output directory -->
+  <ItemGroup>
+    <Content Include="$(SpaRoot)dist\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

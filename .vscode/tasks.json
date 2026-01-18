@@ -49,7 +49,7 @@
                 "dev"
             ],
             "options": {
-                "cwd": "${workspaceFolder}/ClientApp"
+                "cwd": "${workspaceFolder}/Granite.Server/ClientApp"
             },
             "group": "build",
             "presentation": {

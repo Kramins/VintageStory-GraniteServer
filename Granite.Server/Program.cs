@@ -85,7 +85,7 @@ builder
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
 
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/graniteHub"))
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hub/"))
                 {
                     context.Token = accessToken;
                 }
@@ -144,12 +144,20 @@ app.UseAuthorization();
 // Validate serverid when present (non-blocking for now)
 app.UseMiddleware<Granite.Server.Middleware.ServerIdValidationMiddleware>();
 
+// Serve static files from ClientApp/dist
+app.UseStaticFiles();
+app.UseDefaultFiles();
+
 // Map endpoints
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllers();
-    endpoints.MapHub<GraniteHub>("/graniteHub");
+    endpoints.MapHub<GraniteHub>("/hub/mod");
+    endpoints.MapHub<ClientHub>("/hub/client");
 });
+
+// Fallback to index.html for SPA routing (must be after MapControllers)
+app.MapFallbackToFile("index.html");
 
 // Apply database migrations
 using (var scope = app.Services.CreateScope())
