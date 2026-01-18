@@ -6,9 +6,10 @@ import './App.css';
 
 import router from './routes';
 import AuthInitializer from './components/AuthInitializer';
-import DisconnectedModal from './components/DisconnectedModal';
-import { useServerStatusMonitor } from './hooks/useServerStatusMonitor';
-import { useAppSelector } from './store/store';
+// TODO: Re-enable server status monitoring after multi-server architecture is complete
+// import DisconnectedModal from './components/DisconnectedModal';
+// import { useServerStatusMonitor } from './hooks/useServerStatusMonitor';
+// import { useAppSelector } from './store/store';
 import { ToastProvider } from './components/ToastProvider';
 
 // import type {} from '@mui/x-date-pickers/themeAugmentation';
@@ -39,16 +40,18 @@ const xThemeComponents = {
 };
 
 function AppContent() {
-  const { retryConnection } = useServerStatusMonitor();
-  const { isServerConnected, disconnectionReason } = useAppSelector(state => state.ui);
+  // TODO: Re-enable server status monitoring for multi-server architecture
+  // const { retryConnection } = useServerStatusMonitor();
+  // const { isServerConnected, disconnectionReason } = useAppSelector(state => state.ui);
 
   return (
     <>
-      <DisconnectedModal
+      {/* TODO: Re-enable disconnected modal after multi-server support is added */}
+      {/* <DisconnectedModal
         open={!isServerConnected}
         onRetry={retryConnection}
         reason={disconnectionReason}
-      />
+      /> */}
       <AuthInitializer />
       <RouterProvider router={router} />
     </>

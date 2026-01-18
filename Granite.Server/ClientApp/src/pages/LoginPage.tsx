@@ -11,6 +11,10 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { AuthService } from "../services/AuthService";
+import ServerService from "../services/ServerService";
+import { useAppDispatch } from "../store/store";
+import { setServers, setLoading as setServersLoading, setError as setServersError } from "../store/slices/serversSlice";
+import { EventBus } from "../services/EventBus";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -21,15 +25,9 @@ export default function LoginPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
-    // Check if already authenticated
-    if (AuthService.isAuthenticated()) {
-      const from = (location.state as any)?.from?.pathname || "/";
-      navigate(from, { replace: true });
-      return;
-    }
-
     // Get auth settings from the server
     AuthService.getAuthSettings()
       .then((settings) => {
@@ -57,6 +55,24 @@ export default function LoginPage() {
 
     try {
       await AuthService.login({ username, password });
+      const token = AuthService.getToken();
+      
+      // Fetch available game servers after successful login
+      try {
+        dispatch(setServersLoading(true));
+        const servers = await ServerService.fetchServers();
+        dispatch(setServers(servers));
+      } catch (serverErr) {
+        console.error("Failed to fetch servers:", serverErr);
+        dispatch(setServersError("Failed to load game servers"));
+        // Don't block navigation on server fetch failure
+      }
+      
+      // Start SignalR connection after successful authentication
+      if (token) {
+        EventBus.start(token);
+      }
+      
       const from = (location.state as any)?.from?.pathname || "/";
       navigate(from, { replace: true });
     } catch (err: any) {

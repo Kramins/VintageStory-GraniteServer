@@ -47,22 +47,24 @@ const StatCard: React.FC<{
 const OverviewPage: React.FC = () => {
     const toast = useToast();
     const [status, setStatus] = useState<ServerStatusDTO | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false); // Changed to false - no longer loading status on mount
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [announceOpen, setAnnounceOpen] = useState(false);
 
-    useEffect(() => {
-        ServerService.getStatus()
-            .then(data => {
-                setStatus(data);
-                setLoading(false);
-            })
-            .catch(() => {
-                setError('Failed to load server status');
-                setLoading(false);
-            });
-    }, []);
+    // TODO: Update to use multi-server architecture with selected serverId
+    // The old /api/server/status endpoint no longer exists
+    // useEffect(() => {
+    //     ServerService.getStatus()
+    //         .then(data => {
+    //             setStatus(data);
+    //             setLoading(false);
+    //         })
+    //         .catch(() => {
+    //             setError('Failed to load server status');
+    //             setLoading(false);
+    //         });
+    // }, []);
 
     const handleSaveWorld = async () => {
         if (saving) return;
@@ -90,14 +92,22 @@ const OverviewPage: React.FC = () => {
         }
     };
 
-    if (loading) {
-        return <Typography>Loading server status...</Typography>;
-    }
-    if (error) {
-        return <Typography color="error">{error}</Typography>;
-    }
+    // Temporarily disable these checks until multi-server architecture is fully implemented
+    // TODO: Once multi-server support is added with serverId, re-enable status fetching
     if (!status) {
-        return null;
+        return (
+            <Box>
+                <Typography variant="h4" component="h1" gutterBottom>
+                    Server Overview
+                </Typography>
+                <Paper sx={{ p: 3, mt: 2 }}>
+                    <Typography variant="body1" color="text.secondary">
+                        Server overview is being updated to support multiple game servers.
+                        Please select a server from the navigation to view its status.
+                    </Typography>
+                </Paper>
+            </Box>
+        );
     }
 
     // Helper formatting

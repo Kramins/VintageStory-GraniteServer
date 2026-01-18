@@ -2,7 +2,7 @@ import { styled } from '@mui/material/styles';
 import MuiDrawer, { drawerClasses } from '@mui/material/Drawer';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
-// import SelectContent from './SelectContent';
+import ServerSelector from './ServerSelector';
 import MenuContent from './MenuContent';
 // import CardAlert from './CardAlert';
 import UserProfile from './UserProfile';
@@ -38,7 +38,7 @@ export default function SideMenu() {
           p: 1.5,
         }}
       >
-        {/* <SelectContent /> */}
+        <ServerSelector />
       </Box>
       <Divider />
       <Box
