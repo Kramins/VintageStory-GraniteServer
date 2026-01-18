@@ -50,6 +50,14 @@ builder.Services.AddHostedService<ServerInitializationHostedService>();
 // Register event handlers
 builder.Services.AddEventHandlers();
 
+// Configure Sieve for filtering, sorting, and pagination
+builder.Services.Configure<Sieve.Models.SieveOptions>(options =>
+{
+    options.DefaultPageSize = 20;
+    options.MaxPageSize = 100;
+});
+builder.Services.AddScoped<Sieve.Services.SieveProcessor>();
+
 // Configure JWT authentication using options with environment overrides
 var optionsFromConfig =
     builder.Configuration.GetSection("GraniteServer").Get<GraniteServerOptions>()

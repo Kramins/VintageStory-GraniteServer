@@ -4,6 +4,7 @@ using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using GraniteServer.Messaging;
 using GraniteServer.Messaging.Commands;
+using GraniteServer.Messaging.Events;
 
 namespace GraniteServer.Services
 {
@@ -62,36 +63,6 @@ namespace GraniteServer.Services
             }
         }
 
-        public async Task<CommandResponse<TResponse>> PublishCommandAndWait<TCommand, TResponse>(
-            CommandMessage<TCommand> command
-        )
-        {
-            var tcs = new TaskCompletionSource<CommandResponse<TResponse>>();
-            _subject
-                .Where(msg =>
-                    msg is CommandResponse<TResponse> response
-                    && response.ParentCommandId == command.Id
-                )
-                .Take(1)
-                .Timeout(TimeSpan.FromSeconds(30))
-                .Catch<MessageBusMessage, TimeoutException>(ex =>
-                {
-                    var timeoutResponse = new CommandResponse<TResponse>()
-                    {
-                        ParentCommandId = command.Id,
-                        Success = false,
-                        ErrorMessage = "Command timed out waiting for response",
-                    };
-                    return Observable.Return(timeoutResponse);
-                })
-                .Subscribe(responseMsg =>
-                {
-                    var response = (CommandResponse<TResponse>)responseMsg;
-                    tcs.SetResult(response);
-                });
-            this.Publish(command);
-            return await tcs.Task;
-        }
 
         /// <summary>
         /// Returns an IObservable that can be subscribed to receive events.
@@ -142,6 +113,31 @@ namespace GraniteServer.Services
             command.TraceParent = Guid.NewGuid().ToString(); // For tracing, could be improved with actual trace IDs
 
             return command;
+        }
+
+        public T CreateEvent<T>(Guid serverId, Action<T> value)
+            where T : EventMessage
+        {
+            var @event = Activator.CreateInstance<T>();
+
+            // Get the data type from the EventMessage<TData> base class
+            var baseType = typeof(T).BaseType;
+            if (
+                baseType?.IsGenericType == true
+                && baseType.GetGenericTypeDefinition() == typeof(EventMessage<>)
+            )
+            {
+                var eventDataType = baseType.GetGenericArguments()[0];
+                @event.Data = Activator.CreateInstance(eventDataType);
+            }
+
+            value(@event);
+
+            @event.OriginServerId = serverId;
+            @event.Timestamp = DateTime.UtcNow;
+            @event.TraceParent = Guid.NewGuid().ToString(); // For tracing, could be improved with actual trace IDs
+
+            return @event;
         }
     }
 }

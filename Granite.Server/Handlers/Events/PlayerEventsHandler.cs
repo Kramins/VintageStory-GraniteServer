@@ -10,6 +10,8 @@ namespace GraniteServer.Messaging.Handlers.Events;
 public class PlayerEventsHandler
     : IEventHandler<PlayerWhitelistedEvent>,
         IEventHandler<PlayerUnwhitelistedEvent>,
+        IEventHandler<PlayerBannedEvent>,
+        IEventHandler<PlayerUnbannedEvent>,
         IEventHandler<PlayerLeaveEvent>,
         IEventHandler<PlayerJoinedEvent>,
         IEventHandler<PlayerKickedEvent>
@@ -23,12 +25,82 @@ public class PlayerEventsHandler
 
     Task IEventHandler<PlayerWhitelistedEvent>.Handle(PlayerWhitelistedEvent command)
     {
-        throw new NotImplementedException();
+        var playerEventData = command.Data!;
+
+        var playerEntity = _dataContext.Players.FirstOrDefault(p =>
+            p.PlayerUID == playerEventData.PlayerUID && p.ServerId == command.OriginServerId
+        );
+
+        if (playerEntity != null)
+        {
+            playerEntity.IsWhitelisted = true;
+            _dataContext.Players.Update(playerEntity);
+            _dataContext.SaveChanges();
+        }
+
+        return Task.CompletedTask;
     }
 
     Task IEventHandler<PlayerUnwhitelistedEvent>.Handle(PlayerUnwhitelistedEvent command)
     {
-        throw new NotImplementedException();
+        var playerEventData = command.Data!;
+
+        var playerEntity = _dataContext.Players.FirstOrDefault(p =>
+            p.PlayerUID == playerEventData.PlayerUID && p.ServerId == command.OriginServerId
+        );
+
+        if (playerEntity != null)
+        {
+            playerEntity.IsWhitelisted = false;
+            playerEntity.WhitelistedReason = null;
+            playerEntity.WhitelistedBy = null;
+            _dataContext.Players.Update(playerEntity);
+            _dataContext.SaveChanges();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    Task IEventHandler<PlayerBannedEvent>.Handle(PlayerBannedEvent command)
+    {
+        var playerEventData = command.Data!;
+
+        var playerEntity = _dataContext.Players.FirstOrDefault(p =>
+            p.PlayerUID == playerEventData.PlayerUID && p.ServerId == command.OriginServerId
+        );
+
+        if (playerEntity != null)
+        {
+            playerEntity.IsBanned = true;
+            playerEntity.BanReason = playerEventData.Reason;
+            playerEntity.BanBy = playerEventData.IssuedBy;
+            playerEntity.BanUntil = playerEventData.UntilDate ?? playerEventData.ExpirationDate;
+            _dataContext.Players.Update(playerEntity);
+            _dataContext.SaveChanges();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    Task IEventHandler<PlayerUnbannedEvent>.Handle(PlayerUnbannedEvent command)
+    {
+        var playerEventData = command.Data!;
+
+        var playerEntity = _dataContext.Players.FirstOrDefault(p =>
+            p.PlayerUID == playerEventData.PlayerUID && p.ServerId == command.OriginServerId
+        );
+
+        if (playerEntity != null)
+        {
+            playerEntity.IsBanned = false;
+            playerEntity.BanReason = null;
+            playerEntity.BanBy = null;
+            playerEntity.BanUntil = null;
+            _dataContext.Players.Update(playerEntity);
+            _dataContext.SaveChanges();
+        }
+
+        return Task.CompletedTask;
     }
 
     Task IEventHandler.Handle(object command)
@@ -64,13 +136,13 @@ public class PlayerEventsHandler
     {
         var playerEventData = command.Data!;
         var playerEntity = _dataContext.Players.FirstOrDefault(p =>
-            p.Id == playerEventData.PlayerId && p.ServerId == command.OriginServerId
+            p.PlayerUID == playerEventData.PlayerUID && p.ServerId == command.OriginServerId
         );
         if (playerEntity == null)
         {
             playerEntity = new PlayerEntity()
             {
-                Id = playerEventData.PlayerId,
+                PlayerUID = playerEventData.PlayerUID,
                 ServerId = command.OriginServerId,
                 Name = playerEventData.PlayerName,
                 FirstJoinDate = DateTime.UtcNow,
@@ -90,7 +162,7 @@ public class PlayerEventsHandler
         var playerSessionEntity = new PlayerSessionEntity()
         {
             Id = playerSessionId,
-            PlayerId = playerEventData.PlayerId,
+            PlayerId = playerEventData.PlayerUID,
             ServerId = command.OriginServerId,
             JoinDate = DateTime.UtcNow,
             IpAddress = playerEventData.IpAddress,

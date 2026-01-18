@@ -6,16 +6,17 @@ import type { PlayerNameIdDTO } from '../types/PlayerNameIdDTO';
 import type { PlayerSessionDTO } from '../types/PlayerSessionDTO';
 import type { JsonApiDocument, PaginationMeta, JsonApiError } from '../types/JsonApi';
 
-const API_BASE = '/api/players';
+const getApiBase = (serverId: string) => `/api/${serverId}/players`;
 
 export const PlayerService = {
-    async getAllPlayers(): Promise<PlayerDTO[]> {
-        const response = await axios.get<JsonApiDocument<PlayerDTO[]>>(`${API_BASE}/`);
+    async getAllPlayers(serverId: string): Promise<PlayerDTO[]> {
+        const response = await axios.get<JsonApiDocument<PlayerDTO[]>>(`${getApiBase(serverId)}/`);
         const document = response.data;
         return document?.data ?? [];
     },
 
     async getAllPlayersPaged(
+        serverId: string,
         page = 1,
         pageSize = 20,
         sortField = 'id',
@@ -28,7 +29,7 @@ export const PlayerService = {
         const apiPage = page < 1 ? 1 : page;
         const apiPageSize = pageSize <= 0 ? 1 : pageSize;
 
-        const response = await axios.get<JsonApiDocument<PlayerDTO[]>>(`${API_BASE}/`, {
+        const response = await axios.get<JsonApiDocument<PlayerDTO[]>>(`${getApiBase(serverId)}/`, {
             params: { page: apiPage, pageSize: apiPageSize, sorts, filters },
         });
 
@@ -40,6 +41,7 @@ export const PlayerService = {
     },
 
     async getOnlinePlayers(
+        serverId: string,
         page = 0,
         pageSize = 20,
         sortField = 'id',
@@ -48,10 +50,11 @@ export const PlayerService = {
     ): Promise<{ players: PlayerDTO[]; pagination?: PaginationMeta; errors?: JsonApiError[] }> {
         // Add ConnectionState=='Connected' to the filter
         const onlineFilter = filters ? `ConnectionState=='Connected'&&${filters}` : `ConnectionState=='Connected'`;
-        return this.getAllPlayersPaged(page, pageSize, sortField, sortDirection, onlineFilter);
+        return this.getAllPlayersPaged(serverId, page, pageSize, sortField, sortDirection, onlineFilter);
     },
 
     async getWhitelistedPlayers(
+        serverId: string,
         page = 0,
         pageSize = 20,
         sortField = 'id',
@@ -60,10 +63,11 @@ export const PlayerService = {
     ): Promise<{ players: PlayerDTO[]; pagination?: PaginationMeta; errors?: JsonApiError[] }> {
         // Add IsWhitelisted==true to the filter
         const whitelistFilter = filters ? `IsWhitelisted==true&&${filters}` : 'IsWhitelisted==true';
-        return this.getAllPlayersPaged(page, pageSize, sortField, sortDirection, whitelistFilter);
+        return this.getAllPlayersPaged(serverId, page, pageSize, sortField, sortDirection, whitelistFilter);
     },
 
     async getBannedPlayers(
+        serverId: string,
         page = 0,
         pageSize = 20,
         sortField = 'id',
@@ -72,46 +76,47 @@ export const PlayerService = {
     ): Promise<{ players: PlayerDTO[]; pagination?: PaginationMeta; errors?: JsonApiError[] }> {
         // Add IsBanned==true to the filter
         const bannedFilter = filters ? `IsBanned==true&&${filters}` : 'IsBanned==true';
-        return this.getAllPlayersPaged(page, pageSize, sortField, sortDirection, bannedFilter);
+        return this.getAllPlayersPaged(serverId, page, pageSize, sortField, sortDirection, bannedFilter);
     },
 
-    async kickPlayer(playerId: string, reason?: string): Promise<void> {
-        await axios.post(`${API_BASE}/id/${playerId}/kick`, { reason });
+    async kickPlayer(serverId: string, playerId: string, reason?: string): Promise<void> {
+        await axios.post(`${getApiBase(serverId)}/id/${playerId}/kick`, { reason });
     },
 
-    async banPlayer(playerId: string, reason?: string): Promise<void> {
-        await axios.post(`${API_BASE}/id/${playerId}/ban`, { reason });
+    async banPlayer(serverId: string, playerId: string, reason?: string): Promise<void> {
+        await axios.post(`${getApiBase(serverId)}/id/${playerId}/ban`, { reason });
     },
 
-    async unBanPlayer(playerId: string): Promise<void> {
-        await axios.delete(`${API_BASE}/id/${playerId}/ban`);
+    async unBanPlayer(serverId: string, playerId: string): Promise<void> {
+        await axios.delete(`${getApiBase(serverId)}/id/${playerId}/ban`);
     },
 
-    async whitelistPlayer(playerId: string): Promise<void> {
-        await axios.post(`${API_BASE}/id/${playerId}/whitelist`);
+    async whitelistPlayer(serverId: string, playerId: string): Promise<void> {
+        await axios.post(`${getApiBase(serverId)}/id/${playerId}/whitelist`);
     },
     
-    async unWhitelistPlayer(playerId: string): Promise<void> {
-        await axios.delete(`${API_BASE}/id/${playerId}/whitelist`);
+    async unWhitelistPlayer(serverId: string, playerId: string): Promise<void> {
+        await axios.delete(`${getApiBase(serverId)}/id/${playerId}/whitelist`);
     },
 
-    async getPlayerDetails(playerId: string): Promise<PlayerDetailsDTO> {
-        const response = await axios.get(`${API_BASE}/id/${playerId}`);
+    async getPlayerDetails(serverId: string, playerId: string): Promise<PlayerDetailsDTO> {
+        const response = await axios.get(`${getApiBase(serverId)}/id/${playerId}`);
         return response.data;
     },
-    async updatePlayerInventorySlot(playerId: string, inventoryName: string, data: UpdateInventorySlotRequestDTO): Promise<void> {
-        await axios.post(`${API_BASE}/id/${playerId}/inventories/${inventoryName}/`, data);
+    async updatePlayerInventorySlot(serverId: string, playerId: string, inventoryName: string, data: UpdateInventorySlotRequestDTO): Promise<void> {
+        await axios.post(`${getApiBase(serverId)}/id/${playerId}/inventories/${inventoryName}/`, data);
     },
-    async removeItemFromInventory(playerId: string, inventoryName: string, slotIndex: number): Promise<void> {
-        await axios.delete(`${API_BASE}/id/${playerId}/inventories/${inventoryName}/${slotIndex}`);
+    async removeItemFromInventory(serverId: string, playerId: string, inventoryName: string, slotIndex: number): Promise<void> {
+        await axios.delete(`${getApiBase(serverId)}/id/${playerId}/inventories/${inventoryName}/${slotIndex}`);
     },
 
-    async findPlayerByName(name: string): Promise<PlayerNameIdDTO> {
-        const response = await axios.get(`${API_BASE}/find`, { params: { name } });
+    async findPlayerByName(serverId: string, name: string): Promise<PlayerNameIdDTO> {
+        const response = await axios.get(`${getApiBase(serverId)}/find`, { params: { name } });
         return response.data;
     },
 
     async getPlayerSessions(
+        serverId: string,
         playerId: string,
         page = 1,
         pageSize = 20,
@@ -125,7 +130,7 @@ export const PlayerService = {
         const apiPageSize = pageSize <= 0 ? 1 : pageSize;
 
         const response = await axios.get<JsonApiDocument<PlayerSessionDTO[]>>(
-            `${API_BASE}/id/${playerId}/sessions`,
+            `${getApiBase(serverId)}/id/${playerId}/sessions`,
             { params: { page: apiPage, pageSize: apiPageSize, sorts, filters } }
         );
 

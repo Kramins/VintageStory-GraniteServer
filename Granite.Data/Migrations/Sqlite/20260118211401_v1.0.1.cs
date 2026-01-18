@@ -19,6 +19,50 @@ namespace Granite.Data.Migrations.Sqlite
                 nullable: false,
                 defaultValue: "");
 
+            migrationBuilder.AddColumn<string>(
+                name: "BanBy",
+                table: "Players",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "BanReason",
+                table: "Players",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<DateTime>(
+                name: "BanUntil",
+                table: "Players",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<bool>(
+                name: "IsBanned",
+                table: "Players",
+                type: "INTEGER",
+                nullable: false,
+                defaultValue: false);
+
+            migrationBuilder.AddColumn<bool>(
+                name: "IsWhitelisted",
+                table: "Players",
+                type: "INTEGER",
+                nullable: false,
+                defaultValue: false);
+
+            migrationBuilder.AddColumn<string>(
+                name: "WhitelistedBy",
+                table: "Players",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "WhitelistedReason",
+                table: "Players",
+                type: "TEXT",
+                nullable: true);
+
             migrationBuilder.CreateTable(
                 name: "Mods",
                 columns: table => new
@@ -206,6 +250,34 @@ namespace Granite.Data.Migrations.Sqlite
             migrationBuilder.DropColumn(
                 name: "AccessToken",
                 table: "Servers");
+
+            migrationBuilder.DropColumn(
+                name: "BanBy",
+                table: "Players");
+
+            migrationBuilder.DropColumn(
+                name: "BanReason",
+                table: "Players");
+
+            migrationBuilder.DropColumn(
+                name: "BanUntil",
+                table: "Players");
+
+            migrationBuilder.DropColumn(
+                name: "IsBanned",
+                table: "Players");
+
+            migrationBuilder.DropColumn(
+                name: "IsWhitelisted",
+                table: "Players");
+
+            migrationBuilder.DropColumn(
+                name: "WhitelistedBy",
+                table: "Players");
+
+            migrationBuilder.DropColumn(
+                name: "WhitelistedReason",
+                table: "Players");
         }
     }
 }

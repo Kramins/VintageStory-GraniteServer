@@ -28,7 +28,7 @@ import {
 } from '@mui/icons-material';
 import { PlayerService } from '../services/PlayerService'
 import type { PlayerDTO } from '../types/PlayerDTO';
-import { useAppDispatch } from '../store/store';
+import { useAppDispatch, useAppSelector } from '../store/store';
 import { fetchAllPlayers } from '../store/slices/playersSlice';
 import { useToast } from '../components/ToastProvider';
 
@@ -52,12 +52,15 @@ function mapPlayerDTOtoTable(player: PlayerDTO) {
 const PlayersPage: React.FC = () => {
     const dispatch = useAppDispatch();
     const toast = useToast();
+    const selectedServerId = useAppSelector((state) => state.servers.selectedServerId);
 
     useEffect(() => {
-        // Load data for All Players tab from server (paged); API is 1-based
-        fetchPlayersPaged(1, 20, 'id', 'asc');
+        // Load data for All Players tab from server (paged) if a server is selected
+        if (selectedServerId) {
+            fetchPlayersPaged(1, 20, 'id', 'asc');
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [selectedServerId]);
 
     const handleRefresh = () => {
         if (tabValue === 0) {
@@ -68,13 +71,18 @@ const PlayersPage: React.FC = () => {
     };
 
     const handleToggleWhitelist = async (playerId: string) => {
+        if (!selectedServerId) {
+            toast.show('Please select a server first.', 'warning');
+            return;
+        }
+
         try {
             const isWhitelisted = whitelistedPlayers.some(p => p.id === playerId);
             
             if (isWhitelisted) {
-                await PlayerService.unWhitelistPlayer(playerId);
+                await PlayerService.unWhitelistPlayer(selectedServerId, playerId);
             } else {
-                await PlayerService.whitelistPlayer(playerId);
+                await PlayerService.whitelistPlayer(selectedServerId, playerId);
             }
             
             // Refresh data based on current tab
@@ -110,14 +118,16 @@ const PlayersPage: React.FC = () => {
     };
 
     const handleKickConfirm = async () => {
-        if (kickTargetId) {
-            try {
-                await PlayerService.kickPlayer(kickTargetId, kickReason);
-                dispatch(fetchAllPlayers());
-                setKickDialogOpen(false);
-            } catch (err) {
-                toast.show('Failed to kick player.', 'error');
-            }
+        if (!selectedServerId || !kickTargetId) {
+            return;
+        }
+
+        try {
+            await PlayerService.kickPlayer(selectedServerId, kickTargetId, kickReason);
+            dispatch(fetchAllPlayers());
+            setKickDialogOpen(false);
+        } catch (err) {
+            toast.show('Failed to kick player.', 'error');
         }
     };
 
@@ -147,6 +157,11 @@ const PlayersPage: React.FC = () => {
     };
 
     const handleAddWhitelistConfirm = async () => {
+        if (!selectedServerId) {
+            toast.show('Please select a server first.', 'warning');
+            return;
+        }
+
         if (addWhitelistSearchQuery.trim() === '') {
             toast.show('Please enter a player name or ID.', 'warning');
             return;
@@ -155,9 +170,9 @@ const PlayersPage: React.FC = () => {
         try {
             setAddWhitelistSubmitting(true);
             setAddWhitelistSuccess(false);
-            const result = await PlayerService.findPlayerByName(addWhitelistSearchQuery);
+            const result = await PlayerService.findPlayerByName(selectedServerId, addWhitelistSearchQuery);
             if (result && !whitelistedPlayers.some(w => w.id === result.id)) {
-                await PlayerService.whitelistPlayer(result.id);
+                await PlayerService.whitelistPlayer(selectedServerId, result.id);
                 dispatch(fetchAllPlayers());
                 fetchWhitelistedPlayers();
                 setAddWhitelistSubmitting(false);
@@ -175,12 +190,17 @@ const PlayersPage: React.FC = () => {
     };
 
     const handleToggleBan = async (playerId: string) => {
+        if (!selectedServerId) {
+            toast.show('Please select a server first.', 'warning');
+            return;
+        }
+
         try {
             const isBanned = bannedPlayers.some(p => p.id === playerId);
             if (isBanned) {
-                await PlayerService.unBanPlayer(playerId);
+                await PlayerService.unBanPlayer(selectedServerId, playerId);
             } else {
-                await PlayerService.banPlayer(playerId);
+                await PlayerService.banPlayer(selectedServerId, playerId);
             }
             dispatch(fetchAllPlayers());
             if (tabValue === 3) {
@@ -211,6 +231,11 @@ const PlayersPage: React.FC = () => {
     };
 
     const handleAddBanConfirm = async () => {
+        if (!selectedServerId) {
+            toast.show('Please select a server first.', 'warning');
+            return;
+        }
+
         if (addBanSearchQuery.trim() === '') {
             toast.show('Please enter a player name or ID.', 'warning');
             return;
@@ -219,9 +244,9 @@ const PlayersPage: React.FC = () => {
         try {
             setAddBanSubmitting(true);
             setAddBanSuccess(false);
-            const result = await PlayerService.findPlayerByName(addBanSearchQuery);
+            const result = await PlayerService.findPlayerByName(selectedServerId, addBanSearchQuery);
             if (result && !bannedPlayers.some(w => w.id === result.id)) {
-                await PlayerService.banPlayer(result.id);
+                await PlayerService.banPlayer(selectedServerId, result.id);
                 dispatch(fetchAllPlayers());
                 fetchBannedPlayers();
                 setAddBanSubmitting(false);
@@ -264,10 +289,12 @@ const PlayersPage: React.FC = () => {
     const [addBanSuccess, setAddBanSuccess] = React.useState(false);
 
     const fetchWhitelistedPlayers = async (page = 1, pageSize = 20, sortF = 'id', sortD: 'asc' | 'desc' = 'asc') => {
+        if (!selectedServerId) return;
+
         setWhitelistedLoading(true);
         try {
             const apiPage = page < 1 ? 1 : page; // API expects 1-based
-            const { players, pagination } = await PlayerService.getWhitelistedPlayers(apiPage, pageSize, sortF, sortD);
+            const { players, pagination } = await PlayerService.getWhitelistedPlayers(selectedServerId, apiPage, pageSize, sortF, sortD);
             setWhitelistedPlayers(players);
             setWhitelistedRowCount(pagination?.totalCount ?? players.length);
         } catch (err) {
@@ -278,10 +305,12 @@ const PlayersPage: React.FC = () => {
     };
 
     const fetchBannedPlayers = async (page = 1, pageSize = 20, sortF = 'id', sortD: 'asc' | 'desc' = 'asc') => {
+        if (!selectedServerId) return;
+
         setBannedLoading(true);
         try {
             const apiPage = page < 1 ? 1 : page; // API expects 1-based
-            const { players, pagination } = await PlayerService.getBannedPlayers(apiPage, pageSize, sortF, sortD);
+            const { players, pagination } = await PlayerService.getBannedPlayers(selectedServerId, apiPage, pageSize, sortF, sortD);
             setBannedPlayers(players);
             setBannedRowCount(pagination?.totalCount ?? players.length);
         } catch (err) {
@@ -292,10 +321,12 @@ const PlayersPage: React.FC = () => {
     };
 
     const fetchPlayersPaged = async (page = 1, pageSize = 20, sortF = 'id', sortD: 'asc' | 'desc' = 'asc') => {
+        if (!selectedServerId) return;
+
         setServerLoading(true);
         try {
             const apiPage = page < 1 ? 1 : page; // API expects 1-based
-            const { players, pagination } = await PlayerService.getAllPlayersPaged(apiPage, pageSize, sortF, sortD);
+            const { players, pagination } = await PlayerService.getAllPlayersPaged(selectedServerId, apiPage, pageSize, sortF, sortD);
             setServerPlayers(players);
             setServerRowCount(pagination?.totalCount ?? players.length);
         } catch (err) {
@@ -306,10 +337,12 @@ const PlayersPage: React.FC = () => {
     };
 
     const fetchOnlinePlayers = async (page = 1, pageSize = 20, sortF = 'id', sortD: 'asc' | 'desc' = 'asc') => {
+        if (!selectedServerId) return;
+
         setOnlineLoading(true);
         try {
             const apiPage = page < 1 ? 1 : page; // API expects 1-based
-            const { players, pagination } = await PlayerService.getOnlinePlayers(apiPage, pageSize, sortF, sortD);
+            const { players, pagination } = await PlayerService.getOnlinePlayers(selectedServerId, apiPage, pageSize, sortF, sortD);
             setOnlinePlayers(players);
             setOnlineRowCount(pagination?.totalCount ?? players.length);
         } catch (err) {
@@ -432,100 +465,126 @@ const PlayersPage: React.FC = () => {
         return (
             <>
                 <Box sx={{ minWidth: '100%', maxWidth: { sm: '100%', md: '1700px' } }}>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', marginBottom: 2 }}>
-                        <Typography variant="h4">Players</Typography>
-                        <Button
-                            startIcon={<RefreshIcon />}
-                            onClick={() => {
-                                handleRefresh();
-                                if (tabValue === 1) fetchOnlinePlayers(paginationModel.page + 1, paginationModel.pageSize, sortField, sortDirection);
-                                if (tabValue === 2) fetchWhitelistedPlayers(paginationModel.page + 1, paginationModel.pageSize, sortField, sortDirection);
-                                if (tabValue === 3) fetchBannedPlayers(paginationModel.page + 1, paginationModel.pageSize, sortField, sortDirection);
+                    {!selectedServerId && (
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minHeight: 400,
+                                gap: 2,
+                                backgroundColor: '#f5f5f5',
+                                borderRadius: 1,
+                                p: 3,
                             }}
-                            disabled={displayLoading}
                         >
-                            Refresh
-                        </Button>
-                    </Box>
-                    <Box sx={{ height: 600, width: '100%' }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 1 }}>
-                            <Tabs value={tabValue} onChange={handleTabChange}>
-                                <Tab label="All Players" />
-                                <Tab label="Online" />
-                                <Tab label="Whitelisted" />
-                                <Tab label="Banned" />
-                            </Tabs>
-                            {tabValue === 2 && (
-                                <Button
-                                    variant="contained"
-                                    size="small"
-                                    onClick={handleAddWhitelistOpen}
-                                >
-                                    Add Player
-                                </Button>
-                            )}
-                            {tabValue === 3 && (
-                                <Button
-                                    variant="contained"
-                                    size="small"
-                                    onClick={handleAddBanOpen}
-                                >
-                                    Add Player
-                                </Button>
-                            )}
+                            <Typography variant="h5" color="textSecondary">
+                                Select a server to view and manage players
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                                Use the server dropdown in the navigation to select a server.
+                            </Typography>
                         </Box>
-                        
-                        <DataGrid
-                            rows={tablePlayers}
-                            columns={columns}
-                            loading={displayLoading}
-                            pagination
-                            paginationModel={paginationModel}
-                            onPaginationModelChange={(model) => {
-                                setPaginationModel(model);
-                                if (tabValue === 0) {
-                                    fetchPlayersPaged(model.page + 1, model.pageSize, sortField, sortDirection);
-                                } else if (tabValue === 1) {
-                                    fetchOnlinePlayers(model.page + 1, model.pageSize, sortField, sortDirection);
-                                } else if (tabValue === 2) {
-                                    fetchWhitelistedPlayers(model.page + 1, model.pageSize, sortField, sortDirection);
-                                } else if (tabValue === 3) {
-                                    fetchBannedPlayers(model.page + 1, model.pageSize, sortField, sortDirection);
-                                }
-                            }}
-                            pageSizeOptions={[20, 50, 100]}
-                            sortingMode={tabValue === 0 || tabValue === 1 || tabValue === 2 || tabValue === 3 ? 'server' : undefined}
-                            sortModel={tabValue === 0 || tabValue === 1 || tabValue === 2 || tabValue === 3 ? [{ field: sortField, sort: sortDirection }] : []}
-                            onSortModelChange={(model) => {
-                                if (model.length > 0 && (tabValue === 0 || tabValue === 1 || tabValue === 2 || tabValue === 3)) {
-                                    const { field, sort } = model[0] as any;
-                                    if (sort) {
-                                        setSortField(field);
-                                        setSortDirection(sort);
+                    )}
+                    {selectedServerId && (
+                        <>
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', marginBottom: 2 }}>
+                                <Typography variant="h4">Players</Typography>
+                                <Button
+                                    startIcon={<RefreshIcon />}
+                                    onClick={() => {
+                                        handleRefresh();
+                                        if (tabValue === 1) fetchOnlinePlayers(paginationModel.page + 1, paginationModel.pageSize, sortField, sortDirection);
+                                        if (tabValue === 2) fetchWhitelistedPlayers(paginationModel.page + 1, paginationModel.pageSize, sortField, sortDirection);
+                                        if (tabValue === 3) fetchBannedPlayers(paginationModel.page + 1, paginationModel.pageSize, sortField, sortDirection);
+                                    }}
+                                    disabled={displayLoading}
+                                >
+                                    Refresh
+                                </Button>
+                            </Box>
+                            <Box sx={{ height: 600, width: '100%' }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 1 }}>
+                                    <Tabs value={tabValue} onChange={handleTabChange}>
+                                        <Tab label="All Players" />
+                                        <Tab label="Online" />
+                                        <Tab label="Whitelisted" />
+                                        <Tab label="Banned" />
+                                    </Tabs>
+                                    {tabValue === 2 && (
+                                        <Button
+                                            variant="contained"
+                                            size="small"
+                                            onClick={handleAddWhitelistOpen}
+                                        >
+                                            Add Player
+                                        </Button>
+                                    )}
+                                    {tabValue === 3 && (
+                                        <Button
+                                            variant="contained"
+                                            size="small"
+                                            onClick={handleAddBanOpen}
+                                        >
+                                            Add Player
+                                        </Button>
+                                    )}
+                                </Box>
+                                
+                                <DataGrid
+                                    rows={tablePlayers}
+                                    columns={columns}
+                                    loading={displayLoading}
+                                    pagination
+                                    paginationModel={paginationModel}
+                                    onPaginationModelChange={(model) => {
+                                        setPaginationModel(model);
                                         if (tabValue === 0) {
-                                            fetchPlayersPaged(paginationModel.page + 1, paginationModel.pageSize, field, sort);
+                                            fetchPlayersPaged(model.page + 1, model.pageSize, sortField, sortDirection);
                                         } else if (tabValue === 1) {
-                                            fetchOnlinePlayers(paginationModel.page + 1, paginationModel.pageSize, field, sort);
+                                            fetchOnlinePlayers(model.page + 1, model.pageSize, sortField, sortDirection);
                                         } else if (tabValue === 2) {
-                                            fetchWhitelistedPlayers(paginationModel.page + 1, paginationModel.pageSize, field, sort);
+                                            fetchWhitelistedPlayers(model.page + 1, model.pageSize, sortField, sortDirection);
                                         } else if (tabValue === 3) {
-                                            fetchBannedPlayers(paginationModel.page + 1, paginationModel.pageSize, field, sort);
+                                            fetchBannedPlayers(model.page + 1, model.pageSize, sortField, sortDirection);
                                         }
+                                    }}
+                                    pageSizeOptions={[20, 50, 100]}
+                                    sortingMode={tabValue === 0 || tabValue === 1 || tabValue === 2 || tabValue === 3 ? 'server' : undefined}
+                                    sortModel={tabValue === 0 || tabValue === 1 || tabValue === 2 || tabValue === 3 ? [{ field: sortField, sort: sortDirection }] : []}
+                                    onSortModelChange={(model) => {
+                                        if (model.length > 0 && (tabValue === 0 || tabValue === 1 || tabValue === 2 || tabValue === 3)) {
+                                            const { field, sort } = model[0] as any;
+                                            if (sort) {
+                                                setSortField(field);
+                                                setSortDirection(sort);
+                                                if (tabValue === 0) {
+                                                    fetchPlayersPaged(paginationModel.page + 1, paginationModel.pageSize, field, sort);
+                                                } else if (tabValue === 1) {
+                                                    fetchOnlinePlayers(paginationModel.page + 1, paginationModel.pageSize, field, sort);
+                                                } else if (tabValue === 2) {
+                                                    fetchWhitelistedPlayers(paginationModel.page + 1, paginationModel.pageSize, field, sort);
+                                                } else if (tabValue === 3) {
+                                                    fetchBannedPlayers(paginationModel.page + 1, paginationModel.pageSize, field, sort);
+                                                }
+                                            }
+                                        }
+                                    }}
+                                    rowCount={
+                                        tabValue === 0 ? serverRowCount : 
+                                        tabValue === 1 ? onlineRowCount : 
+                                        tabValue === 2 ? whitelistedRowCount : 
+                                        tabValue === 3 ? bannedRowCount : 
+                                        undefined
                                     }
-                                }
-                            }}
-                            rowCount={
-                                tabValue === 0 ? serverRowCount : 
-                                tabValue === 1 ? onlineRowCount : 
-                                tabValue === 2 ? whitelistedRowCount : 
-                                tabValue === 3 ? bannedRowCount : 
-                                undefined
-                            }
-                            paginationMode={tabValue === 0 || tabValue === 1 || tabValue === 2 || tabValue === 3 ? 'server' : undefined}
-                            disableRowSelectionOnClick
-                        />
-                        
-                    </Box>
+                                    paginationMode={tabValue === 0 || tabValue === 1 || tabValue === 2 || tabValue === 3 ? 'server' : undefined}
+                                    disableRowSelectionOnClick
+                                />
+                                
+                            </Box>
+                        </>
+                    )}
                 </Box>
 
                 <Dialog open={kickDialogOpen} onClose={handleKickCancel}>

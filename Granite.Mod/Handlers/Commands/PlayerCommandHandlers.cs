@@ -2,6 +2,7 @@
 using GraniteServer.Messaging.Commands;
 using GraniteServer.Messaging.Events;
 using GraniteServer.Messaging.Handlers.Commands;
+using GraniteServer.Mod;
 using GraniteServer.Services;
 using Vintagestory.API.Server;
 using Vintagestory.Server;
@@ -16,18 +17,21 @@ public class PlayerCommandHandlers
     private ICoreServerAPI _api;
     private ServerCommandService _commandService;
     private MessageBusService _messageBus;
+    private GraniteModConfig _config;
 
     private PlayerDataManager PlayerDataManager => (PlayerDataManager)_api.PlayerData;
 
     public PlayerCommandHandlers(
         ICoreServerAPI api,
         ServerCommandService commandService,
-        MessageBusService messageBus
+        MessageBusService messageBus,
+        GraniteModConfig config
     )
     {
         _api = api;
         _commandService = commandService;
         _messageBus = messageBus;
+        _config = config;
     }
 
     async Task ICommandHandler<KickPlayerCommand>.Handle(KickPlayerCommand command)
@@ -45,18 +49,17 @@ public class PlayerCommandHandlers
                     command.Data!.Reason
                 );
 
-                _messageBus.Publish(
-                    new PlayerKickedEvent()
+                var kickedEvent = _messageBus.CreateEvent<PlayerKickedEvent>(
+                    _config.ServerId,
+                    e =>
                     {
-                        Data = new PlayerKickedEventData
-                        {
-                            PlayerId = command.Data.PlayerId,
-                            PlayerName = player.PlayerName,
-                            Reason = command.Data.Reason,
-                            IssuedBy = "System",
-                        },
+                        e.Data!.PlayerUID = command.Data.PlayerId;
+                        e.Data!.PlayerName = player.PlayerName;
+                        e.Data!.Reason = command.Data.Reason;
+                        e.Data!.IssuedBy = "System";
                     }
                 );
+                _messageBus.Publish(kickedEvent);
             }
             catch (Exception)
             {
@@ -92,19 +95,18 @@ public class PlayerCommandHandlers
 
         PlayerDataManager.bannedListDirty = true;
 
-        _messageBus.Publish(
-            new PlayerBannedEvent()
+        var bannedEvent = _messageBus.CreateEvent<PlayerBannedEvent>(
+            _config.ServerId,
+            e =>
             {
-                Data = new PlayerBannedEventData
-                {
-                    PlayerId = playerId,
-                    PlayerName = playerName,
-                    Reason = reason,
-                    ExpirationDate = untilDate,
-                    IssuedBy = issuedBy,
-                },
+                e.Data!.PlayerUID = playerId;
+                e.Data!.PlayerName = playerName;
+                e.Data!.Reason = reason;
+                e.Data!.ExpirationDate = untilDate;
+                e.Data!.IssuedBy = issuedBy;
             }
         );
+        _messageBus.Publish(bannedEvent);
     }
 
     Task ICommandHandler.Handle(object command)
@@ -119,9 +121,11 @@ public class PlayerCommandHandlers
         PlayerDataManager.BannedPlayers.RemoveAll(pe => pe.PlayerUID == playerId);
         PlayerDataManager.bannedListDirty = true;
 
-        _messageBus.Publish(
-            new PlayerUnbannedEvent() { Data = new PlayerUnbannedEventData { PlayerId = playerId } }
+        var unbannedEvent = _messageBus.CreateEvent<PlayerUnbannedEvent>(
+            _config.ServerId,
+            e => { e.Data!.PlayerUID = playerId; }
         );
+        _messageBus.Publish(unbannedEvent);
 
         return Task.CompletedTask;
     }

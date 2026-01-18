@@ -35,6 +35,7 @@ const PlayerDetailsPage: React.FC = () => {
     const dispatch = useAppDispatch();
     const { playerDetails, loading, error } = useAppSelector(state => state.playerDetails);
     const { items: collectibles, loading: collectiblesLoading, error: collectiblesError } = useAppSelector(state => state.world.collectibles);
+    const selectedServerId = useAppSelector((state) => state.servers.selectedServerId);
     const [tabValue, setTabValue] = useState(0);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
@@ -69,34 +70,34 @@ const PlayerDetailsPage: React.FC = () => {
     };
 
     const handleKick = async () => {
-        if (!playerId) return;
+        if (!playerId || !selectedServerId) return;
         await runAction('kick', async () => {
-            await PlayerService.kickPlayer(playerId, 'Kicked via UI');
+            await PlayerService.kickPlayer(selectedServerId, playerId, 'Kicked via UI');
         });
     };
 
     const handleBanToggle = async () => {
-        if (!playerId) return;
+        if (!playerId || !selectedServerId) return;
         if (playerDetails?.isBanned) {
             await runAction('unban', async () => {
-                await PlayerService.unBanPlayer(playerId);
+                await PlayerService.unBanPlayer(selectedServerId, playerId);
             });
         } else {
             await runAction('ban', async () => {
-                await PlayerService.banPlayer(playerId, 'Banned via UI');
+                await PlayerService.banPlayer(selectedServerId, playerId, 'Banned via UI');
             });
         }
     };
 
     const handleWhitelistToggle = async () => {
-        if (!playerId) return;
+        if (!playerId || !selectedServerId) return;
         if (playerDetails?.isWhitelisted) {
             await runAction('unwhitelist', async () => {
-                await PlayerService.unWhitelistPlayer(playerId);
+                await PlayerService.unWhitelistPlayer(selectedServerId, playerId);
             });
         } else {
             await runAction('whitelist', async () => {
-                await PlayerService.whitelistPlayer(playerId);
+                await PlayerService.whitelistPlayer(selectedServerId, playerId);
             });
         }
     };
@@ -300,6 +301,7 @@ const PlayerDetailsPage: React.FC = () => {
                 {playerDetails.inventories && Object.keys(playerDetails.inventories).length > 0 ? (
                     <PlayerInventoryTab
                         playerId={playerId as string}
+                        serverId={selectedServerId as string}
                         inventories={playerDetails.inventories}
                         collectibles={collectibles}
                         collectiblesLoading={collectiblesLoading}

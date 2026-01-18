@@ -10,9 +10,9 @@ public class PostgresContextFactory : IDesignTimeDbContextFactory<GraniteDataCon
     {
         var builder = new DbContextOptionsBuilder<GraniteDataContextPostgres>();
 
-        var host = Environment.GetEnvironmentVariable("GS_DATABASEHOST") ?? "localhost";
+        var host = Environment.GetEnvironmentVariable("GS_DATABASEHOST") ?? "postgres";
         var portStr = Environment.GetEnvironmentVariable("GS_DATABASEPORT") ?? "5432";
-        var name = Environment.GetEnvironmentVariable("GS_DATABASENAME") ?? "graniteserver";
+        var name = Environment.GetEnvironmentVariable("GS_DATABASENAME") ?? "Granite";
         var user = Environment.GetEnvironmentVariable("GS_DATABASEUSERNAME") ?? "postgres";
         var pass = Environment.GetEnvironmentVariable("GS_DATABASEPASSWORD") ?? "postgres";
 

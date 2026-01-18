@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Granite.Common.Messaging.Events;
+using GraniteServer.Mod;
 using GraniteServer.Services;
 using Microsoft.Extensions.Hosting;
 using Vintagestory.API.Common;
@@ -16,6 +17,7 @@ public class ServerMetricsHostedService : IHostedService, IDisposable
     private readonly MessageBusService _messageBus;
     private readonly ILogger _logger;
     private readonly SignalRConnectionState _connectionState;
+    private readonly GraniteModConfig _config;
 
     private PeriodicTimer? _timer;
     private CancellationTokenSource? _cts;
@@ -31,13 +33,15 @@ public class ServerMetricsHostedService : IHostedService, IDisposable
         ICoreServerAPI api,
         MessageBusService messageBus,
         ILogger logger,
-        SignalRConnectionState connectionState
+        SignalRConnectionState connectionState,
+        GraniteModConfig config
     )
     {
         _api = api;
         _messageBus = messageBus;
         _logger = logger;
         _connectionState = connectionState;
+        _config = config;
         _process = Process.GetCurrentProcess();
         _prevCpu = _process.TotalProcessorTime;
         _prevTimeUtc = DateTime.UtcNow;
@@ -103,17 +107,16 @@ public class ServerMetricsHostedService : IHostedService, IDisposable
 
             var activePlayers = _api.World?.AllOnlinePlayers?.Length ?? 0;
 
-            _messageBus.Publish(
-                new ServerMetricsEvent
+            var metricsEvent = _messageBus.CreateEvent<ServerMetricsEvent>(
+                _config.ServerId,
+                e =>
                 {
-                    Data = new ServerMetricsEventData
-                    {
-                        CpuUsagePercent = cpuPercent,
-                        MemoryUsageMB = memMb,
-                        ActivePlayerCount = activePlayers,
-                    },
+                    e.Data!.CpuUsagePercent = cpuPercent;
+                    e.Data!.MemoryUsageMB = memMb;
+                    e.Data!.ActivePlayerCount = activePlayers;
                 }
             );
+            _messageBus.Publish(metricsEvent);
 
             _logger.Debug(
                 $"[Metrics] Published metrics: CPU={cpuPercent:F1}% MEM={memMb:F1}MB Players={activePlayers}"

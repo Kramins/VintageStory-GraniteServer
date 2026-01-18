@@ -39,7 +39,7 @@ public class GraniteDataContext : DbContext
 
         modelBuilder.Entity<PlayerEntity>(entity =>
         {
-            entity.HasKey(e => new { e.Id, e.ServerId });
+            entity.HasKey(e => new { e.PlayerUID, e.ServerId });
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
             entity.Property(e => e.FirstJoinDate).IsRequired();
             entity.Property(e => e.LastJoinDate).IsRequired();

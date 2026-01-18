@@ -27,7 +27,7 @@ services:
       - GS_DATABASEUSERNAME=postgres
       - GS_DATABASEPASSWORD=postgres
       - GS_DATABASEPORT=5432
-      - GS_DATABASENAME=graniteserver
+      - GS_DATABASENAME=Granite
     # Granite Server Auto Configuration
       - GS_GRANITEMODSERVERID=d3cd8403ebd34cbaa88b7cc63eb2c0c6
       - GS_GRANITEMODTOKEN=devtoken

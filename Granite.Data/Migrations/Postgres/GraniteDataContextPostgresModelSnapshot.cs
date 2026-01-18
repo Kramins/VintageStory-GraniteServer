@@ -216,8 +216,23 @@ namespace GraniteServer.Data.Migrations.Postgres
                     b.Property<Guid>("ServerId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BanBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BanReason")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("BanUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("FirstJoinDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsBanned")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsWhitelisted")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("LastJoinDate")
                         .HasColumnType("timestamp with time zone");
@@ -226,6 +241,12 @@ namespace GraniteServer.Data.Migrations.Postgres
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<string>("WhitelistedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("WhitelistedReason")
+                        .HasColumnType("text");
 
                     b.HasKey("Id", "ServerId");
 

@@ -1,5 +1,6 @@
 
 using GraniteServer.Messaging.Events;
+using GraniteServer.Mod;
 using GraniteServer.Services;
 using Microsoft.Extensions.Hosting;
 using Vintagestory.API.Common;
@@ -11,6 +12,7 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
 {
     private readonly ICoreServerAPI _api;
     private readonly MessageBusService _messageBus;
+    private readonly GraniteModConfig _config;
     private CancellationTokenSource? _cts;
 
     // private readonly List<Task> _pending = new();
@@ -21,11 +23,13 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
     public PlayerSessionHostedService(
         ICoreServerAPI api,
         MessageBusService messageBus,
+        GraniteModConfig config,
         ILogger logger
     )
     {
         _api = api;
         _messageBus = messageBus;
+        _config = config;
         _logger = logger;
     }
 
@@ -45,18 +49,17 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
             return;
 
         var playerSessionId = byPlayer.ServerData.CustomPlayerData["GraniteSessionId"];
-        _messageBus.Publish(
-            new PlayerLeaveEvent()
+        var leaveEvent = _messageBus.CreateEvent<PlayerLeaveEvent>(
+            _config.ServerId,
+            e =>
             {
-                Data = new PlayerLeaveEventData
-                {
-                    PlayerId = byPlayer.PlayerUID,
-                    PlayerName = byPlayer.PlayerName,
-                    SessionId = playerSessionId.ToString(),
-                    IpAddress = byPlayer.IpAddress,
-                },
+                e.Data!.PlayerUID = byPlayer.PlayerUID;
+                e.Data!.PlayerName = byPlayer.PlayerName;
+                e.Data!.SessionId = playerSessionId.ToString();
+                e.Data!.IpAddress = byPlayer.IpAddress;
             }
         );
+        _messageBus.Publish(leaveEvent);
         byPlayer.ServerData.CustomPlayerData.Remove("GraniteSessionId");
     }
 
@@ -66,18 +69,17 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
             return;
         var playerSessionId = Guid.NewGuid();
         byPlayer.ServerData.CustomPlayerData["GraniteSessionId"] = playerSessionId.ToString();
-        _messageBus.Publish(
-            new PlayerJoinedEvent()
+        var joinEvent = _messageBus.CreateEvent<PlayerJoinedEvent>(
+            _config.ServerId,
+            e =>
             {
-                Data = new PlayerJoinedEventData
-                {
-                    PlayerId = byPlayer.PlayerUID,
-                    PlayerName = byPlayer.PlayerName,
-                    SessionId = playerSessionId.ToString(),
-                    IpAddress = byPlayer.IpAddress,
-                },
+                e.Data!.PlayerUID = byPlayer.PlayerUID;
+                e.Data!.PlayerName = byPlayer.PlayerName;
+                e.Data!.SessionId = playerSessionId.ToString();
+                e.Data!.IpAddress = byPlayer.IpAddress;
             }
         );
+        _messageBus.Publish(joinEvent);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)

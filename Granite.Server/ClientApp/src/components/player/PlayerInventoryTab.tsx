@@ -14,6 +14,7 @@ import type { UpdateInventorySlotRequestDTO } from '../../types/UpdateInventoryS
 
 interface Props {
   playerId: string;
+  serverId: string;
   inventories: PlayerDetailsDTO['inventories'];
   collectibles: CollectibleObjectDTO[];
   collectiblesLoading: boolean;
@@ -32,7 +33,7 @@ interface EditFormData {
   stackSize: number;
 }
 
-const PlayerInventoryTab: React.FC<Props> = ({ playerId, inventories, collectibles, collectiblesLoading, collectiblesError }) => {
+const PlayerInventoryTab: React.FC<Props> = ({ playerId, serverId, inventories, collectibles, collectiblesLoading, collectiblesError }) => {
   const dispatch = useAppDispatch();
   const [removing, setRemoving] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
@@ -54,10 +55,10 @@ const PlayerInventoryTab: React.FC<Props> = ({ playerId, inventories, collectibl
   };
 
   const handleSaveEdit = async () => {
-    if (!playerId || !editingSlot || !selectedCollectible) return;
+    if (!playerId || !serverId || !editingSlot || !selectedCollectible) return;
     setSaving(true);
     try {
-      await PlayerService.updatePlayerInventorySlot(playerId, editingSlot.inventoryName, {
+      await PlayerService.updatePlayerInventorySlot(serverId, playerId, editingSlot.inventoryName, {
         slotIndex: editingSlot.slotIndex,
         entityClass: selectedCollectible.type,
         entityId: selectedCollectible.id,
@@ -82,12 +83,12 @@ const PlayerInventoryTab: React.FC<Props> = ({ playerId, inventories, collectibl
     editingSlot?.inventoryName === inventoryName && editingSlot?.slotIndex === slotIndex;
 
   const handleRemoveItem = async (inventoryName: string, slotIndex: number) => {
-    if (!playerId) return;
+    if (!playerId || !serverId) return;
     const key = `${inventoryName}-${slotIndex}`;
     setRemoving(key);
     setRemoveError(null);
     try {
-      await PlayerService.removeItemFromInventory(playerId, inventoryName, slotIndex);
+      await PlayerService.removeItemFromInventory(serverId, playerId, inventoryName, slotIndex);
       dispatch(fetchPlayerDetails(playerId) as any);
     } catch (err: any) {
       setRemoveError(err.message || 'Failed to remove item');

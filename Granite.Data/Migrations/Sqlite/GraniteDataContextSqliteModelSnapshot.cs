@@ -211,8 +211,23 @@ namespace GraniteServer.Data.Migrations.Sqlite
                     b.Property<Guid>("ServerId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("BanBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BanReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("BanUntil")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("FirstJoinDate")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsBanned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsWhitelisted")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("LastJoinDate")
                         .HasColumnType("TEXT");
@@ -220,6 +235,12 @@ namespace GraniteServer.Data.Migrations.Sqlite
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WhitelistedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WhitelistedReason")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id", "ServerId");
