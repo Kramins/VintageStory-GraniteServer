@@ -273,6 +273,11 @@ namespace GraniteServer.Data.Migrations.Postgres
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -287,6 +292,34 @@ namespace GraniteServer.Data.Migrations.Postgres
                     b.HasKey("Id");
 
                     b.ToTable("Servers");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.ServerMetricsEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ActivePlayerCount")
+                        .HasColumnType("integer");
+
+                    b.Property<float>("CpuUsagePercent")
+                        .HasColumnType("real");
+
+                    b.Property<float>("MemoryUsageMB")
+                        .HasColumnType("real");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServerId", "RecordedAt");
+
+                    b.ToTable("ServerMetrics");
                 });
 
             modelBuilder.Entity("GraniteServer.Data.Entities.ModReleaseEntity", b =>

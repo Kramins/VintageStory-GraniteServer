@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -59,6 +60,13 @@ public class GraniteHub : Hub
                 (MessageBusMessage?)JsonSerializer.Deserialize(payload.GetRawText(), type, options)
                 ?? throw new InvalidOperationException("Failed to deserialize message");
 
+            var isValid = ValidateMessage(message);
+            if (!isValid)
+            {
+                _logger.LogWarning("[SignalR] Message validation failed");
+                throw new UnauthorizedAccessException("Message validation failed");
+            }
+
             _logger.LogTrace(
                 $"[SignalR] Publishing message to bus: {message.GetType().FullName}, Data: {message.Data?.GetType().FullName ?? "null"}"
             );
@@ -70,6 +78,38 @@ public class GraniteHub : Hub
             _logger.LogError(ex, "[SignalR] Error publishing event from client");
             throw;
         }
+    }
+
+    private bool ValidateMessage(MessageBusMessage message)
+    {
+        // Validate that the OriginServerId matches the ServerId claim from the JWT token
+        var serverIdClaim = Context.User?.FindFirst("ServerId")?.Value;
+        if (
+            !string.IsNullOrEmpty(serverIdClaim)
+            && Guid.TryParse(serverIdClaim, out var claimedServerId)
+        )
+        {
+            if (message.OriginServerId != claimedServerId)
+            {
+                _logger.LogWarning(
+                    "[SignalR] Rejected event from connection {ConnectionId}: OriginServerId {OriginServerId} does not match claimed ServerId {ClaimedServerId}",
+                    Context.ConnectionId,
+                    message.OriginServerId,
+                    claimedServerId
+                );
+                return false;
+            }
+        }
+        else
+        {
+            _logger.LogWarning(
+                "[SignalR] Connection {ConnectionId} attempted to publish event without valid ServerId claim",
+                Context.ConnectionId
+            );
+            return false;
+        }
+
+        return true;
     }
 
     private static Type? FindMessageTypeByName(string messageType)
@@ -101,10 +141,27 @@ public class GraniteHub : Hub
     public override async Task OnConnectedAsync()
     {
         var connectionId = Context.ConnectionId;
+        var serverIdClaim = Context.User?.FindFirst("ServerId")?.Value;
+        if (string.IsNullOrEmpty(serverIdClaim))
+        {
+            _logger.LogWarning(
+                "[SignalR] Connection {ConnectionId} has no ServerId claim, disconnecting",
+                connectionId
+            );
+            Context.Abort();
+            return;
+        }
+
+        var serverId = Guid.Parse(serverIdClaim!);
 
         // Subscribe to all messages from the message bus
         var subscription = _messageBus
             .GetObservable()
+            .Where(msg =>
+                // Filter messages to only those intended for this server or broadcast messages
+                msg.TargetServerId == MessageBusMessage.BroadcastServerId
+                || msg.TargetServerId == serverId
+            )
             .Subscribe(
                 message =>
                 {

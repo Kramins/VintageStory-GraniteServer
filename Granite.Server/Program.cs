@@ -1,5 +1,6 @@
 using System.Text;
 using Granite.Server.Configuration;
+using Granite.Server.Extensions;
 using Granite.Server.Hubs;
 using Granite.Server.Services;
 using GraniteServer.Server.HostedServices;
@@ -18,7 +19,11 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 
 // Configure options
-builder.Services.Configure<GraniteServerOptions>(builder.Configuration.GetSection("GraniteServer"));
+builder.Services.Configure<GraniteServerOptions>(options =>
+{
+    builder.Configuration.GetSection("GraniteServer").Bind(options);
+    options.ApplyEnvironmentVariables();
+});
 
 // Add database context
 var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder.AddConsole());
@@ -29,16 +34,32 @@ builder.Services.AddGraniteDatabase(builder.Configuration, logger);
 builder.Services.AddScoped<BasicAuthService>();
 builder.Services.AddScoped<JwtTokenService>();
 
+// Add business services
+builder.Services.AddScoped<ServersService>();
+builder.Services.AddScoped<ServerPlayersService>();
+
 // Add MessageBusService as singleton
 builder.Services.AddSingleton<MessageBusService>();
 
 // Add MessageBridgeHostedService to process events from the message bus
 builder.Services.AddHostedService<MessageBridgeHostedService>();
 
-// Configure JWT authentication
-var jwtSecret =
-    builder.Configuration["GraniteServer:JwtSecret"]
-    ?? throw new InvalidOperationException("JwtSecret is not configured");
+// Add ServerInitializationHostedService to ensure server entity exists on startup
+builder.Services.AddHostedService<ServerInitializationHostedService>();
+
+// Register event handlers
+builder.Services.AddEventHandlers();
+
+// Configure JWT authentication using options with environment overrides
+var optionsFromConfig =
+    builder.Configuration.GetSection("GraniteServer").Get<GraniteServerOptions>()
+    ?? throw new InvalidOperationException("GraniteServer configuration section is missing");
+optionsFromConfig.ApplyEnvironmentVariables();
+var jwtSecret = optionsFromConfig.JwtSecret;
+if (string.IsNullOrWhiteSpace(jwtSecret))
+{
+    throw new InvalidOperationException("JwtSecret is not configured");
+}
 
 builder
     .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -100,11 +121,17 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+// Handle exceptions and wrap in JsonApiDocument (must be first to catch all exceptions)
+app.UseMiddleware<Granite.Server.Middleware.ExceptionHandlingMiddleware>();
+
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+// Enable routing to access route values in middleware
+app.UseRouting();
 
 // Apply CORS before authentication
 app.UseCors();
@@ -114,8 +141,15 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
-app.MapHub<GraniteHub>("/graniteHub");
+// Validate serverid when present (non-blocking for now)
+app.UseMiddleware<Granite.Server.Middleware.ServerIdValidationMiddleware>();
+
+// Map endpoints
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+    endpoints.MapHub<GraniteHub>("/graniteHub");
+});
 
 // Apply database migrations
 using (var scope = app.Services.CreateScope())

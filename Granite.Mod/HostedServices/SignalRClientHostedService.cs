@@ -23,6 +23,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     private readonly ILogger _logger;
     private readonly MessageBusService _messageBus;
     private readonly GraniteModConfig _config;
+    private readonly SignalRConnectionState _connectionState;
     private readonly HttpClient _httpClient;
     private readonly Queue<MessageBusMessage> _messageQueue = new();
     private HubConnection? _hubConnection;
@@ -33,12 +34,15 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     public SignalRClientHostedService(
         ILogger logger,
         MessageBusService messageBus,
-        GraniteModConfig config
+        GraniteModConfig config,
+        SignalRConnectionState connectionState
     )
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _messageBus = messageBus ?? throw new ArgumentNullException(nameof(messageBus));
         _config = config ?? throw new ArgumentNullException(nameof(config));
+        _connectionState =
+            connectionState ?? throw new ArgumentNullException(nameof(connectionState));
         _httpClient = new HttpClient();
     }
 
@@ -51,6 +55,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
             _logger.Warning(
                 "[SignalR] AccessToken is not configured. SignalR client will not connect."
             );
+            _connectionState.SetConnected(false);
             return;
         }
 
@@ -101,7 +106,11 @@ public class SignalRClientHostedService : IHostedService, IDisposable
 
             var response = await _httpClient.PostAsJsonAsync(
                 tokenUrl,
-                new AccessTokenRequestDTO { AccessToken = _config.AccessToken! },
+                new AccessTokenRequestDTO
+                {
+                    ServerId = _config.ServerId,
+                    AccessToken = _config.AccessToken!,
+                },
                 cancellationToken
             );
 
@@ -166,6 +175,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
         _hubConnection.Reconnecting += error =>
         {
             _logger.Warning($"[SignalR] Connection lost. Reconnecting... ({error?.Message})");
+            _connectionState.SetConnected(false);
             return Task.CompletedTask;
         };
 
@@ -176,12 +186,14 @@ public class SignalRClientHostedService : IHostedService, IDisposable
             );
             // Process queued messages after reconnection
             _ = ProcessQueuedMessagesAsync();
+            _connectionState.SetConnected(true);
             return Task.CompletedTask;
         };
 
         _hubConnection.Closed += async error =>
         {
             _logger.Error($"[SignalR] Connection closed: {error?.Message}");
+            _connectionState.SetConnected(false);
             await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             _ = ReconnectLoopAsync();
         };
@@ -190,6 +202,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
         _logger.Notification(
             $"[SignalR] Connected successfully. ConnectionId: {_hubConnection.ConnectionId}"
         );
+        _connectionState.SetConnected(true);
 
         // Subscribe to local MessageBus and forward events to server
         _messageBusSubscription = _messageBus
@@ -233,7 +246,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     private async Task ProcessQueuedMessagesAsync()
     {
         _logger.Notification($"[SignalR] Processing {_messageQueue.Count} queued messages...");
-        
+
         while (_messageQueue.Count > 0 && _hubConnection?.State == HubConnectionState.Connected)
         {
             try

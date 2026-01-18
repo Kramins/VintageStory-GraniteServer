@@ -9,17 +9,17 @@ namespace Granite.Server.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/[controller]")]
-public class WorldController : ControllerBase
+[Route("api/{serverid:guid}/world")]
+public class ServerWorldController : ControllerBase
 {
     [HttpGet("collectibles")]
-    public Task<ActionResult<List<CollectibleObjectDTO>>> GetCollectibles()
+    public Task<ActionResult<List<CollectibleObjectDTO>>> GetCollectibles([FromRoute] Guid serverid)
     {
         throw new NotImplementedException("GetCollectibles endpoint not yet implemented");
     }
 
     [HttpPost("save")]
-    public Task<ActionResult<string>> SaveWorld()
+    public Task<ActionResult<string>> SaveWorld([FromRoute] Guid serverid)
     {
         throw new NotImplementedException("SaveWorld endpoint not yet implemented");
     }

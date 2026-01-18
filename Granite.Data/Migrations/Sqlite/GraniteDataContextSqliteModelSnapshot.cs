@@ -268,6 +268,11 @@ namespace GraniteServer.Data.Migrations.Sqlite
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -282,6 +287,34 @@ namespace GraniteServer.Data.Migrations.Sqlite
                     b.HasKey("Id");
 
                     b.ToTable("Servers");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.ServerMetricsEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ActivePlayerCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<float>("CpuUsagePercent")
+                        .HasColumnType("REAL");
+
+                    b.Property<float>("MemoryUsageMB")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServerId", "RecordedAt");
+
+                    b.ToTable("ServerMetrics");
                 });
 
             modelBuilder.Entity("GraniteServer.Data.Entities.ModReleaseEntity", b =>

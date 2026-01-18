@@ -29,14 +29,14 @@ public class BasicAuthService
 
         // Check if config has credentials set
         if (
-            string.IsNullOrWhiteSpace(_options.ApiUsername)
-            || string.IsNullOrWhiteSpace(_options.ApiPassword)
+            string.IsNullOrWhiteSpace(_options.Username)
+            || string.IsNullOrWhiteSpace(_options.Password)
         )
             return false;
 
         // Use constant-time comparison to prevent timing attacks
-        bool usernameMatch = username == _options.ApiUsername;
-        bool passwordMatch = password == _options.ApiPassword;
+        bool usernameMatch = username == _options.Username;
+        bool passwordMatch = password == _options.Password;
 
         return usernameMatch && passwordMatch;
     }

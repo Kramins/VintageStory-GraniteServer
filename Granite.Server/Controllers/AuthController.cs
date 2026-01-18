@@ -1,7 +1,9 @@
 using Granite.Common.Dto;
 using Granite.Server.Configuration;
 using Granite.Server.Services;
+using GraniteServer.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Granite.Server.Controllers;
@@ -13,16 +15,19 @@ public class AuthController : ControllerBase
     private readonly BasicAuthService _basicAuthService;
     private readonly JwtTokenService _jwtTokenService;
     private readonly GraniteServerOptions _options;
+    private readonly GraniteDataContext _dbContext;
 
     public AuthController(
         BasicAuthService basicAuthService,
         JwtTokenService jwtTokenService,
-        IOptions<GraniteServerOptions> options
+        IOptions<GraniteServerOptions> options,
+        GraniteDataContext dbContext
     )
     {
         _basicAuthService = basicAuthService;
         _jwtTokenService = jwtTokenService;
         _options = options.Value;
+        _dbContext = dbContext;
     }
 
     /// <summary>
@@ -38,7 +43,7 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid username or password" });
         }
 
-        var token = _jwtTokenService.GenerateToken(credentials.Username, "Admin");
+        var token = _jwtTokenService.GenerateUserToken(credentials.Username, "Admin");
         return Ok(token);
     }
 
@@ -48,20 +53,27 @@ public class AuthController : ControllerBase
     /// <param name="request">Access token request</param>
     /// <returns>JWT token if access token is valid</returns>
     [HttpPost("token")]
-    public ActionResult<TokenDTO> ExchangeAccessToken([FromBody] AccessTokenRequestDTO request)
+    public async Task<ActionResult<TokenDTO>> ExchangeAccessToken(
+        [FromBody] AccessTokenRequestDTO request
+    )
     {
-        // if (string.IsNullOrWhiteSpace(request.AccessToken))
-        // {
-        //     return BadRequest(new { message = "Access token is required" });
-        // }
+        if (string.IsNullOrWhiteSpace(request.AccessToken))
+        {
+            return BadRequest(new { message = "Access token is required" });
+        }
 
-        // // TODO: In the future, load valid tokens from database
-        // if (request.AccessToken != _options.ModAccessToken)
-        // {
-        //     return Unauthorized(new { message = "Invalid access token" });
-        // }
+        // Validate token and server id against database
 
-        var token = _jwtTokenService.GenerateToken("ModClient", "Mod");
+        var serverEntity = await _dbContext.Servers.FirstOrDefaultAsync(s =>
+            s.Id == request.ServerId && s.AccessToken == request.AccessToken
+        );
+
+        if (serverEntity == null)
+        {
+            return Unauthorized(new { message = "Invalid server or access token" });
+        }
+
+        var token = _jwtTokenService.GenerateModToken(serverEntity.Id, serverEntity.Name);
         return Ok(token);
     }
 

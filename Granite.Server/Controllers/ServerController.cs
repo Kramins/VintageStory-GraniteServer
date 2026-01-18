@@ -9,29 +9,33 @@ namespace Granite.Server.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/{serverid:guid}/server")]
 public class ServerController : ControllerBase
 {
     [HttpGet("status")]
-    public Task<ActionResult<ServerStatusDTO>> GetServerStatus()
+    public Task<ActionResult<ServerStatusDTO>> GetServerStatus([FromRoute] Guid serverid)
     {
         throw new NotImplementedException("GetServerStatus endpoint not yet implemented");
     }
 
     [HttpPost("announce")]
-    public Task<ActionResult<string>> AnnounceMessage([FromBody] AnnounceMessageDTO request)
+    public Task<ActionResult<string>> AnnounceMessage(
+        [FromRoute] Guid serverid,
+        [FromBody] AnnounceMessageDTO request
+    )
     {
         throw new NotImplementedException("AnnounceMessage endpoint not yet implemented");
     }
 
     [HttpGet("config")]
-    public Task<ActionResult<JsonApiDocument<ServerConfigDTO>>> GetServerConfig()
+    public Task<ActionResult<JsonApiDocument<ServerConfigDTO>>> GetServerConfig([FromRoute] Guid serverid)
     {
         throw new NotImplementedException("GetServerConfig endpoint not yet implemented");
     }
 
     [HttpPost("config")]
     public Task<ActionResult<JsonApiDocument<string>>> UpdateServerConfig(
+        [FromRoute] Guid serverid,
         [FromBody] ServerConfigDTO config
     )
     {

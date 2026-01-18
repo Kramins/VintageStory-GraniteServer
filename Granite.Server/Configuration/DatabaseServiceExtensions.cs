@@ -15,8 +15,8 @@ public static class DatabaseServiceExtensions
         var options = configuration.GetSection("GraniteServer").Get<GraniteServerOptions>()
             ?? throw new InvalidOperationException("GraniteServer configuration section is missing");
 
-        // Override configuration with environment variables
-        OverrideWithEnvironmentVariables(options);
+        // Apply environment variable overrides before configuring database
+        options.ApplyEnvironmentVariables();
 
         var databaseType = options.DatabaseType?.ToLower() ?? "sqlite";
 
@@ -98,57 +98,5 @@ public static class DatabaseServiceExtensions
         services.AddScoped<GraniteDataContext>(sp =>
             sp.GetRequiredService<GraniteDataContextSqlite>()
         );
-    }
-
-    private static void OverrideWithEnvironmentVariables(GraniteServerOptions options)
-    {
-        // Override DatabaseType
-        var databaseType = Environment.GetEnvironmentVariable("GS_DATABASETYPE");
-        if (!string.IsNullOrEmpty(databaseType))
-        {
-            options.DatabaseType = databaseType;
-        }
-
-        // Override DatabaseHost
-        var databaseHost = Environment.GetEnvironmentVariable("GS_DATABASEHOST");
-        if (!string.IsNullOrEmpty(databaseHost))
-        {
-            options.DatabaseHost = databaseHost;
-        }
-
-        // Override DatabasePort
-        var databasePortStr = Environment.GetEnvironmentVariable("GS_DATABASEPORT");
-        if (!string.IsNullOrEmpty(databasePortStr) && int.TryParse(databasePortStr, out var databasePort))
-        {
-            options.DatabasePort = databasePort;
-        }
-
-        // Override DatabaseName
-        var databaseName = Environment.GetEnvironmentVariable("GS_DATABASENAME");
-        if (!string.IsNullOrEmpty(databaseName))
-        {
-            options.DatabaseName = databaseName;
-        }
-
-        // Override DatabaseUsername
-        var databaseUsername = Environment.GetEnvironmentVariable("GS_DATABASEUSERNAME");
-        if (!string.IsNullOrEmpty(databaseUsername))
-        {
-            options.DatabaseUsername = databaseUsername;
-        }
-
-        // Override DatabasePassword
-        var databasePassword = Environment.GetEnvironmentVariable("GS_DATABASEPASSWORD");
-        if (!string.IsNullOrEmpty(databasePassword))
-        {
-            options.DatabasePassword = databasePassword;
-        }
-
-        // Override SqliteFilePath
-        var sqliteFilePath = Environment.GetEnvironmentVariable("GS_SQLITEFILEPATH");
-        if (!string.IsNullOrEmpty(sqliteFilePath))
-        {
-            options.SqliteFilePath = sqliteFilePath;
-        }
     }
 }

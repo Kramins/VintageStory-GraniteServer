@@ -11,6 +11,7 @@ public class GraniteDataContext : DbContext
     public DbSet<ServerEntity> Servers { get; set; } = null!;
     public DbSet<PlayerEntity> Players { get; set; } = null!;
     public DbSet<PlayerSessionEntity> PlayerSessions { get; set; } = null!;
+    public DbSet<ServerMetricsEntity> ServerMetrics { get; set; } = null!;
     public DbSet<ModEntity> Mods { get; set; } = null!;
     public DbSet<ModReleaseEntity> ModReleases { get; set; } = null!;
     public DbSet<ModServerEntity> ModServers { get; set; } = null!;
@@ -33,6 +34,7 @@ public class GraniteDataContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.AccessToken).IsRequired().HasMaxLength(500);
         });
 
         modelBuilder.Entity<PlayerEntity>(entity =>
@@ -41,6 +43,16 @@ public class GraniteDataContext : DbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
             entity.Property(e => e.FirstJoinDate).IsRequired();
             entity.Property(e => e.LastJoinDate).IsRequired();
+        });
+
+        modelBuilder.Entity<ServerMetricsEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.ServerId, e.RecordedAt }).IsUnique(false);
+            entity.Property(e => e.RecordedAt).IsRequired();
+            entity.Property(e => e.CpuUsagePercent).IsRequired();
+            entity.Property(e => e.MemoryUsageMB).IsRequired();
+            entity.Property(e => e.ActivePlayerCount).IsRequired();
         });
 
         modelBuilder.Entity<ModEntity>(entity =>

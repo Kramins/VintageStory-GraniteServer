@@ -7,6 +7,8 @@ namespace Granite.Common.Dto;
 /// </summary>
 public class AccessTokenRequestDTO
 {
+    public Guid ServerId { get; set; }
+
     [JsonPropertyName("accessToken")]
     public string AccessToken { get; set; } = string.Empty;
 }

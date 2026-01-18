@@ -35,7 +35,7 @@
                 "GS_DATABASEPORT": "5432",
                 "GS_DATABASENAME": "Granite",
                 "GS_DATABASEUSERNAME": "postgres",
-                "GS_DATABASEPASSWORD": "postgres"
+                "GS_DATABASEPASSWORD": "postgres",
             },
             "console": "integratedTerminal",
             "stopAtEntry": false

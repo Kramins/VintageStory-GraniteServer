@@ -1,8 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Granite.Common.Dto;
 using Granite.Common.Dto.JsonApi;
+using Granite.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,11 +8,19 @@ namespace Granite.Server.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/[controller]")]
-public class PlayerController : ControllerBase
+[Route("api/{serverId:guid}/players")]
+public class ServerPlayersController : ControllerBase
 {
+    private ServerPlayersService _playerService;
+
+    public ServerPlayersController(ServerPlayersService playerService)
+    {
+        _playerService = playerService;
+    }
+
     [HttpGet]
     public Task<ActionResult<JsonApiDocument<IList<PlayerDTO>>>> GetAllPlayers(
+        [FromRoute] Guid serverId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         [FromQuery] string? sorts = null,
@@ -24,20 +30,24 @@ public class PlayerController : ControllerBase
         throw new NotImplementedException("GetAllPlayers endpoint not yet implemented");
     }
 
-    [HttpGet("{id}")]
-    public Task<ActionResult<PlayerDetailsDTO>> GetPlayerById(string id)
+    [HttpGet("{playerId}")]
+    public Task<ActionResult<PlayerDetailsDTO>> GetPlayerById([FromRoute] Guid serverId, string playerId)
     {
         throw new NotImplementedException("GetPlayerById endpoint not yet implemented");
     }
 
     [HttpGet("find")]
-    public Task<ActionResult<PlayerNameIdDTO>> FindPlayerByName([FromQuery] string name)
+    public Task<ActionResult<PlayerNameIdDTO>> FindPlayerByName(
+        [FromRoute] Guid serverId,
+        [FromQuery] string name
+    )
     {
         throw new NotImplementedException("FindPlayerByName endpoint not yet implemented");
     }
 
     [HttpGet("sessions")]
     public Task<ActionResult<JsonApiDocument<IList<PlayerSessionDTO>>>> GetPlayerSessions(
+        [FromRoute] Guid serverId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         [FromQuery] string? sorts = null,
@@ -47,39 +57,52 @@ public class PlayerController : ControllerBase
         throw new NotImplementedException("GetPlayerSessions endpoint not yet implemented");
     }
 
-    [HttpPost("{id}/kick")]
-    public Task<ActionResult<string>> KickPlayer(string id, [FromBody] KickRequestDTO request)
+    [HttpPost("{playerId}/kick")]
+    public Task<ActionResult<JsonApiDocument<string>>> KickPlayer(
+        [FromRoute] Guid serverId,
+        string playerId,
+        [FromBody] KickRequestDTO request
+    )
     {
-        throw new NotImplementedException("KickPlayer endpoint not yet implemented");
+        _playerService.KickPlayer(serverId, playerId, request.Reason);
+
+        return Task.FromResult<ActionResult<JsonApiDocument<string>>>(
+            new JsonApiDocument<string> { Data = "Player kicked successfully" }
+        );
     }
 
-    [HttpPost("{id}/ban")]
-    public Task<ActionResult> BanPlayer(string id, [FromBody] BanRequestDTO request)
+    [HttpPost("{playerId}/ban")]
+    public Task<ActionResult> BanPlayer(
+        [FromRoute] Guid serverId,
+        string playerId,
+        [FromBody] BanRequestDTO request
+    )
     {
         throw new NotImplementedException("BanPlayer endpoint not yet implemented");
     }
 
-    [HttpDelete("{id}/ban")]
-    public Task<ActionResult> UnbanPlayer(string id)
+    [HttpDelete("{playerId}/ban")]
+    public Task<ActionResult> UnbanPlayer([FromRoute] Guid serverId, string playerId)
     {
         throw new NotImplementedException("UnbanPlayer endpoint not yet implemented");
     }
 
-    [HttpPost("{id}/whitelist")]
-    public Task<ActionResult> WhitelistPlayer(string id)
+    [HttpPost("{playerId}/whitelist")]
+    public Task<ActionResult> WhitelistPlayer([FromRoute] Guid serverId, string playerId)
     {
         throw new NotImplementedException("WhitelistPlayer endpoint not yet implemented");
     }
 
-    [HttpDelete("{id}/whitelist")]
-    public Task<ActionResult> UnwhitelistPlayer(string id)
+    [HttpDelete("{playerId}/whitelist")]
+    public Task<ActionResult> UnwhitelistPlayer([FromRoute] Guid serverId, string playerId)
     {
         throw new NotImplementedException("UnwhitelistPlayer endpoint not yet implemented");
     }
 
-    [HttpPost("{id}/inventory/{slotIndex}")]
+    [HttpPost("{playerId}/inventory/{slotIndex}")]
     public Task<ActionResult> UpdateInventorySlot(
-        string id,
+        [FromRoute] Guid serverId,
+        string playerId,
         int slotIndex,
         [FromBody] UpdateInventorySlotRequestDTO request
     )
@@ -87,8 +110,12 @@ public class PlayerController : ControllerBase
         throw new NotImplementedException("UpdateInventorySlot endpoint not yet implemented");
     }
 
-    [HttpDelete("{id}/inventory/{slotIndex}")]
-    public Task<ActionResult> RemoveInventorySlot(string id, int slotIndex)
+    [HttpDelete("{playerId}/inventory/{slotIndex}")]
+    public Task<ActionResult> RemoveInventorySlot(
+        [FromRoute] Guid serverId,
+        string playerId,
+        int slotIndex
+    )
     {
         throw new NotImplementedException("RemoveInventorySlot endpoint not yet implemented");
     }

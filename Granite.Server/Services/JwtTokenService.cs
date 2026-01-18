@@ -35,9 +35,9 @@ public class JwtTokenService
     }
 
     /// <summary>
-    /// Generates a JWT token for the given username with specified roles.
+    /// Generates a JWT token for a user with specified roles.
     /// </summary>
-    public TokenDTO GenerateToken(string username, params string[] roles)
+    public TokenDTO GenerateUserToken(string username, params string[] roles)
     {
         if (string.IsNullOrWhiteSpace(username))
             throw new ArgumentException("Username cannot be empty.", nameof(username));
@@ -53,6 +53,27 @@ public class JwtTokenService
             claims.Add(new Claim(ClaimTypes.Role, role));
         }
 
+        return CreateToken(claims);
+    }
+
+    /// <summary>
+    /// Generates a JWT token for a mod client with server identity.
+    /// </summary>
+    public TokenDTO GenerateModToken(Guid serverId, string serverName)
+    {
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, "ModClient"),
+            new Claim(ClaimTypes.Name, serverName),
+            new Claim(ClaimTypes.Role, "Mod"),
+            new Claim("ServerId", serverId.ToString()),
+        };
+
+        return CreateToken(claims);
+    }
+
+    private TokenDTO CreateToken(List<Claim> claims)
+    {
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),

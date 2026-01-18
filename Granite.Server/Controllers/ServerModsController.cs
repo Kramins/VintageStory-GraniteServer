@@ -10,11 +10,11 @@ namespace Granite.Server.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/[controller]")]
-public class ModController : ControllerBase
+[Route("api/{serverid:guid}/mods")]
+public class ServerModsController : ControllerBase
 {
     [HttpGet]
-    public Task<ActionResult<JsonApiDocument<List<ModDTO>>>> GetMods()
+    public Task<ActionResult<JsonApiDocument<List<ModDTO>>>> GetMods([FromRoute] Guid serverid)
     {
         throw new NotImplementedException("GetMods endpoint not yet implemented");
     }

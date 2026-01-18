@@ -3,14 +3,22 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace GraniteServer.Data.Migrations.Postgres
+namespace Granite.Data.Migrations.Postgres
 {
     /// <inheritdoc />
-    public partial class v001 : Migration
+    public partial class v101 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<string>(
+                name: "AccessToken",
+                table: "Servers",
+                type: "character varying(500)",
+                maxLength: 500,
+                nullable: false,
+                defaultValue: "");
+
             migrationBuilder.CreateTable(
                 name: "Mods",
                 columns: table => new
@@ -45,6 +53,22 @@ namespace GraniteServer.Data.Migrations.Postgres
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Mods", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ServerMetrics",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ServerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RecordedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CpuUsagePercent = table.Column<float>(type: "real", nullable: false),
+                    MemoryUsageMB = table.Column<float>(type: "real", nullable: false),
+                    ActivePlayerCount = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ServerMetrics", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -157,6 +181,11 @@ namespace GraniteServer.Data.Migrations.Postgres
                 table: "ModServers",
                 columns: new[] { "ServerId", "ModId" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ServerMetrics_ServerId_RecordedAt",
+                table: "ServerMetrics",
+                columns: new[] { "ServerId", "RecordedAt" });
         }
 
         /// <inheritdoc />
@@ -166,10 +195,17 @@ namespace GraniteServer.Data.Migrations.Postgres
                 name: "ModServers");
 
             migrationBuilder.DropTable(
+                name: "ServerMetrics");
+
+            migrationBuilder.DropTable(
                 name: "ModReleases");
 
             migrationBuilder.DropTable(
                 name: "Mods");
+
+            migrationBuilder.DropColumn(
+                name: "AccessToken",
+                table: "Servers");
         }
     }
 }

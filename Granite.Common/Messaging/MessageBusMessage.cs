@@ -8,6 +8,7 @@ namespace GraniteServer.Messaging;
 /// </summary>
 public abstract class MessageBusMessage
 {
+    public static readonly Guid BroadcastServerId = Guid.Empty;
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public virtual string MessageType => GetType().Name;

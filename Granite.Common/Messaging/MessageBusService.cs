@@ -118,5 +118,30 @@ namespace GraniteServer.Services
             }
             catch (Exception ex) { }
         }
+
+        public T CreateCommand<T>(Guid serverId, Action<T> value)
+            where T : CommandMessage
+        {
+            var command = Activator.CreateInstance<T>();
+
+            // Get the data type from the CommandMessage<TData> base class
+            var baseType = typeof(T).BaseType;
+            if (
+                baseType?.IsGenericType == true
+                && baseType.GetGenericTypeDefinition() == typeof(CommandMessage<>)
+            )
+            {
+                var commandDataType = baseType.GetGenericArguments()[0];
+                command.Data = Activator.CreateInstance(commandDataType);
+            }
+
+            value(command);
+
+            command.TargetServerId = serverId;
+            command.Timestamp = DateTime.UtcNow;
+            command.TraceParent = Guid.NewGuid().ToString(); // For tracing, could be improved with actual trace IDs
+
+            return command;
+        }
     }
 }
