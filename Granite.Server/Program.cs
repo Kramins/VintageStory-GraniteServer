@@ -11,6 +11,10 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure logging levels to reduce verbosity
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Information);
+
 // Configure Kestrel to use port from config
 var port = builder.Configuration.GetValue<int>("GraniteServer:Port", 5000);
 builder.WebHost.ConfigureKestrel(options =>
