@@ -9,5 +9,5 @@ export interface ServerStatusDTO {
     memoryUsageBytes: number;
     isOnline: boolean;
     worldName: string;
-    worldSeed: string;
+    worldSeed: number;
 }

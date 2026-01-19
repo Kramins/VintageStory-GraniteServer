@@ -3,4 +3,6 @@ export interface ServerDTO {
     name: string;
     description?: string;
     createdAt: string;
+    isOnline: boolean;
+    lastSeenAt?: string | null;
 }

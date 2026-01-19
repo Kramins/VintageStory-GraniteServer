@@ -1,7 +1,9 @@
 // PlayerDTO type for player management
 export interface PlayerDTO {
-    id: any;
-    name: any;
+    id: string;
+    playerUID: string;
+    serverId: string;
+    name: string;
     isAdmin: boolean;
     ipAddress: string;
     languageCode: string;
