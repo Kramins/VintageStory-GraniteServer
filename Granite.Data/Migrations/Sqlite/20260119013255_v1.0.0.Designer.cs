@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Granite.Data.Migrations.Sqlite
 {
     [DbContext(typeof(GraniteDataContextSqlite))]
-    [Migration("20260118211401_v1.0.1")]
-    partial class v101
+    [Migration("20260119013255_v1.0.0")]
+    partial class v100
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -33,7 +33,7 @@ namespace Granite.Data.Migrations.Sqlite
                     b.Property<int>("Comments")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Created")
+                    b.Property<DateTime?>("Created")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Downloads")
@@ -51,10 +51,10 @@ namespace Granite.Data.Migrations.Sqlite
                     b.Property<DateTime>("LastChecked")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("LastModified")
+                    b.Property<DateTime?>("LastModified")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("LastReleased")
+                    b.Property<DateTime?>("LastReleased")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("LogoFile")
@@ -130,7 +130,7 @@ namespace Granite.Data.Migrations.Sqlite
                     b.Property<string>("Changelog")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Created")
+                    b.Property<DateTime?>("Created")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Downloads")
@@ -208,10 +208,8 @@ namespace Granite.Data.Migrations.Sqlite
 
             modelBuilder.Entity("GraniteServer.Data.Entities.PlayerEntity", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("ServerId")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("BanBy")
@@ -240,13 +238,25 @@ namespace Granite.Data.Migrations.Sqlite
                         .HasMaxLength(255)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("PlayerUID")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("WhitelistedBy")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("WhitelistedReason")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("Id", "ServerId");
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServerId");
+
+                    b.HasIndex("PlayerUID", "ServerId")
+                        .IsUnique();
 
                     b.ToTable("Players");
                 });
@@ -270,8 +280,7 @@ namespace Granite.Data.Migrations.Sqlite
                     b.Property<DateTime?>("LeaveDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("PlayerId")
-                        .IsRequired()
+                    b.Property<Guid>("PlayerId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PlayerName")
@@ -282,6 +291,8 @@ namespace Granite.Data.Migrations.Sqlite
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PlayerId", "ServerId");
 
                     b.ToTable("PlayerSessions");
                 });
@@ -360,7 +371,7 @@ namespace Granite.Data.Migrations.Sqlite
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GraniteServer.Data.Entities.ModEntity", "Mod")
-                        .WithMany()
+                        .WithMany("ModServers")
                         .HasForeignKey("ModId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -371,7 +382,7 @@ namespace Granite.Data.Migrations.Sqlite
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
-                        .WithMany()
+                        .WithMany("ModServers")
                         .HasForeignKey("ServerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -385,9 +396,58 @@ namespace Granite.Data.Migrations.Sqlite
                     b.Navigation("Server");
                 });
 
+            modelBuilder.Entity("GraniteServer.Data.Entities.PlayerEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
+                        .WithMany("Players")
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Server");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.PlayerSessionEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.PlayerEntity", "Player")
+                        .WithMany("Sessions")
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Player");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.ServerMetricsEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
+                        .WithMany("ServerMetrics")
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Server");
+                });
+
             modelBuilder.Entity("GraniteServer.Data.Entities.ModEntity", b =>
                 {
+                    b.Navigation("ModServers");
+
                     b.Navigation("Releases");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.PlayerEntity", b =>
+                {
+                    b.Navigation("Sessions");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.ServerEntity", b =>
+                {
+                    b.Navigation("ModServers");
+
+                    b.Navigation("Players");
+
+                    b.Navigation("ServerMetrics");
                 });
 #pragma warning restore 612, 618
         }

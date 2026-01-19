@@ -18,7 +18,7 @@ public class PlayerEntity
     /// The server this player belongs to
     /// </summary>
     public Guid ServerId { get; set; }
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
     public DateTime FirstJoinDate { get; set; }
     public DateTime LastJoinDate { get; set; }
     public bool IsWhitelisted { get; set; } = false;
@@ -28,4 +28,8 @@ public class PlayerEntity
     public string? BanReason { get; set; }
     public string? BanBy { get; set; }
     public DateTime? BanUntil { get; set; }
+
+    // Navigation properties
+    public ServerEntity? Server { get; set; }
+    public ICollection<PlayerSessionEntity> Sessions { get; set; } = new List<PlayerSessionEntity>();
 }

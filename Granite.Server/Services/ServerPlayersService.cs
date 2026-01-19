@@ -20,35 +20,29 @@ public class ServerPlayersService
 
     public async Task<List<PlayerDTO>> GetPlayersAsync(Guid serverId)
     {
-        var query =
-            from p in _dbContext.Players
-            join ps in _dbContext.PlayerSessions on new { PlayerId = p.Id, p.ServerId } equals new { ps.PlayerId, ps.ServerId } into sessions
-            from latestSession in sessions.OrderByDescending(s => s.JoinDate).Take(1).DefaultIfEmpty()
-            where p.ServerId == serverId
+        var serverPlayers =
+            from player in _dbContext.Players
+            where player.ServerId == serverId
+            let isPlaying = player.Sessions.Any(s => s.LeaveDate == null)
             select new PlayerDTO
             {
-                Id = p.Id,
-                Name = p.Name,
-                FirstJoinDate = p.FirstJoinDate.ToString("o"),
-                LastJoinDate = p.LastJoinDate.ToString("o"),
-                // Runtime/state fields - will be populated later from other sources
-                IsAdmin = false,
-                IpAddress = latestSession != null ? latestSession.IpAddress : string.Empty,
-                LanguageCode = string.Empty,
-                Ping = 0,
-                RolesCode = string.Empty,
-                Privileges = Array.Empty<string>(),
-                ConnectionState = latestSession != null && !latestSession.LeaveDate.HasValue ? "Playing" : "Offline",
-                IsBanned = p.IsBanned,
-                IsWhitelisted = p.IsWhitelisted,
-                BanReason = p.BanReason,
-                BanBy = p.BanBy,
-                BanUntil = p.BanUntil,
-                WhitelistedReason = p.WhitelistedReason,
-                WhitelistedBy = p.WhitelistedBy,
+                Id = player.Id,
+                ServerId = player.ServerId,
+                PlayerUID = player.PlayerUID,
+                Name = player.Name,
+                FirstJoinDate = player.FirstJoinDate.ToString("o"),
+                LastJoinDate = player.LastJoinDate.ToString("o"),
+                IsWhitelisted = player.IsWhitelisted,
+                WhitelistedBy = player.WhitelistedBy,
+                WhitelistedReason = player.WhitelistedReason,
+                IsBanned = player.IsBanned,
+                BanReason = player.BanReason,
+                BanBy = player.BanBy,
+                BanUntil = player.BanUntil,
+                ConnectionState = isPlaying ? "Connected" : "Disconnected",
             };
 
-        return await query.ToListAsync();
+        return await serverPlayers.ToListAsync();
     }
 
     public void WhitelistPlayer(Guid serverId, string playerId, string? reason)
@@ -74,7 +68,13 @@ public class ServerPlayersService
         );
     }
 
-    public void BanPlayer(Guid serverId, string playerId, string reason, DateTime? expirationDate, string? issuedBy)
+    public void BanPlayer(
+        Guid serverId,
+        string playerId,
+        string reason,
+        DateTime? expirationDate,
+        string? issuedBy
+    )
     {
         var banPlayerCommand = _messageBus.CreateCommand<BanPlayerCommand>(
             serverId,

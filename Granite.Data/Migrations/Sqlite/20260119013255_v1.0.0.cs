@@ -6,63 +6,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Granite.Data.Migrations.Sqlite
 {
     /// <inheritdoc />
-    public partial class v101 : Migration
+    public partial class v100 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "AccessToken",
-                table: "Servers",
-                type: "TEXT",
-                maxLength: 500,
-                nullable: false,
-                defaultValue: "");
-
-            migrationBuilder.AddColumn<string>(
-                name: "BanBy",
-                table: "Players",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "BanReason",
-                table: "Players",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "BanUntil",
-                table: "Players",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "IsBanned",
-                table: "Players",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "IsWhitelisted",
-                table: "Players",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<string>(
-                name: "WhitelistedBy",
-                table: "Players",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "WhitelistedReason",
-                table: "Players",
-                type: "TEXT",
-                nullable: true);
-
             migrationBuilder.CreateTable(
                 name: "Mods",
                 columns: table => new
@@ -88,9 +36,9 @@ namespace Granite.Data.Migrations.Sqlite
                     Comments = table.Column<int>(type: "INTEGER", nullable: false),
                     Side = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
                     Type = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    Created = table.Column<string>(type: "TEXT", nullable: true),
-                    LastReleased = table.Column<string>(type: "TEXT", nullable: true),
-                    LastModified = table.Column<string>(type: "TEXT", nullable: true),
+                    Created = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    LastReleased = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    LastModified = table.Column<DateTime>(type: "TEXT", nullable: true),
                     Tags = table.Column<string>(type: "TEXT", nullable: false),
                     LastChecked = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
@@ -100,19 +48,18 @@ namespace Granite.Data.Migrations.Sqlite
                 });
 
             migrationBuilder.CreateTable(
-                name: "ServerMetrics",
+                name: "Servers",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ServerId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    RecordedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    CpuUsagePercent = table.Column<float>(type: "REAL", nullable: false),
-                    MemoryUsageMB = table.Column<float>(type: "REAL", nullable: false),
-                    ActivePlayerCount = table.Column<int>(type: "INTEGER", nullable: false)
+                    Name = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
+                    Description = table.Column<string>(type: "TEXT", nullable: true),
+                    AccessToken = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ServerMetrics", x => x.Id);
+                    table.PrimaryKey("PK_Servers", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -129,7 +76,7 @@ namespace Granite.Data.Migrations.Sqlite
                     Tags = table.Column<string>(type: "TEXT", nullable: false),
                     ModIdStr = table.Column<string>(type: "TEXT", maxLength: 255, nullable: true),
                     ModVersion = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    Created = table.Column<string>(type: "TEXT", nullable: true),
+                    Created = table.Column<DateTime>(type: "TEXT", nullable: true),
                     Changelog = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
@@ -139,6 +86,57 @@ namespace Granite.Data.Migrations.Sqlite
                         name: "FK_ModReleases_Mods_ModId",
                         column: x => x.ModId,
                         principalTable: "Mods",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Players",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    PlayerUID = table.Column<string>(type: "TEXT", nullable: false),
+                    ServerId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
+                    FirstJoinDate = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    LastJoinDate = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    IsWhitelisted = table.Column<bool>(type: "INTEGER", nullable: false),
+                    WhitelistedReason = table.Column<string>(type: "TEXT", nullable: true),
+                    WhitelistedBy = table.Column<string>(type: "TEXT", nullable: true),
+                    IsBanned = table.Column<bool>(type: "INTEGER", nullable: false),
+                    BanReason = table.Column<string>(type: "TEXT", nullable: true),
+                    BanBy = table.Column<string>(type: "TEXT", nullable: true),
+                    BanUntil = table.Column<DateTime>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Players", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Players_Servers_ServerId",
+                        column: x => x.ServerId,
+                        principalTable: "Servers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ServerMetrics",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ServerId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    RecordedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CpuUsagePercent = table.Column<float>(type: "REAL", nullable: false),
+                    MemoryUsageMB = table.Column<float>(type: "REAL", nullable: false),
+                    ActivePlayerCount = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ServerMetrics", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ServerMetrics_Servers_ServerId",
+                        column: x => x.ServerId,
+                        principalTable: "Servers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -178,6 +176,30 @@ namespace Granite.Data.Migrations.Sqlite
                         name: "FK_ModServers_Servers_ServerId",
                         column: x => x.ServerId,
                         principalTable: "Servers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PlayerSessions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    PlayerId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ServerId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    JoinDate = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    IpAddress = table.Column<string>(type: "TEXT", nullable: false),
+                    PlayerName = table.Column<string>(type: "TEXT", nullable: false),
+                    LeaveDate = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    Duration = table.Column<double>(type: "REAL", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PlayerSessions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PlayerSessions_Players_PlayerId",
+                        column: x => x.PlayerId,
+                        principalTable: "Players",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -227,6 +249,22 @@ namespace Granite.Data.Migrations.Sqlite
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Players_PlayerUID_ServerId",
+                table: "Players",
+                columns: new[] { "PlayerUID", "ServerId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Players_ServerId",
+                table: "Players",
+                column: "ServerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PlayerSessions_PlayerId_ServerId",
+                table: "PlayerSessions",
+                columns: new[] { "PlayerId", "ServerId" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ServerMetrics_ServerId_RecordedAt",
                 table: "ServerMetrics",
                 columns: new[] { "ServerId", "RecordedAt" });
@@ -239,45 +277,22 @@ namespace Granite.Data.Migrations.Sqlite
                 name: "ModServers");
 
             migrationBuilder.DropTable(
+                name: "PlayerSessions");
+
+            migrationBuilder.DropTable(
                 name: "ServerMetrics");
 
             migrationBuilder.DropTable(
                 name: "ModReleases");
 
             migrationBuilder.DropTable(
+                name: "Players");
+
+            migrationBuilder.DropTable(
                 name: "Mods");
 
-            migrationBuilder.DropColumn(
-                name: "AccessToken",
-                table: "Servers");
-
-            migrationBuilder.DropColumn(
-                name: "BanBy",
-                table: "Players");
-
-            migrationBuilder.DropColumn(
-                name: "BanReason",
-                table: "Players");
-
-            migrationBuilder.DropColumn(
-                name: "BanUntil",
-                table: "Players");
-
-            migrationBuilder.DropColumn(
-                name: "IsBanned",
-                table: "Players");
-
-            migrationBuilder.DropColumn(
-                name: "IsWhitelisted",
-                table: "Players");
-
-            migrationBuilder.DropColumn(
-                name: "WhitelistedBy",
-                table: "Players");
-
-            migrationBuilder.DropColumn(
-                name: "WhitelistedReason",
-                table: "Players");
+            migrationBuilder.DropTable(
+                name: "Servers");
         }
     }
 }

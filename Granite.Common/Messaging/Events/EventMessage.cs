@@ -12,9 +12,9 @@ public abstract class EventMessage : MessageBusMessage { }
 /// </summary>
 public abstract class EventMessage<T> : EventMessage
 {
-    public new T? Data
+    public new T Data
     {
-        get => (T?)base.Data;
+        get => (T)base.Data!;
         set => base.Data = value;
     }
 }

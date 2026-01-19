@@ -9,4 +9,9 @@ public class ServerEntity
     public string? Description { get; set; }
     public string AccessToken { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation properties
+    public ICollection<PlayerEntity> Players { get; set; } = new List<PlayerEntity>();
+    public ICollection<ModServerEntity> ModServers { get; set; } = new List<ModServerEntity>();
+    public ICollection<ServerMetricsEntity> ServerMetrics { get; set; } = new List<ServerMetricsEntity>();
 }

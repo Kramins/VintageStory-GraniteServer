@@ -27,9 +27,7 @@ public class PlayerEventsHandler
     {
         var playerEventData = command.Data!;
 
-        var playerEntity = _dataContext.Players.FirstOrDefault(p =>
-            p.PlayerUID == playerEventData.PlayerUID && p.ServerId == command.OriginServerId
-        );
+        var playerEntity = GetPlayerEntity(command.OriginServerId, playerEventData.PlayerUID);
 
         if (playerEntity != null)
         {
@@ -45,9 +43,7 @@ public class PlayerEventsHandler
     {
         var playerEventData = command.Data!;
 
-        var playerEntity = _dataContext.Players.FirstOrDefault(p =>
-            p.PlayerUID == playerEventData.PlayerUID && p.ServerId == command.OriginServerId
-        );
+        var playerEntity = GetPlayerEntity(command.OriginServerId, playerEventData.PlayerUID);
 
         if (playerEntity != null)
         {
@@ -65,9 +61,7 @@ public class PlayerEventsHandler
     {
         var playerEventData = command.Data!;
 
-        var playerEntity = _dataContext.Players.FirstOrDefault(p =>
-            p.PlayerUID == playerEventData.PlayerUID && p.ServerId == command.OriginServerId
-        );
+        var playerEntity = GetPlayerEntity(command.OriginServerId, playerEventData.PlayerUID);
 
         if (playerEntity != null)
         {
@@ -86,9 +80,7 @@ public class PlayerEventsHandler
     {
         var playerEventData = command.Data!;
 
-        var playerEntity = _dataContext.Players.FirstOrDefault(p =>
-            p.PlayerUID == playerEventData.PlayerUID && p.ServerId == command.OriginServerId
-        );
+        var playerEntity = GetPlayerEntity(command.OriginServerId, playerEventData.PlayerUID);
 
         if (playerEntity != null)
         {
@@ -112,11 +104,10 @@ public class PlayerEventsHandler
     {
         var playerEventData = command.Data!;
 
-        var sessionIdStr = playerEventData.SessionId;
-        if (Guid.TryParse(sessionIdStr, out var sessionGuid))
+        if (playerEventData.SessionId.HasValue)
         {
             var playerSessionEntity = _dataContext.PlayerSessions.FirstOrDefault(ps =>
-                ps.Id == sessionGuid
+                ps.Id == playerEventData.SessionId.Value
             );
             if (playerSessionEntity != null)
             {
@@ -135,13 +126,13 @@ public class PlayerEventsHandler
     Task IEventHandler<PlayerJoinedEvent>.Handle(PlayerJoinedEvent command)
     {
         var playerEventData = command.Data!;
-        var playerEntity = _dataContext.Players.FirstOrDefault(p =>
-            p.PlayerUID == playerEventData.PlayerUID && p.ServerId == command.OriginServerId
-        );
+        var playerEntity = GetPlayerEntity(command.OriginServerId, playerEventData.PlayerUID);
+        
         if (playerEntity == null)
         {
             playerEntity = new PlayerEntity()
             {
+                Id = Guid.NewGuid(),
                 PlayerUID = playerEventData.PlayerUID,
                 ServerId = command.OriginServerId,
                 Name = playerEventData.PlayerName,
@@ -149,6 +140,7 @@ public class PlayerEventsHandler
                 LastJoinDate = DateTime.UtcNow,
             };
             _dataContext.Players.Add(playerEntity);
+            _dataContext.SaveChanges();
         }
         else
         {
@@ -157,20 +149,22 @@ public class PlayerEventsHandler
             _dataContext.Players.Update(playerEntity);
         }
 
-        var playerSessionId = Guid.Parse(playerEventData.SessionId);
-
-        var playerSessionEntity = new PlayerSessionEntity()
+        if (playerEventData.SessionId.HasValue)
         {
-            Id = playerSessionId,
-            PlayerId = playerEventData.PlayerUID,
-            ServerId = command.OriginServerId,
-            JoinDate = DateTime.UtcNow,
-            IpAddress = playerEventData.IpAddress,
-            PlayerName = playerEventData.PlayerName,
-        };
+            // TODO: What if session already exists?
+            var playerSessionEntity = new PlayerSessionEntity()
+            {
+                Id = playerEventData.SessionId.Value,
+                PlayerId = playerEntity.Id,
+                ServerId = command.OriginServerId,
+                JoinDate = DateTime.UtcNow,
+                IpAddress = playerEventData.IpAddress,
+                PlayerName = playerEventData.PlayerName,
+            };
 
-        _dataContext.PlayerSessions.Add(playerSessionEntity);
-        _dataContext.SaveChanges();
+            _dataContext.PlayerSessions.Add(playerSessionEntity);
+            _dataContext.SaveChanges();
+        }
 
         return Task.CompletedTask;
     }
@@ -178,5 +172,12 @@ public class PlayerEventsHandler
     Task IEventHandler<PlayerKickedEvent>.Handle(PlayerKickedEvent command)
     {
         throw new NotImplementedException();
+    }
+
+    private PlayerEntity? GetPlayerEntity(Guid serverId, string playerUID)
+    {
+        return _dataContext.Players.FirstOrDefault(p =>
+            p.PlayerUID == playerUID && p.ServerId == serverId
+        );
     }
 }

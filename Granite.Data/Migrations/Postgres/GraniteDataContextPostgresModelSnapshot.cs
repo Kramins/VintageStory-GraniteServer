@@ -8,7 +8,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace GraniteServer.Data.Migrations.Postgres
+namespace Granite.Data.Migrations.Postgres
 {
     [DbContext(typeof(GraniteDataContextPostgres))]
     partial class GraniteDataContextPostgresModelSnapshot : ModelSnapshot
@@ -35,8 +35,8 @@ namespace GraniteServer.Data.Migrations.Postgres
                     b.Property<int>("Comments")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Created")
-                        .HasColumnType("text");
+                    b.Property<DateTime?>("Created")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Downloads")
                         .HasColumnType("integer");
@@ -53,11 +53,11 @@ namespace GraniteServer.Data.Migrations.Postgres
                     b.Property<DateTime>("LastChecked")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("LastModified")
-                        .HasColumnType("text");
+                    b.Property<DateTime?>("LastModified")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("LastReleased")
-                        .HasColumnType("text");
+                    b.Property<DateTime?>("LastReleased")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("LogoFile")
                         .HasColumnType("text");
@@ -132,8 +132,8 @@ namespace GraniteServer.Data.Migrations.Postgres
                     b.Property<string>("Changelog")
                         .HasColumnType("text");
 
-                    b.Property<string>("Created")
-                        .HasColumnType("text");
+                    b.Property<DateTime?>("Created")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Downloads")
                         .HasColumnType("integer");
@@ -210,10 +210,8 @@ namespace GraniteServer.Data.Migrations.Postgres
 
             modelBuilder.Entity("GraniteServer.Data.Entities.PlayerEntity", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("ServerId")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("BanBy")
@@ -242,13 +240,25 @@ namespace GraniteServer.Data.Migrations.Postgres
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<string>("PlayerUID")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("WhitelistedBy")
                         .HasColumnType("text");
 
                     b.Property<string>("WhitelistedReason")
                         .HasColumnType("text");
 
-                    b.HasKey("Id", "ServerId");
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServerId");
+
+                    b.HasIndex("PlayerUID", "ServerId")
+                        .IsUnique();
 
                     b.ToTable("Players");
                 });
@@ -272,9 +282,8 @@ namespace GraniteServer.Data.Migrations.Postgres
                     b.Property<DateTime?>("LeaveDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("PlayerId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("PlayerName")
                         .IsRequired()
@@ -284,6 +293,8 @@ namespace GraniteServer.Data.Migrations.Postgres
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PlayerId", "ServerId");
 
                     b.ToTable("PlayerSessions");
                 });
@@ -362,7 +373,7 @@ namespace GraniteServer.Data.Migrations.Postgres
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GraniteServer.Data.Entities.ModEntity", "Mod")
-                        .WithMany()
+                        .WithMany("ModServers")
                         .HasForeignKey("ModId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -373,7 +384,7 @@ namespace GraniteServer.Data.Migrations.Postgres
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
-                        .WithMany()
+                        .WithMany("ModServers")
                         .HasForeignKey("ServerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -387,9 +398,58 @@ namespace GraniteServer.Data.Migrations.Postgres
                     b.Navigation("Server");
                 });
 
+            modelBuilder.Entity("GraniteServer.Data.Entities.PlayerEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
+                        .WithMany("Players")
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Server");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.PlayerSessionEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.PlayerEntity", "Player")
+                        .WithMany("Sessions")
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Player");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.ServerMetricsEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
+                        .WithMany("ServerMetrics")
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Server");
+                });
+
             modelBuilder.Entity("GraniteServer.Data.Entities.ModEntity", b =>
                 {
+                    b.Navigation("ModServers");
+
                     b.Navigation("Releases");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.PlayerEntity", b =>
+                {
+                    b.Navigation("Sessions");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.ServerEntity", b =>
+                {
+                    b.Navigation("ModServers");
+
+                    b.Navigation("Players");
+
+                    b.Navigation("ServerMetrics");
                 });
 #pragma warning restore 612, 618
         }

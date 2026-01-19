@@ -23,11 +23,12 @@ public class ModEntity
     public int Comments { get; set; }
     public string? Side { get; set; }
     public string? Type { get; set; }
-    public string? Created { get; set; }
-    public string? LastReleased { get; set; }
-    public string? LastModified { get; set; }
+    public DateTime? Created { get; set; }
+    public DateTime? LastReleased { get; set; }
+    public DateTime? LastModified { get; set; }
     public List<string> Tags { get; set; } = new();
     public DateTime LastChecked { get; set; }
 
     public List<ModReleaseEntity> Releases { get; set; } = new();
+    public List<ModServerEntity> ModServers { get; set; } = new();
 }

@@ -6,7 +6,13 @@ namespace Granite.Common.Dto;
 public class PlayerDTO
 {
     [Sieve(CanFilter = true, CanSort = true)]
-    public string Id { get; set; } = string.Empty;
+    public Guid Id { get; set; }
+
+    [Sieve(CanFilter = true, CanSort = true)]
+    public string PlayerUID { get; set; } = string.Empty;
+
+    [Sieve(CanFilter = true, CanSort = true)]
+    public Guid ServerId { get; set; }
 
     [Sieve(CanFilter = true, CanSort = true)]
     public string Name { get; set; } = string.Empty;

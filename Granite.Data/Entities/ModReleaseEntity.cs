@@ -13,6 +13,6 @@ public class ModReleaseEntity
     public List<string> Tags { get; set; } = new();
     public string? ModIdStr { get; set; }
     public string? ModVersion { get; set; }
-    public string? Created { get; set; }
+    public DateTime? Created { get; set; }
     public string? Changelog { get; set; }
 }

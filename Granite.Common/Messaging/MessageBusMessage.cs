@@ -36,9 +36,9 @@ public abstract class MessageBusMessage<T> : MessageBusMessage
     /// <summary>
     /// Strongly-typed message payload.
     /// </summary>
-    public new T? Data
+    public new T Data
     {
-        get => (T?)base.Data;
+        get => (T)base.Data!;
         set => base.Data = value;
     }
 }

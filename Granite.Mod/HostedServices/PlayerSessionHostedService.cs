@@ -48,14 +48,14 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
         if (_isShuttingDown)
             return;
 
-        var playerSessionId = byPlayer.ServerData.CustomPlayerData["GraniteSessionId"];
+        var playerSessionId = Guid.Parse(byPlayer.ServerData.CustomPlayerData["GraniteSessionId"]);
         var leaveEvent = _messageBus.CreateEvent<PlayerLeaveEvent>(
             _config.ServerId,
             e =>
             {
                 e.Data!.PlayerUID = byPlayer.PlayerUID;
                 e.Data!.PlayerName = byPlayer.PlayerName;
-                e.Data!.SessionId = playerSessionId.ToString();
+                e.Data!.SessionId = playerSessionId;
                 e.Data!.IpAddress = byPlayer.IpAddress;
             }
         );
@@ -75,7 +75,7 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
             {
                 e.Data!.PlayerUID = byPlayer.PlayerUID;
                 e.Data!.PlayerName = byPlayer.PlayerName;
-                e.Data!.SessionId = playerSessionId.ToString();
+                e.Data!.SessionId = playerSessionId;
                 e.Data!.IpAddress = byPlayer.IpAddress;
             }
         );

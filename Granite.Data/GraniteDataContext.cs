@@ -39,10 +39,33 @@ public class GraniteDataContext : DbContext
 
         modelBuilder.Entity<PlayerEntity>(entity =>
         {
-            entity.HasKey(e => new { e.PlayerUID, e.ServerId });
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.PlayerUID, e.ServerId }).IsUnique();
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
             entity.Property(e => e.FirstJoinDate).IsRequired();
             entity.Property(e => e.LastJoinDate).IsRequired();
+            
+            entity
+                .HasOne(e => e.Server)
+                .WithMany(s => s.Players)
+                .HasForeignKey(e => e.ServerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PlayerSessionEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.PlayerId, e.ServerId });
+            entity.Property(e => e.PlayerId).IsRequired();
+            entity.Property(e => e.IpAddress).IsRequired();
+            entity.Property(e => e.PlayerName).IsRequired();
+            entity.Property(e => e.JoinDate).IsRequired();
+
+            entity
+                .HasOne(e => e.Player)
+                .WithMany(p => p.Sessions)
+                .HasForeignKey(e => e.PlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ServerMetricsEntity>(entity =>
@@ -53,6 +76,12 @@ public class GraniteDataContext : DbContext
             entity.Property(e => e.CpuUsagePercent).IsRequired();
             entity.Property(e => e.MemoryUsageMB).IsRequired();
             entity.Property(e => e.ActivePlayerCount).IsRequired();
+            
+            entity
+                .HasOne(e => e.Server)
+                .WithMany(s => s.ServerMetrics)
+                .HasForeignKey(e => e.ServerId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ModEntity>(entity =>
@@ -121,13 +150,13 @@ public class GraniteDataContext : DbContext
 
             entity
                 .HasOne(e => e.Server)
-                .WithMany()
+                .WithMany(s => s.ModServers)
                 .HasForeignKey(e => e.ServerId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity
                 .HasOne(e => e.Mod)
-                .WithMany()
+                .WithMany(m => m.ModServers)
                 .HasForeignKey(e => e.ModId)
                 .OnDelete(DeleteBehavior.Cascade);
 
@@ -143,10 +172,5 @@ public class GraniteDataContext : DbContext
                 .HasForeignKey(e => e.RunningReleaseId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
-    }
-
-    public override void Dispose()
-    {
-        base.Dispose();
     }
 }

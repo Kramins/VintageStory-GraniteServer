@@ -9,9 +9,9 @@ public abstract class CommandMessage : MessageBusMessage
 
 public abstract class CommandMessage<T> : CommandMessage
 {
-    public new T? Data
+    public new T Data
     {
-        get => (T?)base.Data;
+        get => (T)base.Data!;
         set => base.Data = value;
     }
 }
