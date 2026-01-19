@@ -40,10 +40,10 @@ const playerDetailsSlice = createSlice({
 
 export const { fetchPlayerDetailsStart, fetchPlayerDetailsSuccess, fetchPlayerDetailsFailure, clearPlayerDetails } = playerDetailsSlice.actions;
 
-export const fetchPlayerDetails = (playerId: string) => async (dispatch: AppDispatch) => {
+export const fetchPlayerDetails = (serverId: string, playerId: string) => async (dispatch: AppDispatch) => {
     dispatch(fetchPlayerDetailsStart());
     try {
-        const playerDetails = await PlayerService.getPlayerDetails(playerId);
+        const playerDetails = await PlayerService.getPlayerDetails(serverId, playerId);
         dispatch(fetchPlayerDetailsSuccess(playerDetails));
     } catch (error: any) {
         dispatch(fetchPlayerDetailsFailure(error.message));

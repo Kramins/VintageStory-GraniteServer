@@ -9,18 +9,23 @@ import {
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import { Storage as StorageIcon } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store/store';
 import { selectServer } from '../store/slices/serversSlice';
 
 export default function ServerSelector() {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const servers = useAppSelector(state => state.servers.servers);
   const selectedServerId = useAppSelector(state => state.servers.selectedServerId);
   const loading = useAppSelector(state => state.servers.loading);
   const error = useAppSelector(state => state.servers.error);
 
   const handleChange = (event: SelectChangeEvent<string>) => {
-    dispatch(selectServer(event.target.value));
+    const serverId = event.target.value;
+    dispatch(selectServer(serverId));
+    // Navigate to the players page for the selected server
+    navigate(`/${serverId}/players`);
   };
 
   if (loading) {

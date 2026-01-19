@@ -80,34 +80,34 @@ export const PlayerService = {
     },
 
     async kickPlayer(serverId: string, playerId: string, reason?: string): Promise<void> {
-        await axios.post(`${getApiBase(serverId)}/id/${playerId}/kick`, { reason });
+        await axios.post(`${getApiBase(serverId)}/${playerId}/kick`, { reason });
     },
 
     async banPlayer(serverId: string, playerId: string, reason?: string): Promise<void> {
-        await axios.post(`${getApiBase(serverId)}/id/${playerId}/ban`, { reason });
+        await axios.post(`${getApiBase(serverId)}/${playerId}/ban`, { reason });
     },
 
     async unBanPlayer(serverId: string, playerId: string): Promise<void> {
-        await axios.delete(`${getApiBase(serverId)}/id/${playerId}/ban`);
+        await axios.delete(`${getApiBase(serverId)}/${playerId}/ban`);
     },
 
     async whitelistPlayer(serverId: string, playerId: string): Promise<void> {
-        await axios.post(`${getApiBase(serverId)}/id/${playerId}/whitelist`);
+        await axios.post(`${getApiBase(serverId)}/${playerId}/whitelist`);
     },
     
     async unWhitelistPlayer(serverId: string, playerId: string): Promise<void> {
-        await axios.delete(`${getApiBase(serverId)}/id/${playerId}/whitelist`);
+        await axios.delete(`${getApiBase(serverId)}/${playerId}/whitelist`);
     },
 
     async getPlayerDetails(serverId: string, playerId: string): Promise<PlayerDetailsDTO> {
-        const response = await axios.get(`${getApiBase(serverId)}/id/${playerId}`);
-        return response.data;
+        const response = await axios.get<JsonApiDocument<PlayerDetailsDTO>>(`${getApiBase(serverId)}/${playerId}`);
+        return response.data.data;
     },
-    async updatePlayerInventorySlot(serverId: string, playerId: string, inventoryName: string, data: UpdateInventorySlotRequestDTO): Promise<void> {
-        await axios.post(`${getApiBase(serverId)}/id/${playerId}/inventories/${inventoryName}/`, data);
+    async updatePlayerInventorySlot(serverId: string, playerId: string, slotIndex: number, data: UpdateInventorySlotRequestDTO): Promise<void> {
+        await axios.post(`${getApiBase(serverId)}/${playerId}/inventory/${slotIndex}`, data);
     },
-    async removeItemFromInventory(serverId: string, playerId: string, inventoryName: string, slotIndex: number): Promise<void> {
-        await axios.delete(`${getApiBase(serverId)}/id/${playerId}/inventories/${inventoryName}/${slotIndex}`);
+    async removeItemFromInventory(serverId: string, playerId: string, slotIndex: number): Promise<void> {
+        await axios.delete(`${getApiBase(serverId)}/${playerId}/inventory/${slotIndex}`);
     },
 
     async findPlayerByName(serverId: string, name: string): Promise<PlayerNameIdDTO> {
@@ -130,7 +130,7 @@ export const PlayerService = {
         const apiPageSize = pageSize <= 0 ? 1 : pageSize;
 
         const response = await axios.get<JsonApiDocument<PlayerSessionDTO[]>>(
-            `${getApiBase(serverId)}/id/${playerId}/sessions`,
+            `${getApiBase(serverId)}/${playerId}/sessions`,
             { params: { page: apiPage, pageSize: apiPageSize, sorts, filters } }
         );
 

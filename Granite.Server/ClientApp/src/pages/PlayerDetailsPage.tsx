@@ -31,30 +31,29 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
 };
 
 const PlayerDetailsPage: React.FC = () => {
-    const { playerId } = useParams<{ playerId: string }>();
+    const { playerId, serverId } = useParams<{ playerId: string; serverId: string }>();
     const dispatch = useAppDispatch();
     const { playerDetails, loading, error } = useAppSelector(state => state.playerDetails);
     const { items: collectibles, loading: collectiblesLoading, error: collectiblesError } = useAppSelector(state => state.world.collectibles);
-    const selectedServerId = useAppSelector((state) => state.servers.selectedServerId);
     const [tabValue, setTabValue] = useState(0);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (playerId) {
-            dispatch(fetchPlayerDetails(playerId) as any);
+        if (playerId && serverId) {
+            dispatch(fetchPlayerDetails(serverId, playerId) as any);
         }
         // Load collectibles data (will only fetch if not already loaded)
         dispatch(fetchCollectibles() as any);
-    }, [playerId, dispatch]);
+    }, [playerId, serverId, dispatch]);
 
     const runAction = async (key: string, action: () => Promise<void>) => {
-        if (!playerId) return;
+        if (!playerId || !serverId) return;
         setActionLoading(key);
         setActionError(null);
         try {
             await action();
-            await dispatch(fetchPlayerDetails(playerId) as any);
+            await dispatch(fetchPlayerDetails(serverId, playerId) as any);
         } catch (err: any) {
             setActionError(err.message || 'Action failed');
         } finally {
@@ -63,41 +62,41 @@ const PlayerDetailsPage: React.FC = () => {
     };
 
     const handleRefresh = async () => {
-        if (!playerId) return;
+        if (!playerId || !serverId) return;
         await runAction('refresh', async () => {
-            await dispatch(fetchPlayerDetails(playerId) as any);
+            await dispatch(fetchPlayerDetails(serverId, playerId) as any);
         });
     };
 
     const handleKick = async () => {
-        if (!playerId || !selectedServerId) return;
+        if (!playerId || !serverId) return;
         await runAction('kick', async () => {
-            await PlayerService.kickPlayer(selectedServerId, playerId, 'Kicked via UI');
+            await PlayerService.kickPlayer(serverId, playerId, 'Kicked via UI');
         });
     };
 
     const handleBanToggle = async () => {
-        if (!playerId || !selectedServerId) return;
+        if (!playerId || !serverId) return;
         if (playerDetails?.isBanned) {
             await runAction('unban', async () => {
-                await PlayerService.unBanPlayer(selectedServerId, playerId);
+                await PlayerService.unBanPlayer(serverId, playerId);
             });
         } else {
             await runAction('ban', async () => {
-                await PlayerService.banPlayer(selectedServerId, playerId, 'Banned via UI');
+                await PlayerService.banPlayer(serverId, playerId, 'Banned via UI');
             });
         }
     };
 
     const handleWhitelistToggle = async () => {
-        if (!playerId || !selectedServerId) return;
+        if (!playerId || !serverId) return;
         if (playerDetails?.isWhitelisted) {
             await runAction('unwhitelist', async () => {
-                await PlayerService.unWhitelistPlayer(selectedServerId, playerId);
+                await PlayerService.unWhitelistPlayer(serverId, playerId);
             });
         } else {
             await runAction('whitelist', async () => {
-                await PlayerService.whitelistPlayer(selectedServerId, playerId);
+                await PlayerService.whitelistPlayer(serverId, playerId);
             });
         }
     };
@@ -301,7 +300,7 @@ const PlayerDetailsPage: React.FC = () => {
                 {playerDetails.inventories && Object.keys(playerDetails.inventories).length > 0 ? (
                     <PlayerInventoryTab
                         playerId={playerId as string}
-                        serverId={selectedServerId as string}
+                        serverId={serverId as string}
                         inventories={playerDetails.inventories}
                         collectibles={collectibles}
                         collectiblesLoading={collectiblesLoading}

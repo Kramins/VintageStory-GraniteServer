@@ -16,7 +16,10 @@ public class ServerPlayersController : ControllerBase
     private ServerPlayersService _playerService;
     private SieveProcessor _sieveProcessor;
 
-    public ServerPlayersController(ServerPlayersService playerService, SieveProcessor sieveProcessor)
+    public ServerPlayersController(
+        ServerPlayersService playerService,
+        SieveProcessor sieveProcessor
+    )
     {
         _playerService = playerService;
         _sieveProcessor = sieveProcessor;
@@ -63,9 +66,24 @@ public class ServerPlayersController : ControllerBase
     }
 
     [HttpGet("{playerId}")]
-    public Task<ActionResult<PlayerDetailsDTO>> GetPlayerById([FromRoute] Guid serverId, string playerId)
+    public async Task<ActionResult<JsonApiDocument<PlayerDetailsDTO>>> GetPlayerById(
+        [FromRoute] Guid serverId,
+        string playerId
+    )
     {
-        throw new NotImplementedException("GetPlayerById endpoint not yet implemented");
+        if (!Guid.TryParse(playerId, out var playerGuid))
+        {
+            return BadRequest("Invalid playerId format");
+        }
+
+        var playerDetails = await _playerService.GetPlayerDetailsAsync(serverId, playerGuid);
+
+        if (playerDetails == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new JsonApiDocument<PlayerDetailsDTO> { Data = playerDetails });
     }
 
     [HttpGet("find")]
@@ -110,7 +128,13 @@ public class ServerPlayersController : ControllerBase
         [FromBody] BanRequestDTO request
     )
     {
-        _playerService.BanPlayer(serverId, playerId, request.Reason ?? string.Empty, request.UntilDate, request.IssuedBy);
+        _playerService.BanPlayer(
+            serverId,
+            playerId,
+            request.Reason ?? string.Empty,
+            request.UntilDate,
+            request.IssuedBy
+        );
 
         return Task.FromResult<ActionResult<JsonApiDocument<string>>>(
             new JsonApiDocument<string> { Data = "Player banned successfully" }
@@ -118,7 +142,10 @@ public class ServerPlayersController : ControllerBase
     }
 
     [HttpDelete("{playerId}/ban")]
-    public Task<ActionResult<JsonApiDocument<string>>> UnbanPlayer([FromRoute] Guid serverId, string playerId)
+    public Task<ActionResult<JsonApiDocument<string>>> UnbanPlayer(
+        [FromRoute] Guid serverId,
+        string playerId
+    )
     {
         _playerService.UnbanPlayer(serverId, playerId);
 
@@ -142,7 +169,10 @@ public class ServerPlayersController : ControllerBase
     }
 
     [HttpDelete("{playerId}/whitelist")]
-    public Task<ActionResult<JsonApiDocument<string>>> UnwhitelistPlayer([FromRoute] Guid serverId, string playerId)
+    public Task<ActionResult<JsonApiDocument<string>>> UnwhitelistPlayer(
+        [FromRoute] Guid serverId,
+        string playerId
+    )
     {
         _playerService.UnwhitelistPlayer(serverId, playerId);
 

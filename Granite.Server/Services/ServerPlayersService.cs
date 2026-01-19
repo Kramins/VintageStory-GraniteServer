@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Granite.Common.Dto;
 using GraniteServer.Data;
 using GraniteServer.Messaging.Commands;
@@ -43,6 +45,50 @@ public class ServerPlayersService
             };
 
         return await serverPlayers.ToListAsync();
+    }
+
+    public async Task<PlayerDetailsDTO?> GetPlayerDetailsAsync(Guid serverId, Guid playerId)
+    {
+        var player = await _dbContext
+            .Players
+            .Include(p => p.Sessions)
+            .FirstOrDefaultAsync(p => p.ServerId == serverId && p.Id == playerId);
+
+        if (player == null)
+        {
+            return null;
+        }
+
+        var isPlaying = player.Sessions.Any(s => s.LeaveDate == null);
+        var lastSession = player.Sessions
+            .OrderByDescending(s => s.JoinDate)
+            .FirstOrDefault();
+
+        return new PlayerDetailsDTO
+        {
+            Id = player.Id,
+            ServerId = player.ServerId,
+            PlayerUID = player.PlayerUID,
+            Name = player.Name,
+            FirstJoinDate = player.FirstJoinDate.ToString("o"),
+            LastJoinDate = player.LastJoinDate.ToString("o"),
+            IsWhitelisted = player.IsWhitelisted,
+            WhitelistedBy = player.WhitelistedBy,
+            WhitelistedReason = player.WhitelistedReason,
+            IsBanned = player.IsBanned,
+            BanReason = player.BanReason,
+            BanBy = player.BanBy,
+            BanUntil = player.BanUntil,
+            ConnectionState = isPlaying ? "Connected" : "Disconnected",
+            IpAddress = lastSession?.IpAddress ?? string.Empty,
+            IsAdmin = false,
+            LanguageCode = string.Empty,
+            Ping = 0,
+            RolesCode = string.Empty,
+            Privileges = Array.Empty<string>(),
+            WhitelistedUntil = null,
+            Inventories = new Dictionary<string, InventoryDTO>()
+        };
     }
 
     public void WhitelistPlayer(Guid serverId, string playerId, string? reason)

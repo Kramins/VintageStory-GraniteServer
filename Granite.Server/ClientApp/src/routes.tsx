@@ -17,11 +17,11 @@ const MainRoutes = {
             element: <OverviewPage />
         },
         {
-            path: '/players',
+            path: '/:serverId/players',
             element: <PlayersPage />
         },
         {
-            path: '/players/:playerId',
+            path: '/:serverId/players/:playerId',
             element: <PlayerDetailsPage />
         },
         {

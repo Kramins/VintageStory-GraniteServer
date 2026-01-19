@@ -13,11 +13,11 @@ import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
 import HelpRoundedIcon from '@mui/icons-material/HelpRounded';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
 import { NavLink } from 'react-router-dom';
+import { useAppSelector } from '../store/store';
 
-const mainListItems = [
-  { text: 'Overview', icon: <HomeRoundedIcon />, path: '/' },
-  { text: 'Players', icon: <PeopleRoundedIcon />, path: '/players' },
-  { text: 'Server Configuration', icon: <TuneRoundedIcon />, path: '/server/config' },
+const staticMenuItems = [
+  { text: 'Overview', icon: <HomeRoundedIcon />, path: '/', static: true },
+  { text: 'Server Configuration', icon: <TuneRoundedIcon />, path: '/server/config', static: true },
 ];
 
 const secondaryListItems = [
@@ -27,6 +27,15 @@ const secondaryListItems = [
 ];
 
 export default function MenuContent() {
+  const selectedServerId = useAppSelector(state => state.servers.selectedServerId);
+  const playersPath = selectedServerId ? `/${selectedServerId}/players` : '/players';
+  
+  const mainListItems = [
+    ...staticMenuItems.slice(0, 1),
+    { text: 'Players', icon: <PeopleRoundedIcon />, path: playersPath },
+    ...staticMenuItems.slice(1),
+  ];
+
   return (
     <Stack sx={{ flexGrow: 1, p: 1, justifyContent: 'space-between' }}>
       <List dense>

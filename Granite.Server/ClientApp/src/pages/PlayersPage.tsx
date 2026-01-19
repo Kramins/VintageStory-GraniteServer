@@ -375,7 +375,7 @@ const PlayersPage: React.FC = () => {
             flex: 1,
             minWidth: 140,
             renderCell: (params: GridRenderCellParams) => (
-                <Link to={`/players/${params.row.id}`} style={{ textDecoration: 'none' }}>
+                <Link to={`/${selectedServerId}/players/${params.row.id}`} style={{ textDecoration: 'none' }}>
                     <Box display="flex" alignItems="center" gap={1} sx={{ cursor: 'pointer', '&:hover': { opacity: 0.7 } }}>
                         <Avatar sx={{ width: 24, height: 24 }}>
                             {String(params.value)[0]}
