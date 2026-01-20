@@ -14,14 +14,14 @@ namespace GraniteServer.HostedServices;
 public class MessageBridgeHostedService : IHostedService
 {
     private readonly ILogger _logger;
-    private readonly MessageBusService _messageBus;
+    private readonly ClientMessageBusService _messageBus;
     private readonly IServiceProvider _serviceProvider;
     private IDisposable? _commandSubscription;
     private IDisposable? _eventSubscription;
 
     public MessageBridgeHostedService(
         ILogger logger,
-        MessageBusService messageBus,
+        ClientMessageBusService messageBus,
         IServiceProvider serviceProvider
     )
     {

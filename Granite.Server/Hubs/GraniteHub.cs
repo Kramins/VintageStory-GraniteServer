@@ -5,7 +5,10 @@ using System.Reactive.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Granite.Server.Services;
 using GraniteServer.Messaging;
+using GraniteServer.Messaging.Commands;
+using GraniteServer.Messaging.Events;
 using GraniteServer.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -19,13 +22,19 @@ namespace Granite.Server.Hubs;
 [Authorize]
 public class GraniteHub : Hub
 {
-    private readonly MessageBusService _messageBus;
+    private readonly PersistentMessageBusService _messageBus;
+    private readonly ServersService _serversService;
     private readonly ILogger<GraniteHub> _logger;
     private static readonly ConcurrentDictionary<string, IDisposable> _subscriptions = new();
 
-    public GraniteHub(MessageBusService messageBus, ILogger<GraniteHub> logger)
+    public GraniteHub(
+        PersistentMessageBusService messageBus,
+        ILogger<GraniteHub> logger,
+        ServersService serversService
+    )
     {
         _messageBus = messageBus ?? throw new ArgumentNullException(nameof(messageBus));
+        _serversService = serversService ?? throw new ArgumentNullException(nameof(serversService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -69,7 +78,18 @@ public class GraniteHub : Hub
             _logger.LogTrace(
                 $"[SignalR] Publishing message to bus: {message.GetType().FullName}, Data: {message.Data?.GetType().FullName ?? "null"}"
             );
-            _messageBus.Publish(message);
+
+            if (message is EventMessage @event)
+            {
+                _messageBus.Publish(@event);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "[SignalR] Only EventMessage types are supported for publishing"
+                );
+            }
+
             await Task.CompletedTask;
         }
         catch (Exception ex)
@@ -134,6 +154,19 @@ public class GraniteHub : Hub
             );
     }
 
+    public async Task AcknowledgeCommand(Guid commandId)
+    {
+        _logger.LogTrace(
+            "[SignalR] Acknowledged command {CommandId} from connection {ConnectionId}",
+            commandId,
+            Context.ConnectionId
+        );
+
+        await _messageBus.AcknowledgeCommandAsync(commandId);
+    }
+
+  
+
     /// <summary>
     /// Called when a client connects. Subscribes the client to message bus events.
     /// </summary>
@@ -152,6 +185,9 @@ public class GraniteHub : Hub
         }
 
         var serverId = Guid.Parse(serverIdClaim!);
+
+        // Mark server as online
+        await _serversService.MarkServerOnlineAsync(serverId);
 
         // Subscribe to all messages from the message bus
         var subscription = _messageBus
@@ -197,6 +233,14 @@ public class GraniteHub : Hub
         if (_subscriptions.TryRemove(connectionId, out var subscription))
         {
             subscription?.Dispose();
+        }
+
+        var serverIdClaim = Context.User?.FindFirst("ServerId")?.Value;
+        if (!string.IsNullOrEmpty(serverIdClaim))
+        {
+            var serverId = Guid.Parse(serverIdClaim!);
+            // Mark server as offline
+            await _serversService.MarkServerOfflineAsync(serverId);
         }
 
         await base.OnDisconnectedAsync(exception);

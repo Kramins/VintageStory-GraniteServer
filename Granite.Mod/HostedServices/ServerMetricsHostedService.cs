@@ -14,7 +14,7 @@ namespace GraniteServer.HostedServices;
 public class ServerMetricsHostedService : IHostedService, IDisposable
 {
     private readonly ICoreServerAPI _api;
-    private readonly MessageBusService _messageBus;
+    private readonly ClientMessageBusService _messageBus;
     private readonly ILogger _logger;
     private readonly SignalRConnectionState _connectionState;
     private readonly GraniteModConfig _config;
@@ -31,7 +31,7 @@ public class ServerMetricsHostedService : IHostedService, IDisposable
 
     public ServerMetricsHostedService(
         ICoreServerAPI api,
-        MessageBusService messageBus,
+        ClientMessageBusService messageBus,
         ILogger logger,
         SignalRConnectionState connectionState,
         GraniteModConfig config

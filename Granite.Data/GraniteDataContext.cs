@@ -15,6 +15,7 @@ public class GraniteDataContext : DbContext
     public DbSet<ModEntity> Mods { get; set; } = null!;
     public DbSet<ModReleaseEntity> ModReleases { get; set; } = null!;
     public DbSet<ModServerEntity> ModServers { get; set; } = null!;
+    public DbSet<CommandEntity> BufferedCommands { get; set; } = null!;
 
     public GraniteDataContext(DbContextOptions options)
         : base(options) { }
@@ -35,6 +36,8 @@ public class GraniteDataContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
             entity.Property(e => e.AccessToken).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.IsOnline).IsRequired();
+            entity.Property(e => e.LastSeenAt);
         });
 
         modelBuilder.Entity<PlayerEntity>(entity =>
@@ -171,6 +174,23 @@ public class GraniteDataContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.RunningReleaseId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CommandEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.ServerId, e.Status, e.CreatedAt });
+            entity.Property(e => e.ServerId).IsRequired();
+            entity.Property(e => e.MessageType).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Payload).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.Status).IsRequired();
+            
+            entity
+                .HasOne(e => e.Server)
+                .WithMany()
+                .HasForeignKey(e => e.ServerId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

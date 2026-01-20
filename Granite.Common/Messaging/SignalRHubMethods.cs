@@ -14,4 +14,9 @@ public static class SignalRHubMethods
     /// Hub method name for publishing events to the server.
     /// </summary>
     public const string PublishEvent = "PublishEvent";
+
+    /// <summary>
+    /// Hub method name for acknowledging command receipt.
+    /// </summary>
+    public const string AcknowledgeCommand = "AcknowledgeCommand";
 }

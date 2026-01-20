@@ -11,14 +11,15 @@ using Microsoft.Extensions.Logging;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 
-
 [assembly: ModInfo(
     "GraniteServerMod",
     Authors = new string[] { "Kramins" },
     Description = "Server Administration Tools and features",
     Version = "0.0.1"
 )]
+
 namespace GraniteServer.Mod;
+
 public class GraniteMod : ModSystem
 {
     private IHost? _host;
@@ -28,7 +29,7 @@ public class GraniteMod : ModSystem
     public override void StartServerSide(ICoreServerAPI api)
     {
         api.Logger.Notification("GraniteServer Mod starting server side.");
-        
+
         _config = api.LoadModConfig<GraniteModConfig>(_configFileName);
         if (_config == null)
         {
@@ -45,7 +46,7 @@ public class GraniteMod : ModSystem
                 services.AddSingleton<Vintagestory.API.Common.ILogger>(api.Logger);
 
                 services.AddSingleton<ServerCommandService>();
-                services.AddSingleton<MessageBusService>();
+                services.AddSingleton<ClientMessageBusService>();
                 services.AddSingleton<SignalRConnectionState>();
                 services.AddSingleton(_config);
 
@@ -86,7 +87,7 @@ public class GraniteMod : ModSystem
             .Where(t =>
                 !t.IsAbstract
                 && !t.IsInterface
-                && t.GetInterfaces() 
+                && t.GetInterfaces()
                     .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == eventHandlerType)
             )
             .ToList();

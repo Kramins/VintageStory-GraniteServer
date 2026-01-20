@@ -42,8 +42,8 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<ServersService>();
 builder.Services.AddScoped<ServerPlayersService>();
 
-// Add MessageBusService as singleton
-builder.Services.AddSingleton<MessageBusService>();
+// Add PersistentMessageBusService as singleton (also registers as MessageBusService)
+builder.Services.AddSingleton<PersistentMessageBusService>();
 
 // Add MessageBridgeHostedService to process events from the message bus
 builder.Services.AddHostedService<MessageBridgeHostedService>();

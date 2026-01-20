@@ -1,4 +1,5 @@
 using System.Reactive.Linq;
+using Granite.Server.Services;
 using GraniteServer.Messaging.Commands;
 using GraniteServer.Messaging.Events;
 using GraniteServer.Messaging.Handlers.Commands;
@@ -13,13 +14,13 @@ namespace GraniteServer.Server.HostedServices;
 public class MessageBridgeHostedService : IHostedService
 {
     private readonly ILogger<MessageBridgeHostedService> _logger;
-    private readonly MessageBusService _messageBus;
+    private readonly PersistentMessageBusService _messageBus;
     private readonly IServiceProvider _serviceProvider;
     private IDisposable? _eventSubscription;
 
     public MessageBridgeHostedService(
         ILogger<MessageBridgeHostedService> logger,
-        MessageBusService messageBus,
+        PersistentMessageBusService messageBus,
         IServiceProvider serviceProvider
     )
     {

@@ -39,15 +39,6 @@ namespace GraniteServer.Services
                 return;
             }
 
-            // Enrich event with server IDs if not set
-            // if (@event.TargetServerId == Guid.Empty)
-            // {
-            //     @event.TargetServerId = _config.ServerId;
-            // }
-            // if (@event.OriginServerId == Guid.Empty)
-            // {
-            //     @event.OriginServerId = _config.ServerId;
-            // }
 
             try
             {

@@ -11,10 +11,13 @@ namespace Granite.Server.Services;
 
 public class ServerPlayersService
 {
-    private MessageBusService _messageBus;
+    private PersistentMessageBusService _messageBus;
     private GraniteDataContext _dbContext;
 
-    public ServerPlayersService(MessageBusService messageBus, GraniteDataContext dbContext)
+    public ServerPlayersService(
+        PersistentMessageBusService messageBus,
+        GraniteDataContext dbContext
+    )
     {
         _messageBus = messageBus;
         _dbContext = dbContext;
@@ -50,8 +53,7 @@ public class ServerPlayersService
     public async Task<PlayerDetailsDTO?> GetPlayerDetailsAsync(Guid serverId, Guid playerId)
     {
         var player = await _dbContext
-            .Players
-            .Include(p => p.Sessions)
+            .Players.Include(p => p.Sessions)
             .FirstOrDefaultAsync(p => p.ServerId == serverId && p.Id == playerId);
 
         if (player == null)
@@ -60,9 +62,7 @@ public class ServerPlayersService
         }
 
         var isPlaying = player.Sessions.Any(s => s.LeaveDate == null);
-        var lastSession = player.Sessions
-            .OrderByDescending(s => s.JoinDate)
-            .FirstOrDefault();
+        var lastSession = player.Sessions.OrderByDescending(s => s.JoinDate).FirstOrDefault();
 
         return new PlayerDetailsDTO
         {
@@ -87,11 +87,11 @@ public class ServerPlayersService
             RolesCode = string.Empty,
             Privileges = Array.Empty<string>(),
             WhitelistedUntil = null,
-            Inventories = new Dictionary<string, InventoryDTO>()
+            Inventories = new Dictionary<string, InventoryDTO>(),
         };
     }
 
-    public void WhitelistPlayer(Guid serverId, string playerId, string? reason)
+    public async Task WhitelistPlayer(Guid serverId, string playerId, string? reason)
     {
         var whitelistPlayerCommand = _messageBus.CreateCommand<WhitelistPlayerCommand>(
             serverId,
@@ -101,9 +101,11 @@ public class ServerPlayersService
                 cmd.Data.Reason = reason;
             }
         );
+
+        await _messageBus.PublishCommandAsync(whitelistPlayerCommand);
     }
 
-    public void UnwhitelistPlayer(Guid serverId, string playerId)
+    public async Task UnwhitelistPlayer(Guid serverId, string playerId)
     {
         var unwhitelistPlayerCommand = _messageBus.CreateCommand<UnwhitelistPlayerCommand>(
             serverId,
@@ -112,9 +114,11 @@ public class ServerPlayersService
                 cmd.Data.PlayerId = playerId;
             }
         );
+
+        await _messageBus.PublishCommandAsync(unwhitelistPlayerCommand);
     }
 
-    public void BanPlayer(
+    public async Task BanPlayer(
         Guid serverId,
         string playerId,
         string reason,
@@ -133,9 +137,11 @@ public class ServerPlayersService
                 cmd.Data.PlayerName = string.Empty;
             }
         );
+
+        await _messageBus.PublishCommandAsync(banPlayerCommand);
     }
 
-    public void UnbanPlayer(Guid serverId, string playerId)
+    public async Task UnbanPlayer(Guid serverId, string playerId)
     {
         var unbanPlayerCommand = _messageBus.CreateCommand<UnbanPlayerCommand>(
             serverId,
@@ -144,9 +150,11 @@ public class ServerPlayersService
                 cmd.Data.PlayerId = playerId;
             }
         );
+
+        await _messageBus.PublishCommandAsync(unbanPlayerCommand);
     }
 
-    public void KickPlayer(Guid serverId, string playerId, string reason)
+    public async Task KickPlayer(Guid serverId, string playerId, string reason)
     {
         var kickPlayerCommand = _messageBus.CreateCommand<KickPlayerCommand>(
             serverId,
@@ -156,5 +164,7 @@ public class ServerPlayersService
                 cmd.Data.Reason = reason;
             }
         );
+
+        await _messageBus.PublishCommandAsync(kickPlayerCommand);
     }
 }

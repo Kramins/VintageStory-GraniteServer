@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Granite.Common.Dto;
 using GraniteServer.Messaging;
+using GraniteServer.Messaging.Commands;
 using GraniteServer.Mod;
 using GraniteServer.Services;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -16,12 +17,12 @@ namespace GraniteServer.HostedServices;
 
 /// <summary>
 /// Hosted service that maintains a SignalR connection to the Granite.Server hub.
-/// Routes incoming messages from the hub to the local MessageBusService.
+/// Routes incoming messages from the hub to the local ClientMessageBusService.
 /// </summary>
 public class SignalRClientHostedService : IHostedService, IDisposable
 {
     private readonly ILogger _logger;
-    private readonly MessageBusService _messageBus;
+    private readonly ClientMessageBusService _messageBus;
     private readonly GraniteModConfig _config;
     private readonly SignalRConnectionState _connectionState;
     private readonly HttpClient _httpClient;
@@ -33,7 +34,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
 
     public SignalRClientHostedService(
         ILogger logger,
-        MessageBusService messageBus,
+        ClientMessageBusService messageBus,
         GraniteModConfig config,
         SignalRConnectionState connectionState
     )
@@ -163,6 +164,15 @@ public class SignalRClientHostedService : IHostedService, IDisposable
                 {
                     _logger.Debug($"[SignalR] Received event: {message.MessageType}");
                     _messageBus.Publish(message);
+
+                    if (message is CommandMessage commandMessage)
+                    {
+                        _hubConnection!.InvokeAsync(
+                            SignalRHubMethods.AcknowledgeCommand,
+                            commandMessage.Id,
+                            cancellationToken
+                        );
+                    }
                 }
                 catch (Exception ex)
                 {

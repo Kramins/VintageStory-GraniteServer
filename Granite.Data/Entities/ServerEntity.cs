@@ -9,6 +9,8 @@ public class ServerEntity
     public string? Description { get; set; }
     public string AccessToken { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? LastSeenAt { get; set; }
+    public bool IsOnline { get; set; } = false;
 
     // Navigation properties
     public ICollection<PlayerEntity> Players { get; set; } = new List<PlayerEntity>();

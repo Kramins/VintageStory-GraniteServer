@@ -11,7 +11,7 @@ namespace GraniteServer.HostedServices;
 public class PlayerSessionHostedService : IHostedService, IDisposable
 {
     private readonly ICoreServerAPI _api;
-    private readonly MessageBusService _messageBus;
+    private readonly ClientMessageBusService _messageBus;
     private readonly GraniteModConfig _config;
     private CancellationTokenSource? _cts;
 
@@ -22,7 +22,7 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
 
     public PlayerSessionHostedService(
         ICoreServerAPI api,
-        MessageBusService messageBus,
+        ClientMessageBusService messageBus,
         GraniteModConfig config,
         ILogger logger
     )

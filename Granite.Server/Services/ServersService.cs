@@ -16,16 +16,40 @@ public class ServersService
 
     public async Task<List<ServerDTO>> GetServersAsync()
     {
-        var servers = await _dbContext.Servers
-            .OrderBy(s => s.CreatedAt)
-            .ToListAsync();
+        var servers = await _dbContext.Servers.OrderBy(s => s.CreatedAt).ToListAsync();
 
-        return servers.Select(s => new ServerDTO
+        return servers
+            .Select(s => new ServerDTO
+            {
+                Id = s.Id,
+                Name = s.Name,
+                Description = s.Description,
+                CreatedAt = s.CreatedAt,
+                IsOnline = s.IsOnline,
+                LastSeenAt = s.LastSeenAt,
+            })
+            .ToList();
+    }
+
+    internal async Task MarkServerOfflineAsync(Guid serverId)
+    {
+        var server = await _dbContext.Servers.FindAsync(serverId);
+        if (server != null)
         {
-            Id = s.Id,
-            Name = s.Name,
-            Description = s.Description,
-            CreatedAt = s.CreatedAt
-        }).ToList();
+            server.IsOnline = false;
+            server.LastSeenAt = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync();
+        }
+    }
+
+    internal async Task MarkServerOnlineAsync(Guid serverId)
+    {
+        var server = await _dbContext.Servers.FindAsync(serverId);
+        if (server != null)
+        {
+            server.IsOnline = true;
+            server.LastSeenAt = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync();
+        }
     }
 }

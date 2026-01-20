@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using Granite.Server.Services;
 using GraniteServer.Messaging;
 using GraniteServer.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -14,11 +15,11 @@ namespace Granite.Server.Hubs;
 [Authorize]
 public class ClientHub : Hub
 {
-    private readonly MessageBusService _messageBus;
+    private readonly PersistentMessageBusService _messageBus;
     private readonly ILogger<ClientHub> _logger;
     private static readonly ConcurrentDictionary<string, IDisposable> _subscriptions = new();
 
-    public ClientHub(MessageBusService messageBus, ILogger<ClientHub> logger)
+    public ClientHub(PersistentMessageBusService messageBus, ILogger<ClientHub> logger)
     {
         _messageBus = messageBus ?? throw new ArgumentNullException(nameof(messageBus));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));

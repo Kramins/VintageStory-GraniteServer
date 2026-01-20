@@ -16,7 +16,7 @@ public class PlayerCommandHandlers
 {
     private ICoreServerAPI _api;
     private ServerCommandService _commandService;
-    private MessageBusService _messageBus;
+    private ClientMessageBusService _messageBus;
     private GraniteModConfig _config;
 
     private PlayerDataManager PlayerDataManager => (PlayerDataManager)_api.PlayerData;
@@ -24,7 +24,7 @@ public class PlayerCommandHandlers
     public PlayerCommandHandlers(
         ICoreServerAPI api,
         ServerCommandService commandService,
-        MessageBusService messageBus,
+        ClientMessageBusService messageBus,
         GraniteModConfig config
     )
     {
