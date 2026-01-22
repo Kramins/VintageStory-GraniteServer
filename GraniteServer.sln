@@ -1,10 +1,15 @@
-﻿Microsoft Visual Studio Solution File, Format Version 12.00
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraniteServer", "GraniteServerMod\GraniteServerMod.csproj", "{7CCE0E8C-2678-E545-C1A1-834FEC8D0057}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Granite.Data", "Granite.Data\Granite.Data.csproj", "{6F7FD93F-A147-4F69-BA56-F156D724057D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraniteServer.Data", "GraniteServer.Data\GraniteServer.Data.csproj", "{6F7FD93F-A147-4F69-BA56-F156D724057D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Granite.Mod", "Granite.Mod\Granite.Mod.csproj", "{3162DB32-4088-4AD0-91BA-111E95889316}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Granite.Common", "Granite.Common\Granite.Common.csproj", "{BCA2BE9F-4650-4D1C-BB0B-0FD6E1C2E931}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Granite.Server", "Granite.Server\Granite.Server.csproj", "{C676110A-E78D-426C-80BF-3BFA9B7D9FEE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -12,14 +17,22 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{7CCE0E8C-2678-E545-C1A1-834FEC8D0057}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7CCE0E8C-2678-E545-C1A1-834FEC8D0057}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7CCE0E8C-2678-E545-C1A1-834FEC8D0057}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7CCE0E8C-2678-E545-C1A1-834FEC8D0057}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6F7FD93F-A147-4F69-BA56-F156D724057D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6F7FD93F-A147-4F69-BA56-F156D724057D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6F7FD93F-A147-4F69-BA56-F156D724057D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6F7FD93F-A147-4F69-BA56-F156D724057D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3162DB32-4088-4AD0-91BA-111E95889316}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3162DB32-4088-4AD0-91BA-111E95889316}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3162DB32-4088-4AD0-91BA-111E95889316}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3162DB32-4088-4AD0-91BA-111E95889316}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCA2BE9F-4650-4D1C-BB0B-0FD6E1C2E931}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCA2BE9F-4650-4D1C-BB0B-0FD6E1C2E931}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCA2BE9F-4650-4D1C-BB0B-0FD6E1C2E931}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCA2BE9F-4650-4D1C-BB0B-0FD6E1C2E931}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C676110A-E78D-426C-80BF-3BFA9B7D9FEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C676110A-E78D-426C-80BF-3BFA9B7D9FEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C676110A-E78D-426C-80BF-3BFA9B7D9FEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C676110A-E78D-426C-80BF-3BFA9B7D9FEE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,5 +1,8 @@
 # GraniteServer
 
+> **Note:** This project is currently undergoing a large refactoring. We are separating the mod portion from the server portion.
+> The documentation below does not apply to the current state and is only valid for v0.0.8.
+
 GraniteServer is a Vintage Story server mod that adds server and player administration, paired with a MUI-based React frontend for managing the server.
 
 ## Current Features

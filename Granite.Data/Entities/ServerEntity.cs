@@ -1,0 +1,19 @@
+using System;
+
+namespace GraniteServer.Data.Entities;
+
+public class ServerEntity
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string AccessToken { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? LastSeenAt { get; set; }
+    public bool IsOnline { get; set; } = false;
+
+    // Navigation properties
+    public ICollection<PlayerEntity> Players { get; set; } = new List<PlayerEntity>();
+    public ICollection<ModServerEntity> ModServers { get; set; } = new List<ModServerEntity>();
+    public ICollection<ServerMetricsEntity> ServerMetrics { get; set; } = new List<ServerMetricsEntity>();
+}

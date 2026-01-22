@@ -8,16 +8,30 @@ services:
     volumes:
       - ../..:/workspaces:cached
       - vintage-mod-dev-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
     command: sleep infinity
     environment:
+    # Environment variables for Vintage Story server and Mod
       - VINTAGE_STORY=/app
+      - GS_SERVERID=d3cd8403ebd34cbaa88b7cc63eb2c0c6
+      - GS_ACCESSTOKEN=devtoken
+      - GS_GRANITESERVERHOST=http://localhost:5000
+
+    # Environment variables for Granite Server
+      - GS_JWTSECRET=eb37028ebf434c858f4cd4bff6d799df
+      - GS_AUTHENTICATIONTYPE=basic
+      - GS_USERNAME=admin
       - GS_PASSWORD=password
+
       - GS_DATABASETYPE=PostgreSQL
       - GS_DATABASEHOST=postgres
       - GS_DATABASEUSERNAME=postgres
       - GS_DATABASEPASSWORD=postgres
       - GS_DATABASEPORT=5432
-      - GS_DATABASENAME=graniteserver
+      - GS_DATABASENAME=Granite
+    # Granite Server Auto Configuration
+      - GS_GRANITEMODSERVERID=d3cd8403ebd34cbaa88b7cc63eb2c0c6
+      - GS_GRANITEMODTOKEN=devtoken
     ports:
       - "42425:42425"
       - "42420:42420"

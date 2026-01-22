@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Vintagestory" HintPath="$(VINTAGE_STORY)/Vintagestory.dll" Private="false" />
+    <Reference Include="VintagestoryAPI">
+      <HintPath>$(VINTAGE_STORY)/VintagestoryAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VintagestoryLib" HintPath="$(VINTAGE_STORY)/VintagestoryLib.dll" Private="false" />
+    <Reference Include="VintagestoryServer" HintPath="$(VINTAGE_STORY)/VintagestoryServer.dll" Private="false" />
+    <Reference Include="Newtonsoft.Json" HintPath="$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll" Private="false" />
+    <!-- Only include non-wwwroot resources initially -->
+    <None Include="resources/modinfo.json" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="">
+      <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </None>
+    <None Include="resources/assets/**" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="">
+      <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.8" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Granite.Common/Granite.Common.csproj" />
+  </ItemGroup>
+  <Target Name="PreClean" BeforeTargets="PreBuildEvent">
+    <RemoveDir Directories="bin/mods" />
+    <CallTarget Targets="Clean" />
+  </Target>
+  <Target Name="CleanupBeforeZip" BeforeTargets="PostBuildEvent">
+    <RemoveDir Directories="$(TargetDir)runtimes" Condition="Exists('$(TargetDir)runtimes')" />
+  </Target>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <MakeDir Directories="bin/mods" />
+    <ZipDirectory DestinationFile="bin/mods/$(TargetName)-$(ConfigurationName)-$(modinfoVersion).zip" SourceDirectory="$(TargetDir)" Overwrite="true" />
+  </Target>
+  <Target Name="UpdateModinfoVersion" BeforeTargets="BeforeBuild" Condition=" '$(modinfoVersion)' != '' ">
+    <Message Importance="high" Text="Updating modinfo.json version to $(modinfoVersion)" />
+    <Exec Command="jq --arg v '$(modinfoVersion)' '.version = $v' resources/modinfo.json &gt; resources/modinfo.tmp &amp;&amp; mv resources/modinfo.tmp resources/modinfo.json" />
+  </Target>
+</Project>

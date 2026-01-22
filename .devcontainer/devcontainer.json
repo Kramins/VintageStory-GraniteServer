@@ -15,7 +15,7 @@
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "uname -a",
 	// Use 'postStartCommand' to run commands after the container starts.
-	"postStartCommand": "dotnet tool install --global dotnet-ef --version 8.0  && dotnet tool install csharpier --global && dotnet tool install code-butler --global && sudo chown vintagestory:vintagestory /data/",
+	"postStartCommand": "dotnet tool install --global dotnet-ef --version 8.0  && dotnet tool install csharpier --global && dotnet tool install code-butler --global && sudo chown vintagestory:vintagestory /data/ && sudo chgrp docker /var/run/docker.sock && newgrp docker",
 	// Configure tool-specific properties.
 	"customizations": {
 		"vscode": {
@@ -30,6 +30,9 @@
 				"adrianwilczynski.csharp-to-typescript"
 			]
 		}
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
 	}
 	// Set the default user for the container to 'vintagestory' (non-root best practice)
 	// "remoteUser": "vintagestory"

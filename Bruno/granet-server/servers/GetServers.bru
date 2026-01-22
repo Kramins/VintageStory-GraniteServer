@@ -1,0 +1,30 @@
+meta {
+  name: GetServers
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://{{HOST}}/api/servers
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:multipart-form {
+  playername: Dalraz
+}
+
+script:post-response {
+  let data = res.body;
+  bru.setEnvVar("serverId", data.data[0].id);
+  
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

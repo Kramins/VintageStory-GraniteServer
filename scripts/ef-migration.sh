@@ -33,7 +33,7 @@ set -e  # Exit on error
 
 # Configuration
 WORKSPACE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DATA_PROJECT="${WORKSPACE_ROOT}/GraniteServer.Data"
+DATA_PROJECT="${WORKSPACE_ROOT}/Granite.Data"
 MIGRATIONS_POSTGRES="${DATA_PROJECT}/Migrations/Postgres"
 MIGRATIONS_SQLITE="${DATA_PROJECT}/Migrations/Sqlite"
 
@@ -64,7 +64,7 @@ log_warning() {
 # Validate project exists
 validate_project() {
     if [ ! -d "$DATA_PROJECT" ]; then
-        log_error "GraniteServer.Data project not found at $DATA_PROJECT"
+        log_error "Granite.Data project not found at $DATA_PROJECT"
         exit 1
     fi
     log_info "Using project: $DATA_PROJECT"
