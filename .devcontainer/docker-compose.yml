@@ -37,7 +37,7 @@ services:
       - "42420:42420"
       - "5000:5000"
       - "3000:3000"
-    user: vintagestory
+    # user: vintagestory
     depends_on:
       - postgres
 
