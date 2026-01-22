@@ -78,6 +78,7 @@ public class JwtTokenService
         {
             Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddMinutes(_options.JwtExpiryMinutes),
+            NotBefore = DateTime.UtcNow.AddMinutes(-5),
             SigningCredentials = _signingCredentials,
             Issuer = "GraniteServer",
             Audience = "GraniteServerClient",
@@ -142,7 +143,12 @@ public class JwtTokenService
                 return null;
 
             var jwtToken = tokenHandler.ReadJwtToken(token);
-            return jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value;
+            var nameClaim = jwtToken.Claims.FirstOrDefault(c =>
+                c.Type == ClaimTypes.Name
+                || c.Type == JwtRegisteredClaimNames.UniqueName
+                || c.Type == "name"
+            );
+            return nameClaim?.Value;
         }
         catch
         {
