@@ -4,7 +4,16 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <SpaRoot>ClientApp\</SpaRoot>
+    <SpaRoot>ClientApp/</SpaRoot>
+    <ClientDist>$(SpaRoot)dist/</ClientDist>
+    <BuildWebApp Condition="'$(BuildWebApp)'=='' and '$(Configuration)'=='Release'">true</BuildWebApp>
+    <BuildWebApp Condition="'$(BuildWebApp)'==''">false</BuildWebApp>
+    <IncludeClientAppInPublish Condition="'$(IncludeClientAppInPublish)'==''">true</IncludeClientAppInPublish>
+    <PackageOutputRoot Condition="'$(PackageOutputRoot)'==''">$(MSBuildThisFileDirectory)..\artifacts\</PackageOutputRoot>
+    <PackageVersion Condition="'$(PackageVersion)'=='' and '$(Version)'!=''">$(Version)</PackageVersion>
+    <PackageVersion Condition="'$(PackageVersion)'=='' and '$(Version)'==''">1.0.0</PackageVersion>
+    <PackageName Condition="'$(PackageName)'==''">Granite.Server-$(PackageVersion)-$(Configuration)</PackageName>
+    <PackageFormats Condition="'$(PackageFormats)'==''">zip</PackageFormats>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,15 +29,48 @@
     <ProjectReference Include="..\Granite.Common\Granite.Common.csproj" />
   </ItemGroup>
 
-  <!-- Build ClientApp during build when BuildWebApp=true or in Release mode -->
-  <Target Name="BuildClientApp" BeforeTargets="Build" Condition="'$(BuildWebApp)' == 'true' OR '$(Configuration)' == 'Release'">
-    <Exec WorkingDirectory="$(SpaRoot)" Command="npm install" />
+  <!-- Build ClientApp before build/publish when enabled -->
+  <Target Name="BuildClientApp" BeforeTargets="PrepareForPublish;Build" Condition="'$(BuildWebApp)' == 'true'">
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm --version" />
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm ci" />
     <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
   </Target>
 
   <!-- Include built client files in output directory -->
   <ItemGroup>
-    <Content Include="$(SpaRoot)dist\**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="$(SpaRoot)dist/**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="$(SpaRoot)dist/**" Condition="'$(IncludeClientAppInPublish)'=='true'">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
+
+  <!-- Package publish output into artifacts -->
+  <Target Name="PackageServer" DependsOnTargets="Publish">
+    <PropertyGroup>
+      <_PublishOutput>$(PublishDir)</_PublishOutput>
+      <_PackageRoot>$(PackageOutputRoot)server\$(PackageName)\</_PackageRoot>
+      <_PackagePublishDir>$(_PackageRoot)publish\</_PackagePublishDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(PackageOutputRoot)server" />
+    <MakeDir Directories="$(_PackagePublishDir)" />
+
+    <ItemGroup>
+      <_PublishedFiles Include="$(_PublishOutput)**\*" />
+      <_ZipFormat Include="zip" Condition="'$(PackageFormats)'=='' OR $(PackageFormats.Contains('zip'))" />
+      <_TarFormat Include="tar" Condition="$(PackageFormats.Contains('tar'))" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(_PublishedFiles)" DestinationFiles="@(_PublishedFiles->'$(_PackagePublishDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+
+    <Delete Files="$(PackageOutputRoot)server\$(PackageName).zip" />
+    <ZipDirectory SourceDirectory="$(_PackagePublishDir)" DestinationFile="$(PackageOutputRoot)server\$(PackageName).zip" Condition="'@(_ZipFormat)'!=''" />
+
+    <Tar SourceDirectory="$(_PackagePublishDir)" DestinationFile="$(PackageOutputRoot)server\$(PackageName).tar.gz" CompressionType="GZip" Condition="'@(_TarFormat)'!=''" />
+  </Target>
+
+  <Target Name="Package" DependsOnTargets="PackageServer" />
 
 </Project>
