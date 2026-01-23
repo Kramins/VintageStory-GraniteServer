@@ -12,10 +12,12 @@ namespace Granite.Server.Controllers;
 [ApiController]
 public class ServersController : ControllerBase
 {
+    private readonly ILogger<ServersController> _logger;
     private ServersService _serversService;
 
-    public ServersController(ServersService serversService)
+    public ServersController(ILogger<ServersController> logger, ServersService serversService)
     {
+        _logger = logger;
         _serversService = serversService;
     }
     [HttpGet]

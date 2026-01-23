@@ -11,14 +11,17 @@ namespace Granite.Server.Services;
 
 public class ServerPlayersService
 {
+    private readonly ILogger<ServerPlayersService> _logger;
     private PersistentMessageBusService _messageBus;
     private GraniteDataContext _dbContext;
 
     public ServerPlayersService(
+        ILogger<ServerPlayersService> logger,
         PersistentMessageBusService messageBus,
         GraniteDataContext dbContext
     )
     {
+        _logger = logger;
         _messageBus = messageBus;
         _dbContext = dbContext;
     }

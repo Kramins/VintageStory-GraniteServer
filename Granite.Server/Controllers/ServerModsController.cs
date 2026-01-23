@@ -13,6 +13,12 @@ namespace Granite.Server.Controllers;
 [Route("api/{serverid:guid}/mods")]
 public class ServerModsController : ControllerBase
 {
+    private readonly ILogger<ServerModsController> _logger;
+
+    public ServerModsController(ILogger<ServerModsController> logger)
+    {
+        _logger = logger;
+    }
     [HttpGet]
     public Task<ActionResult<JsonApiDocument<List<ModDTO>>>> GetMods([FromRoute] Guid serverid)
     {

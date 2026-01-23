@@ -10,10 +10,12 @@ namespace Granite.Server.Services;
 /// </summary>
 public class BasicAuthService
 {
+    private readonly ILogger<BasicAuthService> _logger;
     private readonly GraniteServerOptions _options;
 
-    public BasicAuthService(IOptions<GraniteServerOptions> options)
+    public BasicAuthService(ILogger<BasicAuthService> logger, IOptions<GraniteServerOptions> options)
     {
+        _logger = logger;
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
     }
 

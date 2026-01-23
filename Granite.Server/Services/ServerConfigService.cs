@@ -10,11 +10,13 @@ namespace Granite.Server.Services;
 
 public class ServerConfigService
 {
+    private readonly ILogger<ServerConfigService> _logger;
     private readonly PersistentMessageBusService _messageBus;
     private readonly GraniteDataContext _dbContext;
 
-    public ServerConfigService(PersistentMessageBusService messageBus, GraniteDataContext dbContext)
+    public ServerConfigService(ILogger<ServerConfigService> logger, PersistentMessageBusService messageBus, GraniteDataContext dbContext)
     {
+        _logger = logger;
         _messageBus = messageBus;
         _dbContext = dbContext;
     }

@@ -77,8 +77,9 @@ public class GraniteHub : Hub
             }
 
             _logger.LogTrace(
-                "[SignalR] Received {MessageType} from mod, publishing to message bus",
-                message.GetType().Name
+                "[SignalR] Received {MessageType} from {serverId}, publishing to message bus",
+                message.GetType().Name,
+                message.OriginServerId
             );
 
             if (message is EventMessage @event)
@@ -174,13 +175,13 @@ public class GraniteHub : Hub
     {
         var connectionId = Context.ConnectionId;
         var serverIdClaim = Context.User?.FindFirst("ServerId")?.Value;
-        
+
         _logger.LogInformation(
             "[GraniteHub] Connection attempt from {ConnectionId}, ServerId claim: {ServerId}",
             connectionId,
             serverIdClaim ?? "NONE"
         );
-        
+
         if (string.IsNullOrEmpty(serverIdClaim))
         {
             _logger.LogWarning(
@@ -192,7 +193,7 @@ public class GraniteHub : Hub
         }
 
         var serverId = Guid.Parse(serverIdClaim!);
-        
+
         _logger.LogInformation(
             "[GraniteHub] Game server {ServerId} connected with connection ID {ConnectionId}",
             serverId,

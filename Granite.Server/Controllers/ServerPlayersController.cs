@@ -13,14 +13,17 @@ namespace Granite.Server.Controllers;
 [Route("api/{serverId:guid}/players")]
 public class ServerPlayersController : ControllerBase
 {
+    private readonly ILogger<ServerPlayersController> _logger;
     private ServerPlayersService _playerService;
     private SieveProcessor _sieveProcessor;
 
     public ServerPlayersController(
+        ILogger<ServerPlayersController> logger,
         ServerPlayersService playerService,
         SieveProcessor sieveProcessor
     )
     {
+        _logger = logger;
         _playerService = playerService;
         _sieveProcessor = sieveProcessor;
     }

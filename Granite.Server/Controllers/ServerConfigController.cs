@@ -11,10 +11,12 @@ namespace Granite.Server.Controllers;
 [Route("api/{serverId:guid}/config")]
 public class ServerConfigController : ControllerBase
 {
+    private readonly ILogger<ServerConfigController> _logger;
     private readonly ServerConfigService _configService;
 
-    public ServerConfigController(ServerConfigService configService)
+    public ServerConfigController(ILogger<ServerConfigController> logger, ServerConfigService configService)
     {
+        _logger = logger;
         _configService = configService;
     }
 

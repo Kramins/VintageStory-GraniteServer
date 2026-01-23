@@ -12,6 +12,12 @@ namespace Granite.Server.Controllers;
 [Route("api/{serverid:guid}/world")]
 public class ServerWorldController : ControllerBase
 {
+    private readonly ILogger<ServerWorldController> _logger;
+
+    public ServerWorldController(ILogger<ServerWorldController> logger)
+    {
+        _logger = logger;
+    }
     [HttpGet("collectibles")]
     public Task<ActionResult<List<CollectibleObjectDTO>>> GetCollectibles([FromRoute] Guid serverid)
     {

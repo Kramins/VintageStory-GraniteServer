@@ -16,12 +16,14 @@ namespace Granite.Server.Services;
 /// </summary>
 public class JwtTokenService
 {
+    private readonly ILogger<JwtTokenService> _logger;
     private readonly GraniteServerOptions _options;
     private readonly SecurityKey _securityKey;
     private readonly SigningCredentials _signingCredentials;
 
-    public JwtTokenService(IOptions<GraniteServerOptions> options)
+    public JwtTokenService(ILogger<JwtTokenService> logger, IOptions<GraniteServerOptions> options)
     {
+        _logger = logger;
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
 
         if (string.IsNullOrWhiteSpace(_options.JwtSecret))

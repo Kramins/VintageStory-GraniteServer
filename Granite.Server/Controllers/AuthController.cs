@@ -12,18 +12,21 @@ namespace Granite.Server.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
+    private readonly ILogger<AuthController> _logger;
     private readonly BasicAuthService _basicAuthService;
     private readonly JwtTokenService _jwtTokenService;
     private readonly GraniteServerOptions _options;
     private readonly GraniteDataContext _dbContext;
 
     public AuthController(
+        ILogger<AuthController> logger,
         BasicAuthService basicAuthService,
         JwtTokenService jwtTokenService,
         IOptions<GraniteServerOptions> options,
         GraniteDataContext dbContext
     )
     {
+        _logger = logger;
         _basicAuthService = basicAuthService;
         _jwtTokenService = jwtTokenService;
         _options = options.Value;

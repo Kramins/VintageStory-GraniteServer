@@ -7,10 +7,12 @@ namespace Granite.Server.Services;
 
 public class ServersService
 {
+    private readonly ILogger<ServersService> _logger;
     private readonly GraniteDataContext _dbContext;
 
-    public ServersService(GraniteDataContext dbContext)
+    public ServersService(ILogger<ServersService> logger, GraniteDataContext dbContext)
     {
+        _logger = logger;
         _dbContext = dbContext;
     }
 

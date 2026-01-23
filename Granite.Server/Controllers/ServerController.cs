@@ -12,6 +12,12 @@ namespace Granite.Server.Controllers;
 [Route("api/{serverid:guid}/server")]
 public class ServerController : ControllerBase
 {
+    private readonly ILogger<ServerController> _logger;
+
+    public ServerController(ILogger<ServerController> logger)
+    {
+        _logger = logger;
+    }
     [HttpGet("status")]
     public Task<ActionResult<ServerStatusDTO>> GetServerStatus([FromRoute] Guid serverid)
     {
