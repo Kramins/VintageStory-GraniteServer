@@ -21,16 +21,16 @@ namespace Granite.Server.Hubs;
 /// SignalR Hub for Granite Mod communication
 /// </summary>
 [Authorize]
-public class GraniteHub : Hub
+public class ModHub : Hub
 {
     private readonly PersistentMessageBusService _messageBus;
     private readonly ServersService _serversService;
-    private readonly ILogger<GraniteHub> _logger;
+    private readonly ILogger<ModHub> _logger;
     private static readonly ConcurrentDictionary<string, IDisposable> _subscriptions = new();
 
-    public GraniteHub(
+    public ModHub(
         PersistentMessageBusService messageBus,
-        ILogger<GraniteHub> logger,
+        ILogger<ModHub> logger,
         ServersService serversService
     )
     {
