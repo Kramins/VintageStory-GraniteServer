@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Granite.Data.Migrations.Postgres
 {
     [DbContext(typeof(GraniteDataContextPostgres))]
-    [Migration("20260123003641_v1.0.0")]
+    [Migration("20260123033235_v1.0.0")]
     partial class v100
     {
         /// <inheritdoc />
@@ -353,6 +353,15 @@ namespace Granite.Data.Migrations.Postgres
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<bool?>("AllowFallingBlocks")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("AllowFireSpread")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("AllowPvP")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -365,10 +374,28 @@ namespace Granite.Data.Migrations.Postgres
                     b.Property<DateTime?>("LastSeenAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("MaxChunkRadius")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxClients")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Password")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("Port")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WelcomeMessage")
+                        .HasColumnType("text");
+
+                    b.Property<string>("WhitelistMode")
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 

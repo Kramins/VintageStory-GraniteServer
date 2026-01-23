@@ -57,7 +57,16 @@ namespace Granite.Data.Migrations.Sqlite
                     AccessToken = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     LastSeenAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsOnline = table.Column<bool>(type: "INTEGER", nullable: false)
+                    IsOnline = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Port = table.Column<int>(type: "INTEGER", nullable: true),
+                    WelcomeMessage = table.Column<string>(type: "TEXT", nullable: true),
+                    MaxClients = table.Column<int>(type: "INTEGER", nullable: true),
+                    Password = table.Column<string>(type: "TEXT", nullable: true),
+                    MaxChunkRadius = table.Column<int>(type: "INTEGER", nullable: true),
+                    WhitelistMode = table.Column<string>(type: "TEXT", nullable: true),
+                    AllowPvP = table.Column<bool>(type: "INTEGER", nullable: true),
+                    AllowFireSpread = table.Column<bool>(type: "INTEGER", nullable: true),
+                    AllowFallingBlocks = table.Column<bool>(type: "INTEGER", nullable: true)
                 },
                 constraints: table =>
                 {

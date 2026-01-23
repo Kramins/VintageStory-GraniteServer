@@ -57,7 +57,16 @@ namespace Granite.Data.Migrations.Postgres
                     AccessToken = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     LastSeenAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    IsOnline = table.Column<bool>(type: "boolean", nullable: false)
+                    IsOnline = table.Column<bool>(type: "boolean", nullable: false),
+                    Port = table.Column<int>(type: "integer", nullable: true),
+                    WelcomeMessage = table.Column<string>(type: "text", nullable: true),
+                    MaxClients = table.Column<int>(type: "integer", nullable: true),
+                    Password = table.Column<string>(type: "text", nullable: true),
+                    MaxChunkRadius = table.Column<int>(type: "integer", nullable: true),
+                    WhitelistMode = table.Column<string>(type: "text", nullable: true),
+                    AllowPvP = table.Column<bool>(type: "boolean", nullable: true),
+                    AllowFireSpread = table.Column<bool>(type: "boolean", nullable: true),
+                    AllowFallingBlocks = table.Column<bool>(type: "boolean", nullable: true)
                 },
                 constraints: table =>
                 {

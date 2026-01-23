@@ -345,6 +345,15 @@ namespace Granite.Data.Migrations.Sqlite
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool?>("AllowFallingBlocks")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool?>("AllowFireSpread")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool?>("AllowPvP")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -357,9 +366,27 @@ namespace Granite.Data.Migrations.Sqlite
                     b.Property<DateTime?>("LastSeenAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("MaxChunkRadius")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("MaxClients")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Password")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("Port")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("WelcomeMessage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WhitelistMode")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
