@@ -58,16 +58,7 @@ public class ModHub : Hub
                 throw new InvalidOperationException($"Unknown messageType: {messageType}");
             }
 
-            // Configure JSON options to handle property name case-insensitivity and nested types
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            };
-
-            var message =
-                (MessageBusMessage?)JsonSerializer.Deserialize(payload.GetRawText(), type, options)
-                ?? throw new InvalidOperationException("Failed to deserialize message");
+            var message = DeserializeEvent(payload, type);
 
             var isValid = ValidateMessage(message);
             if (!isValid)
@@ -132,6 +123,23 @@ public class ModHub : Hub
         }
 
         return true;
+    }
+
+    public MessageBusMessage DeserializeEvent(JsonElement payload, Type messageType)
+    {
+        // Configure JSON options to handle property name case-insensitivity and nested types
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        };
+
+        var message =
+            (MessageBusMessage?)
+                JsonSerializer.Deserialize(payload.GetRawText(), messageType, options)
+            ?? throw new InvalidOperationException("Failed to deserialize message");
+
+        return message;
     }
 
     private static Type? FindMessageTypeByName(string messageType)
