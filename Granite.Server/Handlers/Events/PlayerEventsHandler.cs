@@ -151,18 +151,39 @@ public class PlayerEventsHandler
 
         if (playerEventData.SessionId.HasValue)
         {
-            // TODO: What if session already exists?
-            var playerSessionEntity = new PlayerSessionEntity()
-            {
-                Id = playerEventData.SessionId.Value,
-                PlayerId = playerEntity.Id,
-                ServerId = command.OriginServerId,
-                JoinDate = DateTime.UtcNow,
-                IpAddress = playerEventData.IpAddress,
-                PlayerName = playerEventData.PlayerName,
-            };
+            // Close any open sessions for this player/server before creating a new one
+            var openSessions = _dataContext.PlayerSessions
+                .Where(ps =>
+                    ps.PlayerId == playerEntity.Id
+                    && ps.ServerId == command.OriginServerId
+                    && ps.LeaveDate == null
+                )
+                .ToList();
 
-            _dataContext.PlayerSessions.Add(playerSessionEntity);
+            foreach (var session in openSessions)
+            {
+                session.LeaveDate = DateTime.UtcNow;
+                session.Duration = (session.LeaveDate - session.JoinDate)?.TotalSeconds;
+                _dataContext.PlayerSessions.Update(session);
+            }
+
+            // Avoid duplicate insert if this session already exists
+            var existing = _dataContext.PlayerSessions.FirstOrDefault(ps => ps.Id == playerEventData.SessionId.Value);
+            if (existing == null)
+            {
+                var playerSessionEntity = new PlayerSessionEntity()
+                {
+                    Id = playerEventData.SessionId.Value,
+                    PlayerId = playerEntity.Id,
+                    ServerId = command.OriginServerId,
+                    JoinDate = DateTime.UtcNow,
+                    IpAddress = playerEventData.IpAddress,
+                    PlayerName = playerEventData.PlayerName,
+                };
+
+                _dataContext.PlayerSessions.Add(playerSessionEntity);
+            }
+
             _dataContext.SaveChanges();
         }
 

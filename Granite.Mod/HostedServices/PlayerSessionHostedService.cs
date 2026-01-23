@@ -1,4 +1,3 @@
-
 using GraniteServer.Messaging.Events;
 using GraniteServer.Mod;
 using GraniteServer.Services;
@@ -16,7 +15,6 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
     private CancellationTokenSource? _cts;
 
     // private readonly List<Task> _pending = new();
-    private readonly object _lockObject = new();
     private bool _isShuttingDown;
     private readonly ILogger _logger;
 
@@ -47,20 +45,7 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
     {
         if (_isShuttingDown)
             return;
-
-        var playerSessionId = Guid.Parse(byPlayer.ServerData.CustomPlayerData["GraniteSessionId"]);
-        var leaveEvent = _messageBus.CreateEvent<PlayerLeaveEvent>(
-            _config.ServerId,
-            e =>
-            {
-                e.Data!.PlayerUID = byPlayer.PlayerUID;
-                e.Data!.PlayerName = byPlayer.PlayerName;
-                e.Data!.SessionId = playerSessionId;
-                e.Data!.IpAddress = byPlayer.IpAddress;
-            }
-        );
-        _messageBus.Publish(leaveEvent);
-        byPlayer.ServerData.CustomPlayerData.Remove("GraniteSessionId");
+        PublishLeaveFromPlayer(byPlayer);
     }
 
     private void OnPlayerJoin(IServerPlayer byPlayer)
@@ -92,6 +77,19 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
 
         try
         {
+            // Flush sessions for any players still connected at shutdown
+            foreach (var player in _api.Server.Players)
+            {
+                PublishLeaveFromPlayer(player);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Failed to flush active player sessions on shutdown: {ex}");
+        }
+
+        try
+        {
             // lock (_lockObject)
             // {
             //     if (_pending.Count > 0)
@@ -109,6 +107,40 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
         catch (Exception ex)
         {
             _logger.Error($"Error awaiting pending tasks during shutdown: {ex}");
+        }
+    }
+
+    private void PublishLeaveFromPlayer(IServerPlayer player)
+    {
+        if (!player.ServerData.CustomPlayerData.TryGetValue("GraniteSessionId", out var sessionObj))
+        {
+            return;
+        }
+
+        if (!Guid.TryParse(sessionObj, out var sessionId))
+        {
+            return;
+        }
+
+        var leaveEvent = _messageBus.CreateEvent<PlayerLeaveEvent>(
+            _config.ServerId,
+            e =>
+            {
+                e.Data!.PlayerUID = player.PlayerUID;
+                e.Data!.PlayerName = player.PlayerName;
+                e.Data!.SessionId = sessionId;
+                e.Data!.IpAddress = player.IpAddress;
+            }
+        );
+
+        try
+        {
+            _messageBus.Publish(leaveEvent);
+            player.ServerData.CustomPlayerData.Remove("GraniteSessionId");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Failed to publish leave event for {player.PlayerUID}: {ex}");
         }
     }
 
