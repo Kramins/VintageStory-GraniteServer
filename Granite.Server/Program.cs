@@ -161,7 +161,7 @@ app.UseDefaultFiles();
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllers();
-    endpoints.MapHub<GraniteHub>("/hub/mod");
+    endpoints.MapHub<ModHub>("/hub/mod");
     endpoints.MapHub<ClientHub>("/hub/client");
 });
 
