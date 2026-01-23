@@ -1,4 +1,3 @@
-
 using GraniteServer.Messaging.Commands;
 using GraniteServer.Messaging.Events;
 using GraniteServer.Messaging.Handlers.Commands;
@@ -12,7 +11,9 @@ namespace GraniteServer.Mod.Handlers.Commands;
 public class PlayerCommandHandlers
     : ICommandHandler<KickPlayerCommand>,
         ICommandHandler<BanPlayerCommand>,
-        ICommandHandler<UnbanPlayerCommand>
+        ICommandHandler<UnbanPlayerCommand>,
+        ICommandHandler<WhitelistPlayerCommand>,
+        ICommandHandler<UnwhitelistPlayerCommand>
 {
     private ICoreServerAPI _api;
     private ServerCommandService _commandService;
@@ -68,7 +69,7 @@ public class PlayerCommandHandlers
         }
     }
 
-    async Task ICommandHandler<BanPlayerCommand>.Handle(BanPlayerCommand command)
+    Task ICommandHandler<BanPlayerCommand>.Handle(BanPlayerCommand command)
     {
         var playerId = command.Data!.PlayerId;
         var playerName = command.Data.PlayerName;
@@ -107,6 +108,8 @@ public class PlayerCommandHandlers
             }
         );
         _messageBus.Publish(bannedEvent);
+
+        return Task.CompletedTask;
     }
 
     Task ICommandHandler.Handle(object command)
@@ -123,9 +126,63 @@ public class PlayerCommandHandlers
 
         var unbannedEvent = _messageBus.CreateEvent<PlayerUnbannedEvent>(
             _config.ServerId,
-            e => { e.Data!.PlayerUID = playerId; }
+            e =>
+            {
+                e.Data!.PlayerUID = playerId;
+            }
         );
         _messageBus.Publish(unbannedEvent);
+
+        return Task.CompletedTask;
+    }
+
+    Task ICommandHandler<WhitelistPlayerCommand>.Handle(WhitelistPlayerCommand command)
+    {
+        var playerId = command.Data!.PlayerId;
+        var reason = command.Data.Reason;
+
+        var isWhitelisted = PlayerDataManager.WhitelistedPlayers.Any(wp =>
+            wp.PlayerUID == playerId
+        );
+        if (isWhitelisted)
+        {
+            PlayerDataManager.WhitelistedPlayers.RemoveAll(wp => wp.PlayerUID == playerId);
+        }
+
+        PlayerDataManager.WhitelistedPlayers.Add(
+            new PlayerEntry { PlayerUID = playerId, Reason = reason }
+        );
+
+        PlayerDataManager.whiteListDirty = true;
+
+        var whitelistedEvent = _messageBus.CreateEvent<PlayerWhitelistedEvent>(
+            _config.ServerId,
+            e =>
+            {
+                e.Data!.PlayerUID = playerId;
+                // e.Data!.Reason = reason;
+            }
+        );
+        _messageBus.Publish(whitelistedEvent);
+
+        return Task.CompletedTask;
+    }
+
+    Task ICommandHandler<UnwhitelistPlayerCommand>.Handle(UnwhitelistPlayerCommand command)
+    {
+        var playerId = command.Data!.PlayerId;
+
+        PlayerDataManager.WhitelistedPlayers.RemoveAll(pe => pe.PlayerUID == playerId);
+        PlayerDataManager.whiteListDirty = true;
+
+        var unwhitelistedEvent = _messageBus.CreateEvent<PlayerUnwhitelistedEvent>(
+            _config.ServerId,
+            e =>
+            {
+                e.Data!.PlayerUID = playerId;
+            }
+        );
+        _messageBus.Publish(unwhitelistedEvent);
 
         return Task.CompletedTask;
     }
