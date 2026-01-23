@@ -47,21 +47,11 @@ public class ServerReadyEventHandler : IEventHandler<ServerReadyEvent>
     {
         try
         {
-            _logger.LogInformation(
-                "Issuing SyncServerConfigCommand to server {ServerId}",
-                serverId
-            );
-
             var syncCommand = _messageBus.CreateCommand<SyncServerConfigCommand>(
                 serverId,
                 cmd => { }
             );
             await _messageBus.PublishCommandAsync(syncCommand);
-
-            _logger.LogInformation(
-                "SyncServerConfigCommand sent successfully to server {ServerId}",
-                serverId
-            );
         }
         catch (Exception ex)
         {

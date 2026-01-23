@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Reactive.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Granite.Common.Dto;
@@ -48,6 +49,10 @@ public class SignalRClientHostedService : IHostedService, IDisposable
         _httpClient = new HttpClient();
     }
 
+    /// <summary>
+    /// Starts the SignalR client service. Validates configuration and initiates connection to the server.
+    /// If connection fails, starts the reconnection loop in the background.
+    /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.Notification("[SignalR] Starting SignalR client service...");
@@ -73,6 +78,9 @@ public class SignalRClientHostedService : IHostedService, IDisposable
         }
     }
 
+    /// <summary>
+    /// Stops the SignalR client service. Cancels reconnection attempts, disposes subscriptions, and closes the connection.
+    /// </summary>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.Notification("[SignalR] Stopping SignalR client service...");
@@ -100,7 +108,18 @@ public class SignalRClientHostedService : IHostedService, IDisposable
 
     private async Task ConnectAsync(CancellationToken cancellationToken)
     {
-        // First, exchange access token for JWT
+        await ExchangeAccessTokenForJwtAsync(cancellationToken);
+        BuildHubConnection();
+        RegisterHubEventHandlers(cancellationToken);
+        await StartHubConnectionAsync(cancellationToken);
+        SubscribeToLocalMessageBus();
+    }
+
+    /// <summary>
+    /// Exchanges the server's access token for a JWT token from the authentication endpoint.
+    /// </summary>
+    private async Task ExchangeAccessTokenForJwtAsync(CancellationToken cancellationToken)
+    {
         try
         {
             _logger.Notification("[SignalR] Exchanging access token for JWT...");
@@ -138,8 +157,13 @@ public class SignalRClientHostedService : IHostedService, IDisposable
             _logger.Error($"[SignalR] Failed to obtain JWT token: {ex.Message}");
             throw;
         }
+    }
 
-        // Now connect to SignalR with the JWT token
+    /// <summary>
+    /// Builds and initializes the SignalR hub connection with authentication and reconnection settings.
+    /// </summary>
+    private void BuildHubConnection()
+    {
         var hubUrl = $"{_config.GraniteServerHost.TrimEnd('/')}{_config.HubPath}";
         _logger.Notification($"[SignalR] Connecting to hub at {hubUrl}");
 
@@ -155,46 +179,55 @@ public class SignalRClientHostedService : IHostedService, IDisposable
                 _config.ReconnectDelaysSeconds.Select(s => TimeSpan.FromSeconds(s)).ToArray()
             )
             .Build();
+    }
 
-        // Register handlers for incoming messages
-        _hubConnection.On<MessageBusMessage>(SignalRHubMethods.ReceiveEvent, OnReceiveEventAsync);
+    /// <summary>
+    /// Registers message handlers for incoming events from the server hub.
+    /// </summary>
+    private void RegisterHubEventHandlers(CancellationToken cancellationToken)
+    {
+        if (_hubConnection == null)
+            return;
 
-        // Handle reconnection events
-        _hubConnection.Reconnecting += error =>
-        {
-            _logger.Warning($"[SignalR] Connection lost. Reconnecting... ({error?.Message})");
-            _connectionState.SetConnected(false);
-            return Task.CompletedTask;
-        };
+        // Register handler for receiving events from the server
+        _hubConnection.On<System.Text.Json.JsonElement>(
+            SignalRHubMethods.ReceiveEvent,
+            OnReceiveEventAsync
+        );
 
-        _hubConnection.Reconnected += connectionId =>
-        {
-            _logger.Notification(
-                $"[SignalR] Reconnected successfully. ConnectionId: {connectionId}"
-            );
-            // Process queued messages after reconnection
-            _ = ProcessQueuedMessagesAsync();
-            _connectionState.SetConnected(true);
-            return Task.CompletedTask;
-        };
+        // Handle disconnection and reconnection events
+        _hubConnection.Reconnecting += error => OnHubReconnecting(error);
 
-        _hubConnection.Closed += async error =>
-        {
-            _logger.Error($"[SignalR] Connection closed: {error?.Message}");
-            _connectionState.SetConnected(false);
-            await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
-            _ = ReconnectLoopAsync();
-        };
+        _hubConnection.Reconnected += connectionId => OnHubReconnected(connectionId);
 
-        await _hubConnection.StartAsync(cancellationToken);
+        _hubConnection.Closed += error => OnHubClosed(error, cancellationToken);
+    }
+
+    /// <summary>
+    /// Starts the SignalR hub connection and sets the connection state.
+    /// </summary>
+    private async Task StartHubConnectionAsync(CancellationToken cancellationToken)
+    {
+        await _hubConnection!.StartAsync(cancellationToken);
         _logger.Notification(
             $"[SignalR] Connected successfully. ConnectionId: {_hubConnection.ConnectionId}"
         );
         _connectionState.SetConnected(true);
+    }
 
-        // Subscribe to local MessageBus and forward events to server
+    /// <summary>
+    /// Subscribes to the local message bus and forwards events to the server via SignalR.
+    /// Handles errors and attempts recovery without terminating the subscription.
+    /// </summary>
+    private void SubscribeToLocalMessageBus()
+    {
         _messageBusSubscription = _messageBus
             .GetObservable()
+            .Where(msg =>
+                // Only forward messages that originated from this server
+                // Don't echo back messages received from the control plane
+                msg.OriginServerId == _config.ServerId
+            )
             .SelectMany(message => HandleMessageAsync(message))
             .Catch<MessageBusMessage, Exception>(error =>
             {
@@ -219,15 +252,70 @@ public class SignalRClientHostedService : IHostedService, IDisposable
             );
     }
 
-    private void OnReceiveEventAsync(MessageBusMessage message)
+    /// <summary>
+    /// Handles the hub reconnection event. Marks the server as offline during disconnection.
+    /// </summary>
+    private Task OnHubReconnecting(Exception? error)
+    {
+        _logger.Warning($"[SignalR] Connection lost. Reconnecting... ({error?.Message})");
+        _connectionState.SetConnected(false);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Handles the hub reconnected event. Processes queued messages and marks server as online.
+    /// </summary>
+    private Task OnHubReconnected(string? connectionId)
+    {
+        _logger.Notification($"[SignalR] Reconnected successfully. ConnectionId: {connectionId}");
+        // Process queued messages after reconnection
+        _ = ProcessQueuedMessagesAsync();
+        _connectionState.SetConnected(true);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Handles the hub closed event. Marks server as offline and initiates reconnection loop.
+    /// </summary>
+    private async Task OnHubClosed(Exception? error, CancellationToken cancellationToken)
+    {
+        _logger.Error($"[SignalR] Connection closed: {error?.Message}");
+        _connectionState.SetConnected(false);
+        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+        _ = ReconnectLoopAsync();
+    }
+
+    private void OnReceiveEventAsync(JsonElement payload)
     {
         try
         {
+            var messageType =
+                payload.GetProperty("messageType").GetString()
+                ?? throw new InvalidOperationException("messageType is required");
+
+            var type = FindMessageTypeByName(messageType);
+            if (type == null)
+            {
+                _logger.Error($"[SignalR] Could not find message type: {messageType}");
+                return;
+            }
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            };
+
+            var message =
+                (MessageBusMessage?)JsonSerializer.Deserialize(payload.GetRawText(), type, options)
+                ?? throw new InvalidOperationException("Failed to deserialize message");
+
             if (message.OriginServerId == _config.ServerId)
             {
                 _logger.Debug($"[SignalR] Ignoring own message: {message.MessageType}");
                 return;
             }
+
             _logger.Debug($"[SignalR] Received event: {message.MessageType}");
             _messageBus.Publish(message);
 
@@ -246,6 +334,33 @@ public class SignalRClientHostedService : IHostedService, IDisposable
         }
     }
 
+    private Type? FindMessageTypeByName(string messageType)
+    {
+        return AppDomain
+            .CurrentDomain.GetAssemblies()
+            .SelectMany(assembly =>
+            {
+                try
+                {
+                    return assembly.GetTypes();
+                }
+                catch (System.Reflection.ReflectionTypeLoadException ex)
+                {
+                    return ex.Types.Where(t => t != null)!;
+                }
+            })
+            .FirstOrDefault(t =>
+                t != null
+                && !t.IsAbstract
+                && typeof(MessageBusMessage).IsAssignableFrom(t)
+                && t.Name.Equals(messageType, StringComparison.OrdinalIgnoreCase)
+            );
+    }
+
+    /// <summary>
+    /// Processes messages that were queued while the connection was inactive.
+    /// Attempts to send all queued messages in order after reconnection.
+    /// </summary>
     private async Task ProcessQueuedMessagesAsync()
     {
         _logger.Notification($"[SignalR] Processing {_messageQueue.Count} queued messages...");
@@ -280,6 +395,11 @@ public class SignalRClientHostedService : IHostedService, IDisposable
         }
     }
 
+    /// <summary>
+    /// Processes a message from the local message bus and sends it to the server via SignalR.
+    /// Queues the message if the connection is not currently active.
+    /// Returns the message to allow continuation of the observable stream.
+    /// </summary>
     private IObservable<MessageBusMessage> HandleMessageAsync(MessageBusMessage message)
     {
         return Observable.FromAsync(async () =>
@@ -314,6 +434,10 @@ public class SignalRClientHostedService : IHostedService, IDisposable
         });
     }
 
+    /// <summary>
+    /// Attempts to reconnect to the server hub with exponential backoff delays.
+    /// Continues retrying indefinitely until a successful connection is established or cancellation is requested.
+    /// </summary>
     private async Task ReconnectLoopAsync()
     {
         _reconnectCts?.Cancel();

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Reactive;
 using System.Reactive.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -76,7 +77,8 @@ public class GraniteHub : Hub
             }
 
             _logger.LogTrace(
-                $"[SignalR] Publishing message to bus: {message.GetType().FullName}, Data: {message.Data?.GetType().FullName ?? "null"}"
+                "[SignalR] Received {MessageType} from mod, publishing to message bus",
+                message.GetType().Name
             );
 
             if (message is EventMessage @event)
@@ -157,7 +159,7 @@ public class GraniteHub : Hub
     public async Task AcknowledgeCommand(Guid commandId)
     {
         _logger.LogTrace(
-            "[SignalR] Acknowledged command {CommandId} from connection {ConnectionId}",
+            "[SignalR] Received acknowledgment for command {CommandId} from connection {ConnectionId}",
             commandId,
             Context.ConnectionId
         );
@@ -172,6 +174,13 @@ public class GraniteHub : Hub
     {
         var connectionId = Context.ConnectionId;
         var serverIdClaim = Context.User?.FindFirst("ServerId")?.Value;
+        
+        _logger.LogInformation(
+            "[GraniteHub] Connection attempt from {ConnectionId}, ServerId claim: {ServerId}",
+            connectionId,
+            serverIdClaim ?? "NONE"
+        );
+        
         if (string.IsNullOrEmpty(serverIdClaim))
         {
             _logger.LogWarning(
@@ -183,6 +192,12 @@ public class GraniteHub : Hub
         }
 
         var serverId = Guid.Parse(serverIdClaim!);
+        
+        _logger.LogInformation(
+            "[GraniteHub] Game server {ServerId} connected with connection ID {ConnectionId}",
+            serverId,
+            connectionId
+        );
 
         // Mark server as online
         await _serversService.MarkServerOnlineAsync(serverId);
@@ -201,38 +216,30 @@ public class GraniteHub : Hub
                     || msg.TargetServerId == serverId
                 )
             )
-            .Subscribe(
-                message =>
+            .SelectMany(async message =>
+            {
+                try
                 {
-                    try
-                    {
-                        // Fire-and-forget: SendAsync returns a Task but we don't await it
-                        // to avoid accessing the disposed Hub context
-                        var sendTask = clientProxy.SendAsync(
-                            SignalRHubMethods.ReceiveEvent,
-                            message
-                        );
-                        _ = sendTask.ContinueWith(t =>
-                        {
-                            if (t.IsFaulted)
-                            {
-                                _logger.LogError(
-                                    t.Exception,
-                                    "[SignalR] Error sending message to client {ConnectionId}",
-                                    connectionId
-                                );
-                            }
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(
-                            ex,
-                            "[SignalR] Error queuing message for client {ConnectionId}",
-                            connectionId
-                        );
-                    }
-                },
+                    _logger.LogTrace(
+                        "[SignalR] Sending {MessageType} to mod {ConnectionId}",
+                        message.GetType().Name,
+                        connectionId
+                    );
+                    await clientProxy.SendAsync(SignalRHubMethods.ReceiveEvent, message);
+                    return message;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "[SignalR] Error sending message to client {ConnectionId}",
+                        connectionId
+                    );
+                    return message;
+                }
+            })
+            .Subscribe(
+                _ => { },
                 error =>
                 {
                     // Log error but don't terminate connection
