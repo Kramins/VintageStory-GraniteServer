@@ -78,45 +78,56 @@ public class GraniteMod : ModSystem
     {
         var assembly = Assembly.GetExecutingAssembly();
         var eventHandlerType = typeof(IEventHandler<>);
+        var commandHandlerType = typeof(ICommandHandler<>);
 
         logger?.Notification(
-            $"[Events] Scanning assembly {assembly.GetName().Name} for event handlers..."
+            $"[Handlers] Scanning assembly {assembly.GetName().Name} for event and command handlers..."
         );
 
+        // Find all types that implement IEventHandler<> or ICommandHandler<>
         var handlerTypes = assembly
             .GetTypes()
             .Where(t =>
                 !t.IsAbstract
                 && !t.IsInterface
                 && t.GetInterfaces()
-                    .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == eventHandlerType)
+                    .Any(i =>
+                        (i.IsGenericType && i.GetGenericTypeDefinition() == eventHandlerType)
+                        || (i.IsGenericType && i.GetGenericTypeDefinition() == commandHandlerType)
+                    )
             )
             .ToList();
 
-        logger?.Notification($"[Events] Found {handlerTypes.Count} event handler type(s).");
+        logger?.Notification($"[Handlers] Found {handlerTypes.Count} handler type(s).");
 
         foreach (var handlerType in handlerTypes)
         {
-            logger?.Notification($"[Events] Processing handler type: {handlerType.FullName}");
+            logger?.Notification($"[Handlers] Processing handler type: {handlerType.FullName}");
 
-            var eventHandlerInterfaces = handlerType
+            // Get all event and command handler interfaces
+            var handlerInterfaces = handlerType
                 .GetInterfaces()
-                .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == eventHandlerType)
+                .Where(i =>
+                    i.IsGenericType
+                    && (i.GetGenericTypeDefinition() == eventHandlerType
+                        || i.GetGenericTypeDefinition() == commandHandlerType)
+                )
                 .ToList();
 
-            foreach (var handlerInterface in eventHandlerInterfaces)
+            foreach (var handlerInterface in handlerInterfaces)
             {
                 try
                 {
                     services.AddScoped(handlerInterface, handlerType);
+                    var interfaceName = handlerInterface.GetGenericTypeDefinition().Name;
                     logger?.Notification(
-                        $"[Events] Registered {handlerInterface.FullName} -> {handlerType.FullName}"
+                        $"[Handlers] Registered {interfaceName}<{string.Join(", ", handlerInterface.GetGenericArguments().Select(t => t.Name))}> -> {handlerType.FullName}"
                     );
                 }
                 catch (Exception ex)
                 {
                     logger?.Warning(
-                        $"[Events] Failed to register handler {handlerType.FullName} for interface {handlerInterface.FullName}: {ex.Message}"
+                        $"[Handlers] Failed to register handler {handlerType.FullName} for interface {handlerInterface.FullName}: {ex.Message}"
                     );
                 }
             }
