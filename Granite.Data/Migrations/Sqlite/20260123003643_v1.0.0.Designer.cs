@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Granite.Data.Migrations.Sqlite
 {
     [DbContext(typeof(GraniteDataContextSqlite))]
-    [Migration("20260119013255_v1.0.0")]
+    [Migration("20260123003643_v1.0.0")]
     partial class v100
     {
         /// <inheritdoc />
@@ -19,6 +19,46 @@ namespace Granite.Data.Migrations.Sqlite
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.13");
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.CommandEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResponsePayload")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServerId", "Status", "CreatedAt");
+
+                    b.ToTable("BufferedCommands");
+                });
 
             modelBuilder.Entity("GraniteServer.Data.Entities.ModEntity", b =>
                 {
@@ -314,6 +354,12 @@ namespace Granite.Data.Migrations.Sqlite
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsOnline")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastSeenAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -350,6 +396,17 @@ namespace Granite.Data.Migrations.Sqlite
                     b.HasIndex("ServerId", "RecordedAt");
 
                     b.ToTable("ServerMetrics");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.CommandEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
+                        .WithMany()
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Server");
                 });
 
             modelBuilder.Entity("GraniteServer.Data.Entities.ModReleaseEntity", b =>

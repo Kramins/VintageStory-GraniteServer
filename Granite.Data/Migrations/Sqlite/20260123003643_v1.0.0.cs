@@ -55,7 +55,9 @@ namespace Granite.Data.Migrations.Sqlite
                     Name = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
                     Description = table.Column<string>(type: "TEXT", nullable: true),
                     AccessToken = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    LastSeenAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    IsOnline = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -86,6 +88,31 @@ namespace Granite.Data.Migrations.Sqlite
                         name: "FK_ModReleases_Mods_ModId",
                         column: x => x.ModId,
                         principalTable: "Mods",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "BufferedCommands",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ServerId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    MessageType = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
+                    Payload = table.Column<string>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    SentAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
+                    ResponsePayload = table.Column<string>(type: "TEXT", nullable: true),
+                    ErrorMessage = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BufferedCommands", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BufferedCommands_Servers_ServerId",
+                        column: x => x.ServerId,
+                        principalTable: "Servers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -205,6 +232,11 @@ namespace Granite.Data.Migrations.Sqlite
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_BufferedCommands_ServerId_Status_CreatedAt",
+                table: "BufferedCommands",
+                columns: new[] { "ServerId", "Status", "CreatedAt" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ModReleases_ModId",
                 table: "ModReleases",
                 column: "ModId");
@@ -273,6 +305,9 @@ namespace Granite.Data.Migrations.Sqlite
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "BufferedCommands");
+
             migrationBuilder.DropTable(
                 name: "ModServers");
 

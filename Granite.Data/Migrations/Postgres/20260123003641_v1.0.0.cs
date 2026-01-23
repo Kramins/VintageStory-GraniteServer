@@ -55,7 +55,9 @@ namespace Granite.Data.Migrations.Postgres
                     Name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     Description = table.Column<string>(type: "text", nullable: true),
                     AccessToken = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LastSeenAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsOnline = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -86,6 +88,31 @@ namespace Granite.Data.Migrations.Postgres
                         name: "FK_ModReleases_Mods_ModId",
                         column: x => x.ModId,
                         principalTable: "Mods",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "BufferedCommands",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ServerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    MessageType = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    Payload = table.Column<string>(type: "text", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    SentAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    ResponsePayload = table.Column<string>(type: "text", nullable: true),
+                    ErrorMessage = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BufferedCommands", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BufferedCommands_Servers_ServerId",
+                        column: x => x.ServerId,
+                        principalTable: "Servers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -205,6 +232,11 @@ namespace Granite.Data.Migrations.Postgres
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_BufferedCommands_ServerId_Status_CreatedAt",
+                table: "BufferedCommands",
+                columns: new[] { "ServerId", "Status", "CreatedAt" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ModReleases_ModId",
                 table: "ModReleases",
                 column: "ModId");
@@ -273,6 +305,9 @@ namespace Granite.Data.Migrations.Postgres
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "BufferedCommands");
+
             migrationBuilder.DropTable(
                 name: "ModServers");
 
