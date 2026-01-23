@@ -39,19 +39,22 @@ public class MessageBridgeHostedService : IHostedService
             _eventSubscription = _messageBus
                 .GetObservable()
                 .Where(msg => msg is EventMessage)
-                .Subscribe(
-                    msg =>
+                .SelectMany(async msg =>
+                {
+                    try
                     {
-                        try
-                        {
-                            var evt = (EventMessage)msg;
-                            HandleEventMessage(evt);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "[EventBridge] Exception in message handler");
-                        }
-                    },
+                        var evt = (EventMessage)msg;
+                        await HandleEventMessageAsync(evt);
+                        return msg;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[EventBridge] Exception in message handler");
+                        return msg;
+                    }
+                })
+                .Subscribe(
+                    _ => { },
                     error =>
                     {
                         _logger.LogError(error, "[EventBridge] Error in message bus subscription");
@@ -74,7 +77,7 @@ public class MessageBridgeHostedService : IHostedService
         return Task.CompletedTask;
     }
 
-    private void HandleEventMessage(EventMessage eventMessage)
+    private async Task HandleEventMessageAsync(EventMessage eventMessage)
     {
         _logger.LogInformation($"[EventBridge] Received event: {eventMessage.MessageType}");
         var handlerInterfaceType = typeof(IEventHandler<>).MakeGenericType(eventMessage.GetType());
@@ -101,7 +104,7 @@ public class MessageBridgeHostedService : IHostedService
                     var result = handleMethod!.Invoke(handlerObj, new object[] { eventMessage });
                     if (result is Task task)
                     {
-                        task.GetAwaiter().GetResult();
+                        await task;
                     }
 
                     _logger.LogTrace(

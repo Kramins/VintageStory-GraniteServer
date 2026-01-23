@@ -62,8 +62,8 @@ public class GraniteMod : ModSystem
                 services.AddHostedService<PlayerSessionHostedService>();
                 services.AddHostedService<MessageBridgeHostedService>();
                 services.AddHostedService<SignalRClientHostedService>();
-                services.AddHostedService<ServerMetricsHostedService>();
-                services.AddHostedService<ServerConfigSyncHostedService>();
+                // services.AddHostedService<ServerMetricsHostedService>();
+                services.AddHostedService<ServerReadyHostedService>();
             })
             .Build();
 

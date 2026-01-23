@@ -1,5 +1,6 @@
 using Granite.Common.Messaging.Events;
 using Granite.Server.Handlers.Events;
+using GraniteServer.Handlers.Events;
 using GraniteServer.Messaging.Events;
 using GraniteServer.Messaging.Handlers.Events;
 
@@ -40,6 +41,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ServerConfigEventHandler>();
         services.AddScoped<IEventHandler<ServerConfigSyncedEvent>>(sp =>
             sp.GetRequiredService<ServerConfigEventHandler>()
+        );
+
+        // Register ServerReadyEventHandler and its event handler implementation
+        services.AddScoped<ServerReadyEventHandler>();
+        services.AddScoped<IEventHandler<ServerReadyEvent>>(sp =>
+            sp.GetRequiredService<ServerReadyEventHandler>()
         );
 
         return services;

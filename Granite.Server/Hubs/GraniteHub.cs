@@ -165,8 +165,6 @@ public class GraniteHub : Hub
         await _messageBus.AcknowledgeCommandAsync(commandId);
     }
 
-  
-
     /// <summary>
     /// Called when a client connects. Subscribes the client to message bus events.
     /// </summary>
@@ -190,20 +188,50 @@ public class GraniteHub : Hub
         await _serversService.MarkServerOnlineAsync(serverId);
 
         // Subscribe to all messages from the message bus
+        // Capture the client proxy synchronously since Hub context is only valid during method execution
+        var clientProxy = Clients.Client(connectionId);
+
         var subscription = _messageBus
             .GetObservable()
             .Where(msg =>
                 // Filter messages to only those intended for this server or broadcast messages
-                msg.TargetServerId == MessageBusMessage.BroadcastServerId
-                || msg.TargetServerId == serverId
+                msg.OriginServerId != serverId
+                && (
+                    msg.TargetServerId == MessageBusMessage.BroadcastServerId
+                    || msg.TargetServerId == serverId
+                )
             )
             .Subscribe(
                 message =>
                 {
-                    // Broadcast event to this specific client
-                    Clients
-                        .Client(connectionId)
-                        .SendAsync(SignalRHubMethods.ReceiveEvent, message);
+                    try
+                    {
+                        // Fire-and-forget: SendAsync returns a Task but we don't await it
+                        // to avoid accessing the disposed Hub context
+                        var sendTask = clientProxy.SendAsync(
+                            SignalRHubMethods.ReceiveEvent,
+                            message
+                        );
+                        _ = sendTask.ContinueWith(t =>
+                        {
+                            if (t.IsFaulted)
+                            {
+                                _logger.LogError(
+                                    t.Exception,
+                                    "[SignalR] Error sending message to client {ConnectionId}",
+                                    connectionId
+                                );
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(
+                            ex,
+                            "[SignalR] Error queuing message for client {ConnectionId}",
+                            connectionId
+                        );
+                    }
                 },
                 error =>
                 {
