@@ -10,6 +10,7 @@ using GraniteServer.Messaging.Commands;
 using GraniteServer.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Granite.Server.Services;
 
@@ -19,15 +20,15 @@ namespace Granite.Server.Services;
 /// </summary>
 public class PersistentMessageBusService : MessageBusService
 {
-    private readonly GraniteDataContext _dbContext;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PersistentMessageBusService> _logger;
 
     public PersistentMessageBusService(
-        GraniteDataContext dbContext,
+        IServiceScopeFactory scopeFactory,
         ILogger<PersistentMessageBusService> logger
     )
     {
-        _dbContext = dbContext;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -51,8 +52,11 @@ public class PersistentMessageBusService : MessageBusService
             Status = CommandStatus.Pending,
         };
 
-        _dbContext.BufferedCommands.Add(commandEntity);
-        await _dbContext.SaveChangesAsync();
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<GraniteDataContext>();
+
+        db.BufferedCommands.Add(commandEntity);
+        await db.SaveChangesAsync();
 
         _logger.LogDebug(
             "Stored command {CommandId} of type {MessageType} for server {ServerId}",
@@ -72,7 +76,10 @@ public class PersistentMessageBusService : MessageBusService
     /// </summary>
     public async Task<List<CommandEntity>> GetPendingCommandsAsync(Guid serverId)
     {
-        return await _dbContext
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<GraniteDataContext>();
+
+        return await db
             .BufferedCommands.Where(c =>
                 c.ServerId == serverId && c.Status == CommandStatus.Pending
             )
@@ -85,12 +92,15 @@ public class PersistentMessageBusService : MessageBusService
     /// </summary>
     public async Task MarkCommandAsSentAsync(Guid commandId)
     {
-        var command = await _dbContext.BufferedCommands.FindAsync(commandId);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<GraniteDataContext>();
+
+        var command = await db.BufferedCommands.FindAsync(commandId);
         if (command != null)
         {
             command.Status = CommandStatus.Sent;
             command.SentAt = DateTime.UtcNow;
-            await _dbContext.SaveChangesAsync();
+            await db.SaveChangesAsync();
 
             _logger.LogDebug("Marked command {CommandId} as sent", commandId);
         }
@@ -105,13 +115,16 @@ public class PersistentMessageBusService : MessageBusService
         bool success = true
     )
     {
-        var command = await _dbContext.BufferedCommands.FindAsync(commandId);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<GraniteDataContext>();
+
+        var command = await db.BufferedCommands.FindAsync(commandId);
         if (command != null)
         {
             command.Status = success ? CommandStatus.Completed : CommandStatus.Failed;
             command.ResponsePayload = JsonSerializer.Serialize(response);
             command.ErrorMessage = response.ErrorMessage;
-            await _dbContext.SaveChangesAsync();
+            await db.SaveChangesAsync();
 
             _logger.LogDebug(
                 "Stored response for command {CommandId} with status {Status}",
@@ -166,7 +179,9 @@ public class PersistentMessageBusService : MessageBusService
                 // Mark as failed
                 commandEntity.Status = CommandStatus.Failed;
                 commandEntity.ErrorMessage = ex.Message;
-                await _dbContext.SaveChangesAsync();
+                using var scope = _scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<GraniteDataContext>();
+                await db.SaveChangesAsync();
             }
         }
 
@@ -180,15 +195,18 @@ public class PersistentMessageBusService : MessageBusService
     {
         var cutoffDate = DateTime.UtcNow - olderThan;
 
-        var oldCommands = await _dbContext
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<GraniteDataContext>();
+
+        var oldCommands = await db
             .BufferedCommands.Where(c =>
                 c.CreatedAt < cutoffDate
                 && (c.Status == CommandStatus.Completed || c.Status == CommandStatus.Failed)
             )
             .ToListAsync();
 
-        _dbContext.BufferedCommands.RemoveRange(oldCommands);
-        await _dbContext.SaveChangesAsync();
+        db.BufferedCommands.RemoveRange(oldCommands);
+        await db.SaveChangesAsync();
 
         _logger.LogInformation("Cleaned up {Count} old commands", oldCommands.Count);
 
@@ -200,7 +218,10 @@ public class PersistentMessageBusService : MessageBusService
     /// </summary>
     public async Task<bool> AcknowledgeCommandAsync(Guid commandId)
     {
-        var command = await _dbContext.BufferedCommands.FindAsync(commandId);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<GraniteDataContext>();
+
+        var command = await db.BufferedCommands.FindAsync(commandId);
         if (command == null)
         {
             _logger.LogWarning(
@@ -210,8 +231,8 @@ public class PersistentMessageBusService : MessageBusService
             return false;
         }
 
-        _dbContext.BufferedCommands.Remove(command);
-        await _dbContext.SaveChangesAsync();
+        db.BufferedCommands.Remove(command);
+        await db.SaveChangesAsync();
 
         _logger.LogDebug(
             "Acknowledged and deleted command {CommandId} of type {MessageType}",

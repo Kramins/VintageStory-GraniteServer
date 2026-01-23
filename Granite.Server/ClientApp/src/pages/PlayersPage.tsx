@@ -31,6 +31,18 @@ import type { PlayerDTO } from '../types/PlayerDTO';
 import { useAppDispatch, useAppSelector } from '../store/store';
 import { fetchAllPlayers } from '../store/slices/playersSlice';
 import { useToast } from '../components/ToastProvider';
+import { usePlayerEventHandlers } from '../hooks/usePlayerEventHandlers';
+
+// Merge connection state updates from Redux into local paged lists
+function mergeConnectionState(list: PlayerDTO[], updates: PlayerDTO[], serverId?: string) {
+    if (!serverId || updates.length === 0) return list;
+    return list.map(player => {
+        const match = updates.find(
+            u => u.serverId === serverId && (u.playerUID === player.playerUID || u.id === player.id)
+        );
+        return match ? { ...player, connectionState: match.connectionState } : player;
+    });
+}
 
 // Temporary mapping for demo, since server DTO only has Id, Name, IsAdmin
 // Map PlayerDTO to table row data for display
@@ -53,6 +65,10 @@ const PlayersPage: React.FC = () => {
     const dispatch = useAppDispatch();
     const toast = useToast();
     const selectedServerId = useAppSelector((state) => state.servers.selectedServerId);
+    const realtimePlayers = useAppSelector((state) => state.players.players);
+
+    // Register player event handlers for real-time updates
+    usePlayerEventHandlers();
 
     useEffect(() => {
         // Load data for All Players tab from server (paged) if a server is selected
@@ -62,11 +78,18 @@ const PlayersPage: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedServerId]);
 
+    // Apply connection state updates from real-time events into local paged lists
+    useEffect(() => {
+        if (!selectedServerId) return;
+        setServerPlayers(prev => mergeConnectionState(prev, realtimePlayers, selectedServerId));
+        setOnlinePlayers(prev => mergeConnectionState(prev, realtimePlayers, selectedServerId));
+    }, [realtimePlayers, selectedServerId]);
+
     const handleRefresh = () => {
         if (tabValue === 0) {
             fetchPlayersPaged(paginationModel.page, paginationModel.pageSize, sortField, sortDirection);
-        } else {
-            dispatch(fetchAllPlayers());
+        } else if (selectedServerId) {
+            dispatch(fetchAllPlayers(selectedServerId));
         }
     };
 
@@ -86,7 +109,9 @@ const PlayersPage: React.FC = () => {
             }
             
             // Refresh data based on current tab
-            dispatch(fetchAllPlayers());
+            if (selectedServerId) {
+                dispatch(fetchAllPlayers(selectedServerId));
+            }
             if (tabValue === 2) {
                 fetchWhitelistedPlayers();
             }
@@ -124,7 +149,9 @@ const PlayersPage: React.FC = () => {
 
         try {
             await PlayerService.kickPlayer(selectedServerId, kickTargetId, kickReason);
-            dispatch(fetchAllPlayers());
+            if (selectedServerId) {
+                dispatch(fetchAllPlayers(selectedServerId));
+            }
             setKickDialogOpen(false);
         } catch (err) {
             toast.show('Failed to kick player.', 'error');
@@ -173,7 +200,9 @@ const PlayersPage: React.FC = () => {
             const result = await PlayerService.findPlayerByName(selectedServerId, addWhitelistSearchQuery);
             if (result && !whitelistedPlayers.some(w => w.id === result.id)) {
                 await PlayerService.whitelistPlayer(selectedServerId, result.id);
-                dispatch(fetchAllPlayers());
+                if (selectedServerId) {
+                    dispatch(fetchAllPlayers(selectedServerId));
+                }
                 fetchWhitelistedPlayers();
                 setAddWhitelistSubmitting(false);
                 setAddWhitelistSuccess(true);
@@ -202,7 +231,9 @@ const PlayersPage: React.FC = () => {
             } else {
                 await PlayerService.banPlayer(selectedServerId, playerId);
             }
-            dispatch(fetchAllPlayers());
+            if (selectedServerId) {
+                dispatch(fetchAllPlayers(selectedServerId));
+            }
             if (tabValue === 3) {
                 fetchBannedPlayers();
             }

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 
 namespace GraniteServer.Messaging;
-
 /// <summary>
 /// Represents a message (command or event) that can be published through the MessageBus and streamed to clients via SSE.
 /// </summary>

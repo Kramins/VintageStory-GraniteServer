@@ -1,7 +1,7 @@
 
 export interface ServerEvent {
   id: string;
-  eventType: string;
+  messageType: string;
   data: any;
   timestamp: string;
   source?: string;

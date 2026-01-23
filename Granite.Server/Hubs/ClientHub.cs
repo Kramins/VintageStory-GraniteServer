@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Concurrent;
+using System.Reactive.Linq;
 using Granite.Server.Services;
 using GraniteServer.Messaging;
+using GraniteServer.Messaging.Events;
 using GraniteServer.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -16,12 +18,18 @@ namespace Granite.Server.Hubs;
 public class ClientHub : Hub
 {
     private readonly PersistentMessageBusService _messageBus;
+    private readonly IHubContext<ClientHub> _hubContext;
     private readonly ILogger<ClientHub> _logger;
     private static readonly ConcurrentDictionary<string, IDisposable> _subscriptions = new();
 
-    public ClientHub(PersistentMessageBusService messageBus, ILogger<ClientHub> logger)
+    public ClientHub(
+        PersistentMessageBusService messageBus,
+        IHubContext<ClientHub> hubContext,
+        ILogger<ClientHub> logger
+    )
     {
         _messageBus = messageBus ?? throw new ArgumentNullException(nameof(messageBus));
+        _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -43,22 +51,17 @@ public class ClientHub : Hub
         // ClientApp should receive events from all servers for management purposes
         var subscription = _messageBus
             .GetObservable()
+                        .Where(m => m is EventMessage)
             .Subscribe(
                 message =>
                 {
                     try
                     {
-                        // Broadcast event to this specific client
-                        Clients
+                        // Broadcast event to this specific client using HubContext
+                        _hubContext
+                            .Clients
                             .Client(connectionId)
-                            .SendAsync("ServerEvent", new
-                            {
-                                id = Guid.NewGuid().ToString(),
-                                eventType = message.GetType().Name,
-                                data = message.Data,
-                                timestamp = DateTime.UtcNow.ToString("O"),
-                                source = message.OriginServerId.ToString()
-                            });
+                            .SendAsync("ServerEvent", message);
                     }
                     catch (Exception ex)
                     {

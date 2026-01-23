@@ -4,10 +4,11 @@ import ServerService from '../services/ServerService';
 import store, { useAppSelector } from '../store/store';
 import { setAuth } from '../store/slices/authSlice';
 import { setServers, setLoading, setError } from '../store/slices/serversSlice';
+import { EventBus } from '../services/EventBus';
 
 /**
  * Component to initialize auth state from localStorage on app startup
- * Note: SignalR connection is managed by LoginPage after successful authentication
+ * and establish SignalR connection when authenticated
  */
 export default function AuthInitializer() {
     const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
@@ -18,6 +19,9 @@ export default function AuthInitializer() {
             // Restore auth state from stored token
             // ProtectedRoute will validate if this token is still valid
             store.dispatch(setAuth(token));
+            
+            // Start SignalR connection with the restored token
+            EventBus.start(token);
         }
     }, []);
 

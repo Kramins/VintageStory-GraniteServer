@@ -34,6 +34,7 @@ const PlayerDetailsPage: React.FC = () => {
     const { playerId, serverId } = useParams<{ playerId: string; serverId: string }>();
     const dispatch = useAppDispatch();
     const { playerDetails, loading, error } = useAppSelector(state => state.playerDetails);
+    const realtimePlayers = useAppSelector(state => state.players.players);
     const { items: collectibles, loading: collectiblesLoading, error: collectiblesError } = useAppSelector(state => state.world.collectibles);
     const [tabValue, setTabValue] = useState(0);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -46,6 +47,17 @@ const PlayerDetailsPage: React.FC = () => {
         // Load collectibles data (will only fetch if not already loaded)
         dispatch(fetchCollectibles() as any);
     }, [playerId, serverId, dispatch]);
+
+    // If connection state changes via SignalR events, refresh the details
+    useEffect(() => {
+        if (!playerDetails || !playerId || !serverId) return;
+        const match = realtimePlayers.find(
+            p => p.serverId === serverId && (p.id === playerId || p.playerUID === playerDetails.playerUID)
+        );
+        if (match && match.connectionState !== playerDetails.connectionState) {
+            dispatch(fetchPlayerDetails(serverId, playerId) as any);
+        }
+    }, [realtimePlayers, playerDetails, playerId, serverId, dispatch]);
 
     const runAction = async (key: string, action: () => Promise<void>) => {
         if (!playerId || !serverId) return;

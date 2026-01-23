@@ -678,3 +678,5 @@ fabric.properties
 # End of https://www.toptal.com/developers/gitignore/api/csharp,visualstudio,visualstudiocode,rider
 
 Granite.Server/graniteserver.db
+Granite.Server/graniteserver.db-shm
+Granite.Server/graniteserver.db-wal
