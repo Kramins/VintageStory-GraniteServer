@@ -680,3 +680,5 @@ fabric.properties
 Granite.Server/graniteserver.db
 Granite.Server/graniteserver.db-shm
 Granite.Server/graniteserver.db-wal
+Granite.Server/ClientApp/dist/
+

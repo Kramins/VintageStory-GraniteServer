@@ -63,6 +63,7 @@ public class GraniteMod : ModSystem
                 services.AddHostedService<MessageBridgeHostedService>();
                 services.AddHostedService<SignalRClientHostedService>();
                 services.AddHostedService<ServerMetricsHostedService>();
+                services.AddHostedService<ServerConfigSyncHostedService>();
             })
             .Build();
 

@@ -25,7 +25,7 @@ const MainRoutes = {
             element: <PlayerDetailsPage />
         },
         {
-            path: '/server/config',
+            path: '/:serverId/config',
             element: <ServerConfigurationPage />
         }
     ]

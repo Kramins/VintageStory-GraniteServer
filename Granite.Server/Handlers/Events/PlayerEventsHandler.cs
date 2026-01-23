@@ -127,7 +127,7 @@ public class PlayerEventsHandler
     {
         var playerEventData = command.Data!;
         var playerEntity = GetPlayerEntity(command.OriginServerId, playerEventData.PlayerUID);
-        
+
         if (playerEntity == null)
         {
             playerEntity = new PlayerEntity()
@@ -152,8 +152,8 @@ public class PlayerEventsHandler
         if (playerEventData.SessionId.HasValue)
         {
             // Close any open sessions for this player/server before creating a new one
-            var openSessions = _dataContext.PlayerSessions
-                .Where(ps =>
+            var openSessions = _dataContext
+                .PlayerSessions.Where(ps =>
                     ps.PlayerId == playerEntity.Id
                     && ps.ServerId == command.OriginServerId
                     && ps.LeaveDate == null
@@ -168,7 +168,9 @@ public class PlayerEventsHandler
             }
 
             // Avoid duplicate insert if this session already exists
-            var existing = _dataContext.PlayerSessions.FirstOrDefault(ps => ps.Id == playerEventData.SessionId.Value);
+            var existing = _dataContext.PlayerSessions.FirstOrDefault(ps =>
+                ps.Id == playerEventData.SessionId.Value
+            );
             if (existing == null)
             {
                 var playerSessionEntity = new PlayerSessionEntity()

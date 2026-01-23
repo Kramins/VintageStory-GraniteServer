@@ -17,7 +17,6 @@ import { useAppSelector } from '../store/store';
 
 const staticMenuItems = [
   { text: 'Overview', icon: <HomeRoundedIcon />, path: '/', static: true },
-  { text: 'Server Configuration', icon: <TuneRoundedIcon />, path: '/server/config', static: true },
 ];
 
 const secondaryListItems = [
@@ -29,11 +28,12 @@ const secondaryListItems = [
 export default function MenuContent() {
   const selectedServerId = useAppSelector(state => state.servers.selectedServerId);
   const playersPath = selectedServerId ? `/${selectedServerId}/players` : '/players';
+  const configPath = selectedServerId ? `/${selectedServerId}/config` : '/config';
   
   const mainListItems = [
-    ...staticMenuItems.slice(0, 1),
+    ...staticMenuItems,
     { text: 'Players', icon: <PeopleRoundedIcon />, path: playersPath },
-    ...staticMenuItems.slice(1),
+    { text: 'Server Configuration', icon: <TuneRoundedIcon />, path: configPath },
   ];
 
   return (

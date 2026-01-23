@@ -9,8 +9,8 @@ using GraniteServer.Messaging;
 using GraniteServer.Messaging.Commands;
 using GraniteServer.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Granite.Server.Services;
 
@@ -35,7 +35,7 @@ public class PersistentMessageBusService : MessageBusService
     /// <summary>
     /// Publishes a command and stores it in the database for persistence
     /// </summary>
-    public async Task<Guid> PublishCommandAsync(CommandMessage command)
+    public virtual async Task<Guid> PublishCommandAsync(CommandMessage command)
     {
         if (command == null)
         {

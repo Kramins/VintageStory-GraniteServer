@@ -41,6 +41,7 @@ builder.Services.AddScoped<JwtTokenService>();
 // Add business services
 builder.Services.AddScoped<ServersService>();
 builder.Services.AddScoped<ServerPlayersService>();
+builder.Services.AddScoped<ServerConfigService>();
 
 // Add PersistentMessageBusService as singleton (also registers as MessageBusService)
 builder.Services.AddSingleton<PersistentMessageBusService>();

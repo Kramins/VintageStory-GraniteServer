@@ -61,20 +61,31 @@ export const {
     clearError,
 } = serverConfigSlice.actions;
 
-export const fetchServerConfig = () => async (dispatch: any) => {
+export const fetchServerConfig = (serverId: string) => async (dispatch: any) => {
     dispatch(fetchConfigStart());
     try {
-        const config = await ServerConfigurationService.getConfig();
+        const config = await ServerConfigurationService.getConfig(serverId);
         dispatch(fetchConfigSuccess(config));
     } catch (error: any) {
         dispatch(fetchConfigFailure(error.message || 'Failed to fetch server config'));
     }
 };
 
-export const updateServerConfig = (config: ServerConfigDTO) => async (dispatch: any) => {
+export const syncServerConfig = (serverId: string) => async (dispatch: any) => {
+    dispatch(fetchConfigStart());
+    try {
+        await ServerConfigurationService.syncConfig(serverId);
+        // After requesting sync, fetch the config again (it will be updated via event)
+        // You might want to wait for the event instead
+    } catch (error: any) {
+        dispatch(fetchConfigFailure(error.message || 'Failed to sync server config'));
+    }
+};
+
+export const updateServerConfig = (serverId: string, config: ServerConfigDTO) => async (dispatch: any) => {
     dispatch(updateConfigStart());
     try {
-        await ServerConfigurationService.updateConfig(config);
+        await ServerConfigurationService.updateConfig(serverId, config);
         dispatch(updateConfigSuccess(config));
     } catch (error: any) {
         dispatch(updateConfigFailure(error.message || 'Failed to update server config'));

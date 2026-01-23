@@ -36,6 +36,12 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ServerMetricsEventHandler>()
         );
 
+        // Register ServerConfigEventHandler and its event handler implementation
+        services.AddScoped<ServerConfigEventHandler>();
+        services.AddScoped<IEventHandler<ServerConfigSyncedEvent>>(sp =>
+            sp.GetRequiredService<ServerConfigEventHandler>()
+        );
+
         return services;
     }
 }
