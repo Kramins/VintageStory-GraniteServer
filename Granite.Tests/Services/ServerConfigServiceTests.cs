@@ -33,6 +33,7 @@ public class ServerConfigServiceTests
         // Mock the dependencies for PersistentMessageBusService
         var scopeFactory = Substitute.For<IServiceScopeFactory>();
         var logger = Substitute.For<ILogger<PersistentMessageBusService>>();
+        var serviceLogger = Substitute.For<ILogger<ServerConfigService>>();
 
         // Use ForPartsOf with correct constructor arguments
         _mockMessageBus = Substitute.ForPartsOf<PersistentMessageBusService>(scopeFactory, logger);
@@ -40,7 +41,7 @@ public class ServerConfigServiceTests
         // Configure PublishCommandAsync to not call the base implementation
         _mockMessageBus.PublishCommandAsync(Arg.Any<CommandMessage>()).Returns(Guid.NewGuid());
 
-        _service = new ServerConfigService(_mockMessageBus, _dataContext);
+        _service = new ServerConfigService(serviceLogger, _mockMessageBus, _dataContext);
     }
 
     [Fact]

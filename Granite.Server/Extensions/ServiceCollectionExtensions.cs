@@ -49,6 +49,12 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ServerReadyEventHandler>()
         );
 
+        // Register CollectiblesLoadedEventHandler and its event handler implementation
+        services.AddScoped<CollectiblesLoadedEventHandler>();
+        services.AddScoped<IEventHandler<CollectiblesLoadedEvent>>(sp =>
+            sp.GetRequiredService<CollectiblesLoadedEventHandler>()
+        );
+
         return services;
     }
 }

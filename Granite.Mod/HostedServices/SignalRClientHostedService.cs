@@ -28,7 +28,6 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     private readonly GraniteModConfig _config;
     private readonly SignalRConnectionState _connectionState;
     private readonly HttpClient _httpClient;
-    private readonly Queue<MessageBusMessage> _messageQueue = new();
     private HubConnection? _hubConnection;
     private CancellationTokenSource? _reconnectCts;
     private IDisposable? _messageBusSubscription;
@@ -173,6 +172,10 @@ public class SignalRClientHostedService : IHostedService, IDisposable
                 options =>
                 {
                     options.AccessTokenProvider = () => Task.FromResult(_jwtToken)!;
+                    // Increase buffer size for large messages (e.g., collectibles sync with 17k items)
+                    // Default is 32KB, increase to 10MB
+                    options.ApplicationMaxBufferSize = 10 * 1024 * 1024; // 10MB
+                    options.TransportMaxBufferSize = 10 * 1024 * 1024; // 10MB
                 }
             )
             .WithAutomaticReconnect(
@@ -196,6 +199,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
         );
 
         // Handle disconnection and reconnection events
+
         _hubConnection.Reconnecting += error => OnHubReconnecting(error);
 
         _hubConnection.Reconnected += connectionId => OnHubReconnected(connectionId);
@@ -228,17 +232,8 @@ public class SignalRClientHostedService : IHostedService, IDisposable
                 // Don't echo back messages received from the control plane
                 msg.OriginServerId == _config.ServerId
             )
-            .SelectMany(message => HandleMessageAsync(message))
-            .Catch<MessageBusMessage, Exception>(error =>
-            {
-                _logger.Error(
-                    $"[SignalR] Error in message subscription, attempting recovery: {error.Message}"
-                );
-                // Continue the stream instead of terminating
-                return Observable.Empty<MessageBusMessage>();
-            })
             .Subscribe(
-                _ => { },
+                message => HandleMessage(message),
                 error =>
                 {
                     _logger.Error(
@@ -263,13 +258,11 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     }
 
     /// <summary>
-    /// Handles the hub reconnected event. Processes queued messages and marks server as online.
+    /// Handles the hub reconnected event. Marks server as online.
     /// </summary>
     private Task OnHubReconnected(string? connectionId)
     {
         _logger.Notification($"[SignalR] Reconnected successfully. ConnectionId: {connectionId}");
-        // Process queued messages after reconnection
-        _ = ProcessQueuedMessagesAsync();
         _connectionState.SetConnected(true);
         return Task.CompletedTask;
     }
@@ -360,78 +353,45 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     /// <summary>
     /// Processes messages that were queued while the connection was inactive.
     /// Attempts to send all queued messages in order after reconnection.
-    /// </summary>
-    private async Task ProcessQueuedMessagesAsync()
-    {
-        _logger.Notification($"[SignalR] Processing {_messageQueue.Count} queued messages...");
-
-        while (_messageQueue.Count > 0 && _hubConnection?.State == HubConnectionState.Connected)
-        {
-            try
-            {
-                if (!_messageQueue.TryDequeue(out var message))
-                {
-                    break;
-                }
-
-                _logger.Debug($"[SignalR] Sending queued event: {message.MessageType}");
-                await _hubConnection.InvokeAsync(SignalRHubMethods.PublishEvent, message);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error($"[SignalR] Error processing queued message: {ex.Message}");
-                // Stop processing if an error occurs, remaining messages stay in queue
-                break;
-            }
-        }
-
-        if (_messageQueue.Count > 0)
-        {
-            _logger.Notification($"[SignalR] {_messageQueue.Count} messages still queued.");
-        }
-        else
-        {
-            _logger.Notification("[SignalR] All queued messages processed successfully.");
-        }
-    }
-
+    
     /// <summary>
-    /// Processes a message from the local message bus and sends it to the server via SignalR.
-    /// Queues the message if the connection is not currently active.
-    /// Returns the message to allow continuation of the observable stream.
+    /// Handles a message from the local message bus and sends it to the server via SignalR.
+    /// Drops the message if the connection is not currently active.
     /// </summary>
-    private IObservable<MessageBusMessage> HandleMessageAsync(MessageBusMessage message)
+    private void HandleMessage(MessageBusMessage message)
     {
-        return Observable.FromAsync(async () =>
+        try
         {
-            try
+            // If not connected, drop the message (don't queue)
+            if (_hubConnection?.State != HubConnectionState.Connected)
             {
-                // If not connected, queue the message
-                if (_hubConnection?.State != HubConnectionState.Connected)
-                {
-                    _logger.Debug(
-                        $"[SignalR] Connection not active. Queueing event: {message.MessageType}"
-                    );
-                    _messageQueue.Enqueue(message);
-                    return message;
-                }
-
-                _logger.Debug($"[SignalR] Sending event to server: {message.MessageType}");
-                await _hubConnection.InvokeAsync(
-                    SignalRHubMethods.PublishEvent,
-                    message,
-                    CancellationToken.None
+                _logger.Debug(
+                    $"[SignalR] Connection not active. Dropping event: {message.MessageType}"
                 );
-            }
-            catch (Exception ex)
-            {
-                _logger.Error($"[SignalR] Error sending event to server: {ex.Message}");
-                // Queue the message if sending failed
-                _messageQueue.Enqueue(message);
+                return;
             }
 
-            return message;
-        });
+            // Log message size for debugging
+            var json = JsonSerializer.Serialize(message);
+            var sizeKB = json.Length / 1024.0;
+            _logger.Debug($"[SignalR] Sending event to server: {message.MessageType} (Size: {sizeKB:F2} KB)");
+            
+            if (sizeKB > 100)
+            {
+                _logger.Warning($"[SignalR] Large message detected: {message.MessageType} is {sizeKB:F2} KB");
+            }
+
+            _ = _hubConnection.InvokeAsync(
+                SignalRHubMethods.PublishEvent,
+                message,
+                CancellationToken.None
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"[SignalR] Error sending event to server: {ex.Message}");
+            // Drop the message on error instead of queuing
+        }
     }
 
     /// <summary>

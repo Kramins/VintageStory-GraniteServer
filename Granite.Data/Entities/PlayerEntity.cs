@@ -32,4 +32,5 @@ public class PlayerEntity
     // Navigation properties
     public ServerEntity? Server { get; set; }
     public ICollection<PlayerSessionEntity> Sessions { get; set; } = new List<PlayerSessionEntity>();
+    public ICollection<PlayerInventorySlotEntity> InventorySlots { get; set; } = new List<PlayerInventorySlotEntity>();
 }

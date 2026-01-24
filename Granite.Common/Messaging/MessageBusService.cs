@@ -12,20 +12,15 @@ namespace GraniteServer.Services
     /// Centralized event bus service that allows any service to publish events
     /// and clients to subscribe to events via SSE or other mechanisms.
     ///
-    /// Thread-safe singleton using Rx.NET synchronized ReplaySubject for broadcast to all subscribers.
+    /// Thread-safe singleton using Rx.NET synchronized Subject for broadcast to all subscribers.
     /// </summary>
     public class MessageBusService
     {
         private readonly ISubject<MessageBusMessage> _subject;
 
-        /// <summary>
-        /// Capacity of the replay buffer. Stores up to this many events for new subscribers to catch up.
-        /// </summary>
-        private const int ReplayBufferSize = 1000;
-
         public MessageBusService()
         {
-            _subject = Subject.Synchronize(new ReplaySubject<MessageBusMessage>(ReplayBufferSize));
+            _subject = Subject.Synchronize(new Subject<MessageBusMessage>());
         }
 
         /// <summary>

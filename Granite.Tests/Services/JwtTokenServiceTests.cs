@@ -5,6 +5,7 @@ using System.Security.Claims;
 using FluentAssertions;
 using Granite.Server.Configuration;
 using Granite.Server.Services;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
@@ -14,11 +15,13 @@ namespace Granite.Tests.Services;
 public class JwtTokenServiceTests
 {
     private readonly IOptions<GraniteServerOptions> _mockOptions;
+    private readonly ILogger<JwtTokenService> _mockLogger;
     private const string TestSecret = "VeryLongSecretKeyThatIsAtLeast32CharactersLong123456789";
 
     public JwtTokenServiceTests()
     {
         _mockOptions = Substitute.For<IOptions<GraniteServerOptions>>();
+        _mockLogger = Substitute.For<ILogger<JwtTokenService>>();
         _mockOptions.Value.Returns(new GraniteServerOptions
         {
             JwtSecret = TestSecret,
@@ -34,7 +37,7 @@ public class JwtTokenServiceTests
             JwtExpiryMinutes = expiryMinutes
         };
         _mockOptions.Value.Returns(options);
-        return new JwtTokenService(_mockOptions);
+        return new JwtTokenService(_mockLogger, _mockOptions);
     }
 
     [Fact]
@@ -266,7 +269,7 @@ public class JwtTokenServiceTests
         _mockOptions.Value.Returns(options);
 
         // Act
-        var action = () => new JwtTokenService(_mockOptions);
+        var action = () => new JwtTokenService(_mockLogger, _mockOptions);
 
         // Assert
         action.Should().Throw<InvalidOperationException>().WithMessage("*JwtSecret*");

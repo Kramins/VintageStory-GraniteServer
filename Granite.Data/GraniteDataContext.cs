@@ -11,6 +11,8 @@ public class GraniteDataContext : DbContext
     public DbSet<ServerEntity> Servers { get; set; } = null!;
     public DbSet<PlayerEntity> Players { get; set; } = null!;
     public DbSet<PlayerSessionEntity> PlayerSessions { get; set; } = null!;
+    public DbSet<PlayerInventorySlotEntity> PlayerInventorySlots { get; set; } = null!;
+    public DbSet<CollectibleEntity> Collectibles { get; set; } = null!;
     public DbSet<ServerMetricsEntity> ServerMetrics { get; set; } = null!;
     public DbSet<ModEntity> Mods { get; set; } = null!;
     public DbSet<ModReleaseEntity> ModReleases { get; set; } = null!;
@@ -68,6 +70,44 @@ public class GraniteDataContext : DbContext
                 .HasOne(e => e.Player)
                 .WithMany(p => p.Sessions)
                 .HasForeignKey(e => e.PlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PlayerInventorySlotEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.PlayerId, e.ServerId, e.InventoryName, e.SlotIndex }).IsUnique();
+            entity.Property(e => e.PlayerId).IsRequired();
+            entity.Property(e => e.ServerId).IsRequired();
+            entity.Property(e => e.InventoryName).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.SlotIndex).IsRequired();
+            entity.Property(e => e.EntityId).IsRequired();
+            entity.Property(e => e.StackSize).IsRequired();
+            entity.Property(e => e.LastUpdated).IsRequired();
+
+            entity
+                .HasOne(e => e.Player)
+                .WithMany(p => p.InventorySlots)
+                .HasForeignKey(e => e.PlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CollectibleEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            // entity.HasIndex(e => new { e.ServerId, e.CollectibleId }).IsUnique(); // CollectibleId is not unique, we need another property
+            entity.Property(e => e.ServerId).IsRequired();
+            entity.Property(e => e.CollectibleId).IsRequired();
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Type).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Class).HasMaxLength(500);
+            entity.Property(e => e.MaxStackSize).IsRequired();
+            entity.Property(e => e.LastSynced).IsRequired();
+
+            entity
+                .HasOne(e => e.Server)
+                .WithMany(s => s.Collectibles)
+                .HasForeignKey(e => e.ServerId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

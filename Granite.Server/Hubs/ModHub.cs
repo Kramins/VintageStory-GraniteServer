@@ -27,6 +27,7 @@ public class ModHub : Hub
     private readonly ServersService _serversService;
     private readonly ILogger<ModHub> _logger;
     private static readonly ConcurrentDictionary<string, IDisposable> _subscriptions = new();
+    private static readonly ConcurrentDictionary<Guid, string> _serverConnections = new();
 
     public ModHub(
         PersistentMessageBusService messageBus,
@@ -178,6 +179,7 @@ public class ModHub : Hub
 
     /// <summary>
     /// Called when a client connects. Subscribes the client to message bus events.
+    /// Prevents duplicate connections by disconnecting any previous connection from the same server.
     /// </summary>
     public override async Task OnConnectedAsync()
     {
@@ -201,6 +203,23 @@ public class ModHub : Hub
         }
 
         var serverId = Guid.Parse(serverIdClaim!);
+
+        // Check if this server already has an active connection and disconnect it
+        if (_serverConnections.TryGetValue(serverId, out var previousConnectionId))
+        {
+            _logger.LogInformation(
+                "[GraniteHub] Server {ServerId} reconnected. Disconnecting previous connection {PreviousConnectionId}",
+                serverId,
+                previousConnectionId
+            );
+            // Disconnect the previous connection
+            await Clients.Client(previousConnectionId).SendAsync("__disconnect__");
+            // Clean up the old subscription
+            if (_subscriptions.TryRemove(previousConnectionId, out var oldSubscription))
+            {
+                oldSubscription?.Dispose();
+            }
+        }
 
         _logger.LogInformation(
             "[GraniteHub] Game server {ServerId} connected with connection ID {ConnectionId}",
@@ -230,9 +249,9 @@ public class ModHub : Hub
                 try
                 {
                     _logger.LogTrace(
-                        "[SignalR] Sending {MessageType} to mod {ConnectionId}",
+                        "[SignalR] Sending {MessageType} to server {serverId}",
                         message.GetType().Name,
-                        connectionId
+                        serverId
                     );
                     await clientProxy.SendAsync(SignalRHubMethods.ReceiveEvent, message);
                     return message;
@@ -262,12 +281,15 @@ public class ModHub : Hub
 
         // Store subscription for cleanup
         _subscriptions[connectionId] = subscription;
+        
+        // Track this connection as the active connection for this server
+        _serverConnections[serverId] = connectionId;
 
         await base.OnConnectedAsync();
     }
 
     /// <summary>
-    /// Called when a client disconnects. Cleans up message bus subscription.
+    /// Called when a client disconnects. Cleans up message bus subscription and server tracking.
     /// </summary>
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
@@ -283,8 +305,17 @@ public class ModHub : Hub
         if (!string.IsNullOrEmpty(serverIdClaim))
         {
             var serverId = Guid.Parse(serverIdClaim!);
-            // Mark server as offline
-            await _serversService.MarkServerOfflineAsync(serverId);
+            
+            // Only mark offline if this is the current active connection for this server
+            if (
+                _serverConnections.TryGetValue(serverId, out var activeConnectionId)
+                && activeConnectionId == connectionId
+            )
+            {
+                _serverConnections.TryRemove(serverId, out _);
+                // Mark server as offline
+                await _serversService.MarkServerOfflineAsync(serverId);
+            }
         }
 
         await base.OnDisconnectedAsync(exception);

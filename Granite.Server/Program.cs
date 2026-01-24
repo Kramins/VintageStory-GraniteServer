@@ -122,8 +122,12 @@ builder.Services.AddCors(options =>
 // Add controllers
 builder.Services.AddControllers();
 
-// Add SignalR
-builder.Services.AddSignalR();
+// Add SignalR with increased buffer sizes for large messages (e.g., collectibles sync)
+builder.Services.AddSignalR(options =>
+{
+    // Default is 32KB, increase to 10MB to handle large collections
+    options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB
+});
 
 // Add OpenAPI/Swagger
 builder.Services.AddOpenApi();

@@ -2,11 +2,13 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Granite.Server.Services;
 using GraniteServer.Data;
 using GraniteServer.Data.Entities;
 using GraniteServer.Messaging.Events;
 using GraniteServer.Messaging.Handlers.Events;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
@@ -15,6 +17,8 @@ namespace Granite.Tests.Handlers;
 public class PlayerEventsHandlerTests
 {
     private readonly GraniteDataContext _mockDataContext;
+    private readonly PersistentMessageBusService _mockMessageBus;
+    private readonly ILogger<PlayerEventsHandler> _mockLogger;
     private readonly PlayerEventsHandler _handler;
 
     public PlayerEventsHandlerTests()
@@ -24,7 +28,9 @@ public class PlayerEventsHandlerTests
             .Options;
 
         _mockDataContext = new GraniteDataContext(options);
-        _handler = new PlayerEventsHandler(_mockDataContext);
+        _mockMessageBus = Substitute.For<PersistentMessageBusService>(null!, null!);
+        _mockLogger = Substitute.For<ILogger<PlayerEventsHandler>>();
+        _handler = new PlayerEventsHandler(_mockDataContext, _mockMessageBus, _mockLogger);
     }
 
     [Fact]

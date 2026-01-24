@@ -27,4 +27,5 @@ public class ServerEntity
     public ICollection<PlayerEntity> Players { get; set; } = new List<PlayerEntity>();
     public ICollection<ModServerEntity> ModServers { get; set; } = new List<ModServerEntity>();
     public ICollection<ServerMetricsEntity> ServerMetrics { get; set; } = new List<ServerMetricsEntity>();
+    public ICollection<CollectibleEntity> Collectibles { get; set; } = new List<CollectibleEntity>();
 }

@@ -1,9 +1,12 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Granite.Server.Services;
 using GraniteServer.Data;
 using GraniteServer.Data.Entities;
+using GraniteServer.Messaging.Commands;
 using GraniteServer.Messaging.Events;
+using Microsoft.Extensions.Logging;
 
 namespace GraniteServer.Messaging.Handlers.Events;
 
@@ -16,11 +19,19 @@ public class PlayerEventsHandler
         IEventHandler<PlayerJoinedEvent>,
         IEventHandler<PlayerKickedEvent>
 {
-    private GraniteDataContext _dataContext;
+    private readonly GraniteDataContext _dataContext;
+    private readonly PersistentMessageBusService _messageBus;
+    private readonly ILogger<PlayerEventsHandler> _logger;
 
-    public PlayerEventsHandler(GraniteDataContext dataContext)
+    public PlayerEventsHandler(
+        GraniteDataContext dataContext,
+        PersistentMessageBusService messageBus,
+        ILogger<PlayerEventsHandler> logger
+    )
     {
         _dataContext = dataContext;
+        _messageBus = messageBus;
+        _logger = logger;
     }
 
     Task IEventHandler<PlayerWhitelistedEvent>.Handle(PlayerWhitelistedEvent command)
@@ -123,7 +134,7 @@ public class PlayerEventsHandler
         return Task.CompletedTask;
     }
 
-    Task IEventHandler<PlayerJoinedEvent>.Handle(PlayerJoinedEvent command)
+    async Task IEventHandler<PlayerJoinedEvent>.Handle(PlayerJoinedEvent command)
     {
         var playerEventData = command.Data!;
         var playerEntity = GetPlayerEntity(command.OriginServerId, playerEventData.PlayerUID);
@@ -189,7 +200,12 @@ public class PlayerEventsHandler
             _dataContext.SaveChanges();
         }
 
-        return Task.CompletedTask;
+        // Issue QueryPlayerInventoryCommand to sync player's inventory
+        await IssueQueryPlayerInventoryCommandAsync(
+            command.OriginServerId,
+            playerEventData.PlayerUID,
+            playerEventData.PlayerName
+        );
     }
 
     Task IEventHandler<PlayerKickedEvent>.Handle(PlayerKickedEvent command)
@@ -202,5 +218,36 @@ public class PlayerEventsHandler
         return _dataContext.Players.FirstOrDefault(p =>
             p.PlayerUID == playerUID && p.ServerId == serverId
         );
+    }
+
+    private async Task IssueQueryPlayerInventoryCommandAsync(
+        Guid serverId,
+        string playerUID,
+        string playerName
+    )
+    {
+        try
+        {
+            var queryCommand = _messageBus.CreateCommand<QueryPlayerInventoryCommand>(
+                serverId,
+                cmd =>
+                {
+                    cmd.Data.PlayerId = playerUID;
+                    cmd.Data.PlayerName = playerName;
+                }
+            );
+            await _messageBus.PublishCommandAsync(queryCommand);
+         
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to issue QueryPlayerInventoryCommand for player {PlayerName} ({PlayerUID}) on server {ServerId}",
+                playerName,
+                playerUID,
+                serverId
+            );
+        }
     }
 }

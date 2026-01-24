@@ -57,6 +57,7 @@ public class ServerPlayersService
     {
         var player = await _dbContext
             .Players.Include(p => p.Sessions)
+            .Include(p => p.InventorySlots)
             .FirstOrDefaultAsync(p => p.ServerId == serverId && p.Id == playerId);
 
         if (player == null)
@@ -66,6 +67,28 @@ public class ServerPlayersService
 
         var isPlaying = player.Sessions.Any(s => s.LeaveDate == null);
         var lastSession = player.Sessions.OrderByDescending(s => s.JoinDate).FirstOrDefault();
+
+        // Group inventory slots by inventory name
+        var inventories = player
+            .InventorySlots.GroupBy(slot => slot.InventoryName)
+            .ToDictionary(
+                g => g.Key,
+                g =>
+                    new InventoryDTO
+                    {
+                        Name = g.Key,
+                        Slots = g.Select(slot => new InventorySlotDTO
+                            {
+                                SlotIndex = slot.SlotIndex,
+                                EntityId = slot.EntityId,
+                                EntityClass = slot.EntityClass,
+                                Name = slot.Name,
+                                StackSize = slot.StackSize,
+                            })
+                            .OrderBy(s => s.SlotIndex)
+                            .ToList(),
+                    }
+            );
 
         return new PlayerDetailsDTO
         {
@@ -90,7 +113,7 @@ public class ServerPlayersService
             RolesCode = string.Empty,
             Privileges = Array.Empty<string>(),
             WhitelistedUntil = null,
-            Inventories = new Dictionary<string, InventoryDTO>(),
+            Inventories = inventories,
         };
     }
 
@@ -169,5 +192,48 @@ public class ServerPlayersService
         );
 
         await _messageBus.PublishCommandAsync(kickPlayerCommand);
+    }
+
+    public virtual async Task UpdateInventorySlot(
+        Guid serverId,
+        string playerUID,
+        string inventoryName,
+        int slotIndex,
+        UpdateInventorySlotRequestDTO request
+    )
+    {
+        var updateCommand = _messageBus.CreateCommand<UpdateInventorySlotCommand>(
+            serverId,
+            cmd =>
+            {
+                cmd.Data.PlayerId = playerUID;
+                cmd.Data.InventoryName = inventoryName;
+                cmd.Data.SlotIndex = slotIndex;
+                cmd.Data.ItemId = request.EntityId;
+                cmd.Data.Quantity = request.StackSize ?? 1;
+            }
+        );
+
+        await _messageBus.PublishCommandAsync(updateCommand);
+    }
+
+    public virtual async Task RemoveInventorySlot(
+        Guid serverId,
+        string playerUID,
+        string inventoryName,
+        int slotIndex
+    )
+    {
+        var removeCommand = _messageBus.CreateCommand<RemoveInventorySlotCommand>(
+            serverId,
+            cmd =>
+            {
+                cmd.Data.PlayerId = playerUID;
+                cmd.Data.InventoryName = inventoryName;
+                cmd.Data.SlotIndex = slotIndex;
+            }
+        );
+
+        await _messageBus.PublishCommandAsync(removeCommand);
     }
 }

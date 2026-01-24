@@ -7,6 +7,7 @@ using Granite.Common.Dto.JsonApi;
 using Granite.Server.Controllers;
 using Granite.Server.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
@@ -19,8 +20,9 @@ public class ServerConfigControllerTests
 
     public ServerConfigControllerTests()
     {
-        _mockService = Substitute.For<ServerConfigService>(null!, null!);
-        _controller = new ServerConfigController(_mockService);
+        _mockService = Substitute.For<ServerConfigService>(null!, null!, null!);
+        var logger = Substitute.For<ILogger<ServerConfigController>>();
+        _controller = new ServerConfigController(logger, _mockService);
     }
 
     [Fact]

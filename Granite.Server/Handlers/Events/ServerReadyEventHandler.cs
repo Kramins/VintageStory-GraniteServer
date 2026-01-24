@@ -27,15 +27,11 @@ public class ServerReadyEventHandler : IEventHandler<ServerReadyEvent>
 
     async Task IEventHandler<ServerReadyEvent>.Handle(ServerReadyEvent @event)
     {
-        _logger.LogInformation(
-            "Server {ServerId} announced ready at {StartedAt} with version {ServerVersion}",
-            @event.OriginServerId,
-            @event.Data.StartedAt,
-            @event.Data.ServerVersion
-        );
-
         // Issue sync server configuration command
         await IssueSyncServerConfigCommandAsync(@event.OriginServerId);
+
+        // Issue sync collectibles command to populate collectibles cache
+        await IssueSyncCollectiblesCommandAsync(@event.OriginServerId);
 
         // TODO: Add more sync commands as needed:
         // - Player data sync
@@ -58,6 +54,26 @@ public class ServerReadyEventHandler : IEventHandler<ServerReadyEvent>
             _logger.LogError(
                 ex,
                 "Failed to issue SyncServerConfigCommand to server {ServerId}",
+                serverId
+            );
+        }
+    }
+
+    private async Task IssueSyncCollectiblesCommandAsync(Guid serverId)
+    {
+        try
+        {
+            var syncCommand = _messageBus.CreateCommand<SyncCollectiblesCommand>(
+                serverId,
+                cmd => { }
+            );
+            await _messageBus.PublishCommandAsync(syncCommand);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to issue SyncCollectiblesCommand to server {ServerId}",
                 serverId
             );
         }

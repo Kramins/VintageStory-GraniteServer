@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Granite.Server.Configuration;
 using Granite.Server.Services;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
@@ -10,17 +11,19 @@ namespace Granite.Tests.Services;
 public class BasicAuthServiceTests
 {
     private readonly IOptions<GraniteServerOptions> _mockOptions;
+    private readonly ILogger<BasicAuthService> _mockLogger;
 
     public BasicAuthServiceTests()
     {
         _mockOptions = Substitute.For<IOptions<GraniteServerOptions>>();
+        _mockLogger = Substitute.For<ILogger<BasicAuthService>>();
     }
 
     private BasicAuthService CreateService(string? username = null, string? password = null)
     {
         var options = new GraniteServerOptions { Username = username ?? string.Empty, Password = password ?? string.Empty };
         _mockOptions.Value.Returns(options);
-        return new BasicAuthService(_mockOptions);
+        return new BasicAuthService(_mockLogger, _mockOptions);
     }
 
     [Fact]

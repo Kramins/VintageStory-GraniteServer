@@ -174,24 +174,36 @@ public class ServerPlayersController : ControllerBase
         return new JsonApiDocument<string> { Data = "Player unwhitelisted successfully" };
     }
 
-    [HttpPost("{playerId}/inventory/{slotIndex}")]
-    public Task<ActionResult> UpdateInventorySlot(
+    [HttpPost("{playerId}/inventory/{inventoryName}/{slotIndex}")]
+    public async Task<ActionResult<JsonApiDocument<string>>> UpdateInventorySlot(
         [FromRoute] Guid serverId,
         string playerId,
+        string inventoryName,
         int slotIndex,
         [FromBody] UpdateInventorySlotRequestDTO request
     )
     {
-        throw new NotImplementedException("UpdateInventorySlot endpoint not yet implemented");
+        await _playerService.UpdateInventorySlot(
+            serverId,
+            playerId,
+            inventoryName,
+            slotIndex,
+            request
+        );
+
+        return new JsonApiDocument<string> { Data = "Inventory slot updated successfully" };
     }
 
-    [HttpDelete("{playerId}/inventory/{slotIndex}")]
-    public Task<ActionResult> RemoveInventorySlot(
+    [HttpDelete("{playerId}/inventory/{inventoryName}/{slotIndex}")]
+    public async Task<ActionResult<JsonApiDocument<string>>> RemoveInventorySlot(
         [FromRoute] Guid serverId,
         string playerId,
+        string inventoryName,
         int slotIndex
     )
     {
-        throw new NotImplementedException("RemoveInventorySlot endpoint not yet implemented");
+        await _playerService.RemoveInventorySlot(serverId, playerId, inventoryName, slotIndex);
+
+        return new JsonApiDocument<string> { Data = "Inventory slot removed successfully" };
     }
 }
