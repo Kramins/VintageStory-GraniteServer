@@ -13,4 +13,5 @@ public class ServerMetricsEntity
     public float CpuUsagePercent { get; set; }
     public float MemoryUsageMB { get; set; }
     public int ActivePlayerCount { get; set; }
+    public int UpTimeSeconds { get; set; }
 }
