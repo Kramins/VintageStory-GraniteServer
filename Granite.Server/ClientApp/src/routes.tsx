@@ -13,7 +13,7 @@ const MainRoutes = {
     element: <ProtectedRoute><DashboardLayout /></ProtectedRoute>,
     children: [
         {
-            path: '/',
+            path: '/:serverId',
             element: <OverviewPage />
         },
         {

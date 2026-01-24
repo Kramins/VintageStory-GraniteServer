@@ -26,6 +26,7 @@ public class ServerMetricsHostedService : IHostedService, IDisposable
     private TimeSpan _prevCpu;
     private DateTime _prevTimeUtc;
     private readonly int _processorCount;
+    private readonly DateTime _serverStartTime;
 
     private const int IntervalSeconds = 30;
 
@@ -46,6 +47,7 @@ public class ServerMetricsHostedService : IHostedService, IDisposable
         _prevCpu = _process.TotalProcessorTime;
         _prevTimeUtc = DateTime.UtcNow;
         _processorCount = Environment.ProcessorCount;
+        _serverStartTime = DateTime.UtcNow;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -106,6 +108,7 @@ public class ServerMetricsHostedService : IHostedService, IDisposable
             var memMb = (float)(memBytes / (1024.0 * 1024.0));
 
             var activePlayers = _api.World?.AllOnlinePlayers?.Length ?? 0;
+            var upTimeSeconds = (int)(DateTime.UtcNow - _serverStartTime).TotalSeconds;
 
             var metricsEvent = _messageBus.CreateEvent<ServerMetricsEvent>(
                 _config.ServerId,
@@ -114,6 +117,7 @@ public class ServerMetricsHostedService : IHostedService, IDisposable
                     e.Data!.CpuUsagePercent = cpuPercent;
                     e.Data!.MemoryUsageMB = memMb;
                     e.Data!.ActivePlayerCount = activePlayers;
+                    e.Data!.UpTimeSeconds = upTimeSeconds;
                 }
             );
             _messageBus.Publish(metricsEvent);

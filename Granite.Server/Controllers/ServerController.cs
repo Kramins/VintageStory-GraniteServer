@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Granite.Common.Dto;
 using Granite.Common.Dto.JsonApi;
+using Granite.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,38 +14,62 @@ namespace Granite.Server.Controllers;
 public class ServerController : ControllerBase
 {
     private readonly ILogger<ServerController> _logger;
+    private readonly ServerService _serverService;
 
-    public ServerController(ILogger<ServerController> logger)
+    public ServerController(ILogger<ServerController> logger, ServerService serverService)
     {
         _logger = logger;
+        _serverService = serverService;
     }
+
     [HttpGet("status")]
-    public Task<ActionResult<ServerStatusDTO>> GetServerStatus([FromRoute] Guid serverid)
+    public async Task<ActionResult<JsonApiDocument<ServerStatusDTO>>> GetServerStatus(
+        [FromRoute] Guid serverid
+    )
     {
-        throw new NotImplementedException("GetServerStatus endpoint not yet implemented");
+        var status = await _serverService.GetServerStatusAsync(serverid);
+
+        if (status == null)
+        {
+            return NotFound(
+                new JsonApiDocument<ServerStatusDTO>
+                {
+                    Errors = new List<JsonApiError>
+                    {
+                        new JsonApiError
+                        {
+                            Code = "404",
+                            Message = $"Server with ID {serverid} not found",
+                        },
+                    },
+                }
+            );
+        }
+
+        return new JsonApiDocument<ServerStatusDTO> { Data = status };
     }
 
     [HttpPost("announce")]
-    public Task<ActionResult<string>> AnnounceMessage(
+    public async Task<ActionResult<JsonApiDocument<string>>> AnnounceMessage(
         [FromRoute] Guid serverid,
         [FromBody] AnnounceMessageDTO request
     )
     {
-        throw new NotImplementedException("AnnounceMessage endpoint not yet implemented");
-    }
+        if (string.IsNullOrWhiteSpace(request.Message))
+        {
+            return BadRequest(
+                new JsonApiDocument<string>
+                {
+                    Errors = new List<JsonApiError>
+                    {
+                        new JsonApiError { Code = "400", Message = "Message cannot be empty", },
+                    },
+                }
+            );
+        }
 
-    [HttpGet("config")]
-    public Task<ActionResult<JsonApiDocument<ServerConfigDTO>>> GetServerConfig([FromRoute] Guid serverid)
-    {
-        throw new NotImplementedException("GetServerConfig endpoint not yet implemented");
-    }
+        await _serverService.AnnounceMessageAsync(serverid, request.Message);
 
-    [HttpPost("config")]
-    public Task<ActionResult<JsonApiDocument<string>>> UpdateServerConfig(
-        [FromRoute] Guid serverid,
-        [FromBody] ServerConfigDTO config
-    )
-    {
-        throw new NotImplementedException("UpdateServerConfig endpoint not yet implemented");
+        return new JsonApiDocument<string> { Data = "Message announced successfully" };
     }
 }

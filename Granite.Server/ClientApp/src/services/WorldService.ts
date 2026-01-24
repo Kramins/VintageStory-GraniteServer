@@ -1,21 +1,17 @@
-
 import axios from 'axios';
 import type { CollectibleObjectDTO } from '../types/CollectibleObjectDTO';
-
-
-const API_BASE = '/api/world';
+import type { JsonApiDocument } from '../types/JsonApi';
 
 const WorldService = {
-    async GetAllCollectibles(): Promise<CollectibleObjectDTO[]> {
-        const response = await axios.get<CollectibleObjectDTO[]>(`${API_BASE}/collectibles`);
-        return response.data;
+    async GetAllCollectibles(serverId: string): Promise<CollectibleObjectDTO[]> {
+        const response = await axios.get<JsonApiDocument<CollectibleObjectDTO[]>>(`/api/${serverId}/world/collectibles`);
+        return response.data.data;
     },
     
-    async saveNow(): Promise<any> {
-        return axios.post(`${API_BASE}/save`);
-    },
-
- 
+    async saveNow(serverId: string): Promise<any> {
+        const response = await axios.post<JsonApiDocument<any>>(`/api/${serverId}/world/save`);
+        return response.data.data;
+    }
 };
 
 export default WorldService;

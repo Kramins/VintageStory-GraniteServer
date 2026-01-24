@@ -3,6 +3,7 @@ using GraniteServer.Messaging.Common;
 
 namespace GraniteServer.Messaging.Events;
 
+[ClientEvent]
 public class PlayerBannedEvent : EventMessage<PlayerBannedEventData> { }
 
 public class PlayerBannedEventData : PlayerCommonEventData

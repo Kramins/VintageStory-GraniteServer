@@ -3,6 +3,7 @@ using GraniteServer.Messaging.Common;
 
 namespace GraniteServer.Messaging.Events;
 
+[ClientEvent]
 public class PlayerInventorySlotRemovedEvent : EventMessage<PlayerInventorySlotRemovedEventData> { }
 
 public class PlayerInventorySlotRemovedEventData : PlayerCommonEventData

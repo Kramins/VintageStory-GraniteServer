@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import ServerService from '../services/ServerService';
 import WorldService from '../services/WorldService';
 import { useToast } from '../components/ToastProvider';
+import { useEventBus } from '../hooks/useEventBus';
 import type { ServerStatusDTO } from '../types/ServerStatusDTO';
 import {
     Box,
@@ -45,32 +47,59 @@ const StatCard: React.FC<{
 );
 
 const OverviewPage: React.FC = () => {
+    const { serverId } = useParams<{ serverId: string }>();
     const toast = useToast();
     const [status, setStatus] = useState<ServerStatusDTO | null>(null);
-    const [loading, setLoading] = useState(false); // Changed to false - no longer loading status on mount
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [announceOpen, setAnnounceOpen] = useState(false);
 
-    // TODO: Update to use multi-server architecture with selected serverId
-    // The old /api/server/status endpoint no longer exists
-    // useEffect(() => {
-    //     ServerService.getStatus()
-    //         .then(data => {
-    //             setStatus(data);
-    //             setLoading(false);
-    //         })
-    //         .catch(() => {
-    //             setError('Failed to load server status');
-    //             setLoading(false);
-    //         });
-    // }, []);
+    // Listen for ServerMetricsEvent to update status in real-time
+    useEventBus((event) => {
+        if (event.messageType === 'ServerMetricsEvent' && event.data && status) {
+            setStatus(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    currentPlayers: event.data.activePlayerCount,
+                    memoryUsageBytes: Math.round(event.data.memoryUsageMB * 1024 * 1024),
+                    upTime: event.data.upTimeSeconds || prev.upTime,
+                };
+            });
+        }
+    }, [status]);
+
+    useEffect(() => {
+        if (!serverId) {
+            setError('Server ID is required');
+            setLoading(false);
+            return;
+        }
+
+        const fetchStatus = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const data = await ServerService.getStatus(serverId);
+                setStatus(data);
+            } catch (e: any) {
+                console.error('Failed to load server status:', e);
+                setError('Failed to load server status');
+                setStatus(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStatus();
+    }, [serverId]);
 
     const handleSaveWorld = async () => {
-        if (saving) return;
+        if (saving || !serverId) return;
         setSaving(true);
         try {
-            await WorldService.saveNow();
+            await WorldService.saveNow(serverId);
             toast.show('World saved successfully.', 'success');
         } catch (e: any) {
             if (e?.response?.status === 401) {
@@ -84,8 +113,9 @@ const OverviewPage: React.FC = () => {
     };
 
     const handleAnnounce = async (message: string) => {
+        if (!serverId) return;
         try {
-            await ServerService.announce(message);
+            await ServerService.announce(serverId, message);
             toast.show('Message announced successfully.', 'success');
         } catch (e: any) {
             toast.show('Failed to announce message. Please try again.', 'error');
@@ -94,7 +124,7 @@ const OverviewPage: React.FC = () => {
 
     // Temporarily disable these checks until multi-server architecture is fully implemented
     // TODO: Once multi-server support is added with serverId, re-enable status fetching
-    if (!status) {
+    if (loading) {
         return (
             <Box>
                 <Typography variant="h4" component="h1" gutterBottom>
@@ -102,8 +132,22 @@ const OverviewPage: React.FC = () => {
                 </Typography>
                 <Paper sx={{ p: 3, mt: 2 }}>
                     <Typography variant="body1" color="text.secondary">
-                        Server overview is being updated to support multiple game servers.
-                        Please select a server from the navigation to view its status.
+                        Loading server status...
+                    </Typography>
+                </Paper>
+            </Box>
+        );
+    }
+
+    if (error || !status) {
+        return (
+            <Box>
+                <Typography variant="h4" component="h1" gutterBottom>
+                    Server Overview
+                </Typography>
+                <Paper sx={{ p: 3, mt: 2 }}>
+                    <Typography variant="body1" color="error">
+                        {error || 'Failed to load server status'}
                     </Typography>
                 </Paper>
             </Box>

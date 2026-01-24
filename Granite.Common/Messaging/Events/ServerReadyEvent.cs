@@ -2,6 +2,7 @@ using GraniteServer.Messaging.Common;
 
 namespace GraniteServer.Messaging.Events;
 
+[ClientEvent]
 public class ServerReadyEvent : EventMessage<ServerReadyEventData> { }
 
 public class ServerReadyEventData

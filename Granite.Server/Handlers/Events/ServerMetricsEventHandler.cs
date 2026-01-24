@@ -40,6 +40,7 @@ public class ServerMetricsEventHandler : IEventHandler<ServerMetricsEvent>
                 CpuUsagePercent = @event.Data.CpuUsagePercent,
                 MemoryUsageMB = @event.Data.MemoryUsageMB,
                 ActivePlayerCount = @event.Data.ActivePlayerCount,
+                UpTimeSeconds = @event.Data.UpTimeSeconds,
             };
 
             _dataContext.ServerMetrics.Add(metricsEntity);

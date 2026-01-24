@@ -4,6 +4,7 @@ using GraniteServer.Messaging.Common;
 
 namespace GraniteServer.Messaging.Events;
 
+[ClientEvent]
 public class PlayerInventorySnapshotEvent : EventMessage<PlayerInventorySnapshotEventData> { }
 
 public class PlayerInventorySnapshotEventData : PlayerCommonEventData

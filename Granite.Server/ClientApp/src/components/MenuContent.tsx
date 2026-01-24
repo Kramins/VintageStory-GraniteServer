@@ -15,10 +15,6 @@ import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
 import { NavLink } from 'react-router-dom';
 import { useAppSelector } from '../store/store';
 
-const staticMenuItems = [
-  { text: 'Overview', icon: <HomeRoundedIcon />, path: '/', static: true },
-];
-
 const secondaryListItems = [
   { text: 'Settings', icon: <SettingsRoundedIcon /> },
   { text: 'About', icon: <InfoRoundedIcon /> },
@@ -27,8 +23,13 @@ const secondaryListItems = [
 
 export default function MenuContent() {
   const selectedServerId = useAppSelector(state => state.servers.selectedServerId);
+  const overviewPath = selectedServerId ? `/${selectedServerId}` : '/';
   const playersPath = selectedServerId ? `/${selectedServerId}/players` : '/players';
   const configPath = selectedServerId ? `/${selectedServerId}/config` : '/config';
+  
+  const staticMenuItems = [
+    { text: 'Overview', icon: <HomeRoundedIcon />, path: overviewPath, static: true },
+  ];
   
   const mainListItems = [
     ...staticMenuItems,

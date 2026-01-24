@@ -3,6 +3,7 @@ using GraniteServer.Messaging.Common;
 
 namespace GraniteServer.Messaging.Events;
 
+[ClientEvent]
 public class ServerConfigSyncedEvent : EventMessage<ServerConfigSyncedEventData> { }
 
 public class ServerConfigSyncedEventData

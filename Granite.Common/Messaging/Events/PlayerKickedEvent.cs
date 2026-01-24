@@ -2,6 +2,7 @@ using GraniteServer.Messaging.Common;
 
 namespace GraniteServer.Messaging.Events;
 
+[ClientEvent]
 public class PlayerKickedEvent : EventMessage<PlayerKickedEventData> { }
 
 public class PlayerKickedEventData : PlayerCommonEventData

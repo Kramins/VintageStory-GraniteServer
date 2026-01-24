@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Reactive.Linq;
 using Granite.Server.Services;
 using GraniteServer.Messaging;
@@ -49,9 +50,10 @@ public class ClientHub : Hub
 
         // Subscribe to all messages from the message bus
         // ClientApp should receive events from all servers for management purposes
+        // Filter to only events marked with [ClientEvent] attribute
         var subscription = _messageBus
             .GetObservable()
-                        .Where(m => m is EventMessage)
+            .Where(m => m is EventMessage && ShouldSendToClient(m.GetType()))
             .Subscribe(
                 message =>
                 {
@@ -86,6 +88,20 @@ public class ClientHub : Hub
         _subscriptions[connectionId] = subscription;
 
         await base.OnConnectedAsync();
+    }
+
+    /// <summary>
+    /// Determines if an event should be sent to client apps based on ClientEvent attribute.
+    /// </summary>
+    private static bool ShouldSendToClient(Type messageType)
+    {
+        var attribute = (ClientEventAttribute?)Attribute.GetCustomAttribute(
+            messageType,
+            typeof(ClientEventAttribute)
+        );
+
+        // Default to false if no attribute is present (explicit opt-in)
+        return attribute?.SendToClient ?? false;
     }
 
     /// <summary>

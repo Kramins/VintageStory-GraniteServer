@@ -24,8 +24,8 @@ export default function ServerSelector() {
   const handleChange = (event: SelectChangeEvent<string>) => {
     const serverId = event.target.value;
     dispatch(selectServer(serverId));
-    // Navigate to the players page for the selected server
-    navigate(`/${serverId}/players`);
+    // Navigate to the overview page for the selected server
+    navigate(`/${serverId}`);
   };
 
   if (loading) {

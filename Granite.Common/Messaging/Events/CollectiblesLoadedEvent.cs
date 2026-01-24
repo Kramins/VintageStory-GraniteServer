@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace GraniteServer.Messaging.Events;
 
+[ClientEvent(false)]
 public class CollectiblesLoadedEvent : EventMessage<CollectiblesLoadedEventData> { }
 
 public class CollectiblesLoadedEventData
