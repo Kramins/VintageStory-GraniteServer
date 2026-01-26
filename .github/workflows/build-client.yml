@@ -29,6 +29,7 @@ jobs:
 
       - name: Extract version and SHA
         id: version
+        shell: /bin/bash
         run: |
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             TAG="${GITHUB_REF##*/}"
@@ -56,6 +57,7 @@ jobs:
 
       - name: Create client artifact archive
         working-directory: Granite.Server/ClientApp
+        shell: /bin/bash
         run: |
           if [[ "${{ steps.version.outputs.is_release }}" == "true" ]]; then
             tar -czf granite-client-v${{ steps.version.outputs.version }}-${{ steps.version.outputs.sha }}.tar.gz dist/
@@ -65,6 +67,7 @@ jobs:
 
       - name: Create artifact name
         id: artifact
+        shell: /bin/bash
         run: |
           if [[ "${{ steps.version.outputs.is_release }}" == "true" ]]; then
             echo "name=granite-client-v${{ steps.version.outputs.version }}-${{ steps.version.outputs.sha }}" >> $GITHUB_OUTPUT
@@ -92,6 +95,7 @@ jobs:
     steps:
       - name: Extract version
         id: version
+        shell: /bin/bash
         run: |
           TAG="${GITHUB_REF##*/}"
           VERSION="${TAG#v}"

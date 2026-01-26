@@ -2,7 +2,9 @@
 
 ## Overview
 
-The Granite Server project uses three separate GitHub Actions workflows for building and releasing the Server, Mod, and ClientApp components. Each workflow runs on branch pushes/PRs for testing and on tag pushes for releases.
+The Granite Server project uses two separate GitHub Actions workflows for building and releasing artifacts. Each workflow runs on branch pushes/PRs for testing and on tag pushes for releases.
+
+**Note:** The ClientApp is built automatically as part of the Mod and Server builds via the `/p:BuildWebApp=true` MSBuild property, so there is no separate client workflow.
 
 ## Workflows
 
@@ -54,44 +56,17 @@ The Granite Server project uses three separate GitHub Actions workflows for buil
 
 **Test Output:** Tests run on every build but only fail the build if errors are found
 
-### 3. Build Client ([build-client.yml](.github/workflows/build-client.yml))
-
-**Container:** Native ubuntu-latest (no special container needed)
-
-**Triggers:**
-- Push to `main`, `feature/**` branches
-- Pull requests to `main`
-- Tags matching `v*`
-
-**Jobs:**
-- `build-client`: Builds the React/TypeScript ClientApp
-  - Uses Node.js 20
-  - Caches npm dependencies via `actions/setup-node`
-  - Runs `npm ci` for clean install
-  - Runs `npm run lint`
-  - Runs `npm run build` (Vite)
-  - Creates tar.gz archive of `dist/` folder
-  - Uploads artifact: `granite-client-{sha}.tar.gz` or `granite-client-v{version}-{sha}.tar.gz`
-
-- `release`: Creates GitHub Release (only on tags)
-  - Downloads the client artifact
-  - Attaches to GitHub Release
-
-**Build Output:** `Granite.Server/ClientApp/dist/`
-
 ## Artifact Naming Convention
 
 ### Branch/PR Builds
-- Mod: `granite-mod-{sha}.zip`
-- Server: `granite-server-{sha}.tar.gz`
-- Client: `granite-client-{sha}.tar.gz`
+- Mod: `granite-mod-{sha}.zip` (includes built ClientApp)
+- Server: `granite-server-{sha}.tar.gz` (includes built ClientApp when published with BuildWebApp=true)
 
 Where `{sha}` is the first 7 characters of the commit SHA.
 
 ### Tag Builds (Releases)
-- Mod: `granite-mod-v{version}-{sha}.zip`
-- Server: `granite-server-v{version}-{sha}.tar.gz`
-- Client: `granite-client-v{version}-{sha}.tar.gz`
+- Mod: `granite-mod-v{version}-{sha}.zip` (includes built ClientApp)
+- Server: `granite-server-v{version}-{sha}.tar.gz` (includes built ClientApp)
 
 Where `{version}` is extracted from the git tag (e.g., tag `v0.0.9` → version `0.0.9`).
 
@@ -103,9 +78,9 @@ Where `{version}` is extracted from the git tag (e.g., tag `v0.0.9` → version 
    git push origin v0.0.9
    ```
 
-2. All three workflows will trigger automatically
+2. Both workflows will trigger automatically
 
-3. Each workflow builds its component and uploads artifacts
+3. Each workflow builds its component (with ClientApp included) and uploads artifacts
 
 4. Each workflow creates/updates the same GitHub Release with its artifacts
 
@@ -135,11 +110,13 @@ dotnet build Granite.Server/Granite.Server.csproj -c Debug
 # Test
 dotnet test GraniteServer.sln --configuration Debug
 
-# Publish
-dotnet publish Granite.Server/Granite.Server.csproj -c Release -o ./publish/server
+# Publish (includes ClientApp when BuildWebApp=true)
+dotnet publish Granite.Server/Granite.Server.csproj -c Release -o ./publish/server /p:BuildWebApp=true
 ```
 
-### Client Build
+### ClientApp Build (Standalone - for development)
+The ClientApp is automatically built as part of the Mod and Server builds. For standalone development:
+
 ```bash
 cd Granite.Server/ClientApp
 
@@ -156,10 +133,11 @@ npm run build
 ## Caching Strategy
 
 - **NuGet**: Caches `~/.nuget/packages` with key based on `**/*.csproj` file hashes
-- **npm**: Uses built-in caching from `actions/setup-node` based on `package-lock.json`
+- **npm**: Cached in both workflows as the ClientApp is built by the Mod build (via `/p:BuildWebApp=true`)
 
 ## Notes
 
+- **ClientApp is bundled**: The React/TypeScript ClientApp is built and included in both Mod and Server artifacts via `/p:BuildWebApp=true`
 - Database migrations are NOT created in CI (use `./scripts/ef-migration.sh` locally)
 - The VintageStory dev container is required for mod builds due to game API dependencies
 - Test failures will fail the build but do not block artifact creation on branches
@@ -171,26 +149,27 @@ npm run build
 ### Mod Build Fails
 - Ensure the VintageStory dev container is accessible
 - Check that `VINTAGE_STORY` environment variable is set in the container
-- Verify `Granite.Server/ClientApp` has been built (mod includes the webapp)
+- Verify npm dependencies install correctly (the mod build includes the ClientApp build)
 
 ### Server Tests Fail
 - Review test output in the Actions log
 - Tests can be run locally with `dotnet test`
 - Some tests may be environment-specific
 
-### Client Build Fails
-- Check for npm dependency issues
-- Run `npm ci` locally to reproduce
+### ClientApp Build Fails (as part of Mod/Server)
+- Check for npm dependency issues in the workflow logs
+- Run `npm ci && npm run build` locally in `Granite.Server/ClientApp/` to reproduce
 - Check linting errors with `npm run lint`
-- Ensure Node.js 20 is used
+- Ensure the container has Node.js available
 
 ## Migration from Old Workflow
 
-The previous `ci-cd.yml` workflow has been replaced by these three separate workflows. Key differences:
+The previous `ci-cd.yml` workflow has been replaced by two separate workflows (Mod and Server). Key differences:
 
-- **Separation of Concerns**: Each component (Mod, Server, Client) has its own workflow
-- **Parallel Builds**: All three can run simultaneously on the same trigger
+- **Separation of Concerns**: Mod and Server have their own workflows; ClientApp is built as part of both
+- **Parallel Builds**: Both can run simultaneously on the same trigger
 - **Better Artifact Naming**: Clear naming with version and commit SHA
-- **Improved Caching**: More granular cache keys
+- **Improved Caching**: More granular cache keys for NuGet and npm
 - **Branch Builds**: Now builds and tests on all branches, not just PRs to main
+- **Consistent Release Process**: Both workflows contribute to the same release
 - **Consistent Release Process**: All three workflows contribute to the same release
