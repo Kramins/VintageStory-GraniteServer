@@ -17,6 +17,45 @@ namespace Granite.Data.Migrations.Sqlite
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.13");
 
+            modelBuilder.Entity("GraniteServer.Data.Entities.CollectibleEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Class")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CollectibleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("LastSynced")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MaxStackSize")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServerId");
+
+                    b.ToTable("Collectibles");
+                });
+
             modelBuilder.Entity("GraniteServer.Data.Entities.CommandEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -298,6 +337,49 @@ namespace Granite.Data.Migrations.Sqlite
                     b.ToTable("Players");
                 });
 
+            modelBuilder.Entity("GraniteServer.Data.Entities.PlayerInventorySlotEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EntityClass")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EntityId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("InventoryName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastUpdated")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SlotIndex")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StackSize")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayerId", "ServerId", "InventoryName", "SlotIndex")
+                        .IsUnique();
+
+                    b.ToTable("PlayerInventorySlots");
+                });
+
             modelBuilder.Entity("GraniteServer.Data.Entities.PlayerSessionEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -415,11 +497,25 @@ namespace Granite.Data.Migrations.Sqlite
                     b.Property<Guid>("ServerId")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("UpTimeSeconds")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ServerId", "RecordedAt");
 
                     b.ToTable("ServerMetrics");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.CollectibleEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
+                        .WithMany("Collectibles")
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Server");
                 });
 
             modelBuilder.Entity("GraniteServer.Data.Entities.CommandEntity", b =>
@@ -488,6 +584,17 @@ namespace Granite.Data.Migrations.Sqlite
                     b.Navigation("Server");
                 });
 
+            modelBuilder.Entity("GraniteServer.Data.Entities.PlayerInventorySlotEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.PlayerEntity", "Player")
+                        .WithMany("InventorySlots")
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Player");
+                });
+
             modelBuilder.Entity("GraniteServer.Data.Entities.PlayerSessionEntity", b =>
                 {
                     b.HasOne("GraniteServer.Data.Entities.PlayerEntity", "Player")
@@ -519,11 +626,15 @@ namespace Granite.Data.Migrations.Sqlite
 
             modelBuilder.Entity("GraniteServer.Data.Entities.PlayerEntity", b =>
                 {
+                    b.Navigation("InventorySlots");
+
                     b.Navigation("Sessions");
                 });
 
             modelBuilder.Entity("GraniteServer.Data.Entities.ServerEntity", b =>
                 {
+                    b.Navigation("Collectibles");
+
                     b.Navigation("ModServers");
 
                     b.Navigation("Players");

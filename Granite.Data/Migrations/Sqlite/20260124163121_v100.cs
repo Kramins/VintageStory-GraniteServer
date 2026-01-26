@@ -127,6 +127,30 @@ namespace Granite.Data.Migrations.Sqlite
                 });
 
             migrationBuilder.CreateTable(
+                name: "Collectibles",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ServerId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    CollectibleId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
+                    Type = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    MaxStackSize = table.Column<int>(type: "INTEGER", nullable: false),
+                    Class = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    LastSynced = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Collectibles", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Collectibles_Servers_ServerId",
+                        column: x => x.ServerId,
+                        principalTable: "Servers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Players",
                 columns: table => new
                 {
@@ -164,7 +188,8 @@ namespace Granite.Data.Migrations.Sqlite
                     RecordedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CpuUsagePercent = table.Column<float>(type: "REAL", nullable: false),
                     MemoryUsageMB = table.Column<float>(type: "REAL", nullable: false),
-                    ActivePlayerCount = table.Column<int>(type: "INTEGER", nullable: false)
+                    ActivePlayerCount = table.Column<int>(type: "INTEGER", nullable: false),
+                    UpTimeSeconds = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -217,6 +242,32 @@ namespace Granite.Data.Migrations.Sqlite
                 });
 
             migrationBuilder.CreateTable(
+                name: "PlayerInventorySlots",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    PlayerId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ServerId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    InventoryName = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
+                    SlotIndex = table.Column<int>(type: "INTEGER", nullable: false),
+                    EntityId = table.Column<int>(type: "INTEGER", nullable: false),
+                    EntityClass = table.Column<string>(type: "TEXT", nullable: true),
+                    Name = table.Column<string>(type: "TEXT", nullable: true),
+                    StackSize = table.Column<int>(type: "INTEGER", nullable: false),
+                    LastUpdated = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PlayerInventorySlots", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PlayerInventorySlots_Players_PlayerId",
+                        column: x => x.PlayerId,
+                        principalTable: "Players",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PlayerSessions",
                 columns: table => new
                 {
@@ -244,6 +295,11 @@ namespace Granite.Data.Migrations.Sqlite
                 name: "IX_BufferedCommands_ServerId_Status_CreatedAt",
                 table: "BufferedCommands",
                 columns: new[] { "ServerId", "Status", "CreatedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Collectibles_ServerId",
+                table: "Collectibles",
+                column: "ServerId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ModReleases_ModId",
@@ -290,6 +346,12 @@ namespace Granite.Data.Migrations.Sqlite
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_PlayerInventorySlots_PlayerId_ServerId_InventoryName_SlotIndex",
+                table: "PlayerInventorySlots",
+                columns: new[] { "PlayerId", "ServerId", "InventoryName", "SlotIndex" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Players_PlayerUID_ServerId",
                 table: "Players",
                 columns: new[] { "PlayerUID", "ServerId" },
@@ -318,7 +380,13 @@ namespace Granite.Data.Migrations.Sqlite
                 name: "BufferedCommands");
 
             migrationBuilder.DropTable(
+                name: "Collectibles");
+
+            migrationBuilder.DropTable(
                 name: "ModServers");
+
+            migrationBuilder.DropTable(
+                name: "PlayerInventorySlots");
 
             migrationBuilder.DropTable(
                 name: "PlayerSessions");

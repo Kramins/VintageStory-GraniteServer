@@ -22,6 +22,45 @@ namespace Granite.Data.Migrations.Postgres
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("GraniteServer.Data.Entities.CollectibleEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Class")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("CollectibleId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("LastSynced")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MaxStackSize")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServerId");
+
+                    b.ToTable("Collectibles");
+                });
+
             modelBuilder.Entity("GraniteServer.Data.Entities.CommandEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -303,6 +342,49 @@ namespace Granite.Data.Migrations.Postgres
                     b.ToTable("Players");
                 });
 
+            modelBuilder.Entity("GraniteServer.Data.Entities.PlayerInventorySlotEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EntityClass")
+                        .HasColumnType("text");
+
+                    b.Property<int>("EntityId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("InventoryName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("LastUpdated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SlotIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("StackSize")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayerId", "ServerId", "InventoryName", "SlotIndex")
+                        .IsUnique();
+
+                    b.ToTable("PlayerInventorySlots");
+                });
+
             modelBuilder.Entity("GraniteServer.Data.Entities.PlayerSessionEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -420,11 +502,25 @@ namespace Granite.Data.Migrations.Postgres
                     b.Property<Guid>("ServerId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("UpTimeSeconds")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ServerId", "RecordedAt");
 
                     b.ToTable("ServerMetrics");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.CollectibleEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
+                        .WithMany("Collectibles")
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Server");
                 });
 
             modelBuilder.Entity("GraniteServer.Data.Entities.CommandEntity", b =>
@@ -493,6 +589,17 @@ namespace Granite.Data.Migrations.Postgres
                     b.Navigation("Server");
                 });
 
+            modelBuilder.Entity("GraniteServer.Data.Entities.PlayerInventorySlotEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.PlayerEntity", "Player")
+                        .WithMany("InventorySlots")
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Player");
+                });
+
             modelBuilder.Entity("GraniteServer.Data.Entities.PlayerSessionEntity", b =>
                 {
                     b.HasOne("GraniteServer.Data.Entities.PlayerEntity", "Player")
@@ -524,11 +631,15 @@ namespace Granite.Data.Migrations.Postgres
 
             modelBuilder.Entity("GraniteServer.Data.Entities.PlayerEntity", b =>
                 {
+                    b.Navigation("InventorySlots");
+
                     b.Navigation("Sessions");
                 });
 
             modelBuilder.Entity("GraniteServer.Data.Entities.ServerEntity", b =>
                 {
+                    b.Navigation("Collectibles");
+
                     b.Navigation("ModServers");
 
                     b.Navigation("Players");
