@@ -1,8 +1,7 @@
 import { type Theme, alpha, type Components } from '@mui/material/styles';
-import { gray, orange } from '../themePrimitives';
 
 /* eslint-disable import/prefer-default-export */
-export const feedbackCustomizations: Components<Theme> = {
+export const getFeedbackCustomizations = (gray: any, orange: any): Components<Theme> => ({
   MuiAlert: {
     styleOverrides: {
       root: ({ theme }) => ({
@@ -43,4 +42,4 @@ export const feedbackCustomizations: Components<Theme> = {
       }),
     },
   },
-};
+});

@@ -6,11 +6,18 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import Divider from '@mui/material/Divider';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import LogoutIcon from '@mui/icons-material/Logout';
+import PaletteIcon from '@mui/icons-material/Palette';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../store/store';
 import { AuthService } from '../services/AuthService';
+import ThemeSelector from '../theme/ThemeSelector';
+import ColorModeSelect from '../theme/ColorModeSelect';
 
 export default function UserProfile() {
   const userInfo = useAppSelector((state) => state.auth.user);
@@ -91,10 +98,40 @@ export default function UserProfile() {
           vertical: 'bottom',
           horizontal: 'right',
         }}
+        slotProps={{
+          paper: {
+            sx: { minWidth: 200 }
+          }
+        }}
       >
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Stack spacing={1.5}>
+            <Box>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                <PaletteIcon fontSize="small" color="action" />
+                <Typography variant="caption" color="text.secondary">
+                  Theme
+                </Typography>
+              </Stack>
+              <ThemeSelector size="small" fullWidth />
+            </Box>
+            <Box>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                <Brightness4Icon fontSize="small" color="action" />
+                <Typography variant="caption" color="text.secondary">
+                  Mode
+                </Typography>
+              </Stack>
+              <ColorModeSelect size="small" fullWidth />
+            </Box>
+          </Stack>
+        </Box>
+        <Divider />
         <MenuItem onClick={handleLogout}>
-          <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
-          Logout
+          <ListItemIcon>
+            <LogoutIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Logout</ListItemText>
         </MenuItem>
       </Menu>
     </Stack>

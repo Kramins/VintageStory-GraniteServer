@@ -160,8 +160,9 @@ const PlayerDetailsPage: React.FC = () => {
 
             <Box
                 sx={{
-                    background: 'linear-gradient(180deg, #2d2f33 0%, #22232a 100%)',
-                    border: '1px solid #3a3c43',
+                    bgcolor: 'background.paper',
+                    border: 1,
+                    borderColor: 'divider',
                     borderRadius: 1,
                     px: 2,
                     py: 1.25,
@@ -170,14 +171,14 @@ const PlayerDetailsPage: React.FC = () => {
                     gap: 1.5,
                     flexWrap: 'wrap',
                     mb: 3,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+                    boxShadow: 2,
                 }}
             >
                 <ButtonBase
                     onClick={handleRefresh}
                     disabled={!!actionLoading}
                     sx={{
-                        color: '#e8e8f0',
+                        color: 'text.primary',
                         px: 1.5,
                         py: 1,
                         borderRadius: 1,
@@ -187,8 +188,8 @@ const PlayerDetailsPage: React.FC = () => {
                         typography: 'caption',
                         textTransform: 'none',
                         minWidth: 84,
-                        backgroundColor: actionLoading === 'refresh' ? 'rgba(255,255,255,0.08)' : 'transparent',
-                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.08)' },
+                        backgroundColor: actionLoading === 'refresh' ? 'action.hover' : 'transparent',
+                        '&:hover': { backgroundColor: 'action.hover' },
                         opacity: actionLoading && actionLoading !== 'refresh' ? 0.65 : 1,
                     }}
                 >
@@ -200,7 +201,7 @@ const PlayerDetailsPage: React.FC = () => {
                     onClick={handleKick}
                     disabled={!!actionLoading}
                     sx={{
-                        color: '#e8e8f0',
+                        color: 'text.primary',
                         px: 1.5,
                         py: 1,
                         borderRadius: 1,
@@ -210,8 +211,8 @@ const PlayerDetailsPage: React.FC = () => {
                         typography: 'caption',
                         textTransform: 'none',
                         minWidth: 84,
-                        backgroundColor: actionLoading === 'kick' ? 'rgba(255,255,255,0.08)' : 'transparent',
-                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.08)' },
+                        backgroundColor: actionLoading === 'kick' ? 'action.hover' : 'transparent',
+                        '&:hover': { backgroundColor: 'action.hover' },
                         opacity: actionLoading && actionLoading !== 'kick' ? 0.65 : 1,
                     }}
                 >
@@ -223,7 +224,7 @@ const PlayerDetailsPage: React.FC = () => {
                     onClick={handleBanToggle}
                     disabled={!!actionLoading}
                     sx={{
-                        color: '#e8e8f0',
+                        color: 'text.primary',
                         px: 1.5,
                         py: 1,
                         borderRadius: 1,
@@ -235,9 +236,9 @@ const PlayerDetailsPage: React.FC = () => {
                         minWidth: 84,
                         backgroundColor:
                             actionLoading === 'ban' || actionLoading === 'unban'
-                                ? 'rgba(255,255,255,0.08)'
+                                ? 'action.hover'
                                 : 'transparent',
-                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.08)' },
+                        '&:hover': { backgroundColor: 'action.hover' },
                         opacity:
                             actionLoading && !['ban', 'unban'].includes(actionLoading)
                                 ? 0.65
@@ -256,7 +257,7 @@ const PlayerDetailsPage: React.FC = () => {
                     onClick={handleWhitelistToggle}
                     disabled={!!actionLoading}
                     sx={{
-                        color: '#e8e8f0',
+                        color: 'text.primary',
                         px: 1.5,
                         py: 1,
                         borderRadius: 1,
@@ -268,9 +269,9 @@ const PlayerDetailsPage: React.FC = () => {
                         minWidth: 84,
                         backgroundColor:
                             actionLoading === 'whitelist' || actionLoading === 'unwhitelist'
-                                ? 'rgba(255,255,255,0.08)'
+                                ? 'action.hover'
                                 : 'transparent',
-                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.08)' },
+                        '&:hover': { backgroundColor: 'action.hover' },
                         opacity:
                             actionLoading && !['whitelist', 'unwhitelist'].includes(actionLoading)
                                 ? 0.65
@@ -285,7 +286,7 @@ const PlayerDetailsPage: React.FC = () => {
                     <span>{playerDetails.isWhitelisted ? 'Remove WL' : 'Whitelist'}</span>
                 </ButtonBase>
 
-                <Box sx={{ ml: 'auto', color: '#b8b8c5', typography: 'caption', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ ml: 'auto', color: 'text.secondary', typography: 'caption', display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Typography variant="caption" sx={{ letterSpacing: 0.5 }}>
                         Actions
                     </Typography>

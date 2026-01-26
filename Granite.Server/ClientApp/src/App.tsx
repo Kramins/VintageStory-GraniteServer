@@ -25,6 +25,7 @@ import { ToastProvider } from './components/ToastProvider';
 // import MainGrid from './components/MainGrid';
 // import SideMenu from './components/SideMenu';
 import AppTheme from './theme/AppTheme';
+import { ThemeSelectionProvider } from './theme/ThemeSelectionProvider';
 // import {
 //   chartsCustomizations,
 //   dataGridCustomizations,
@@ -60,16 +61,14 @@ function AppContent() {
 
 function App(props: { disableCustomTheme?: boolean }) {
   return (
-    // <ThemeProvider theme={darkTheme}>
-    //   <CssBaseline />
-    //   <RouterProvider router={router} />
-    // </ThemeProvider>
+    <ThemeSelectionProvider>
       <AppTheme {...props} themeComponents={xThemeComponents}>
         <CssBaseline enableColorScheme />
         <ToastProvider>
           <AppContent />
         </ToastProvider>
       </AppTheme>
+    </ThemeSelectionProvider>
   );
 }
 

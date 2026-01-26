@@ -505,7 +505,7 @@ const PlayersPage: React.FC = () => {
                                 justifyContent: 'center',
                                 minHeight: 400,
                                 gap: 2,
-                                backgroundColor: '#f5f5f5',
+                                bgcolor: 'background.default',
                                 borderRadius: 1,
                                 p: 3,
                             }}

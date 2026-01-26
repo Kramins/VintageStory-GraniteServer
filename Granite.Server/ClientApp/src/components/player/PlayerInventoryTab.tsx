@@ -115,7 +115,7 @@ const PlayerInventoryTab: React.FC<Props> = ({ playerId, serverId, inventories, 
           <TableContainer component={Paper}>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableRow sx={{ bgcolor: 'action.hover' }}>
                   <TableCell>Slot</TableCell>
                   <TableCell>Item Name</TableCell>
                   <TableCell align="right">Stack Size</TableCell>
@@ -126,7 +126,7 @@ const PlayerInventoryTab: React.FC<Props> = ({ playerId, serverId, inventories, 
                 {inventory.slots.map((slot) => {
                   const isCurrentlyEditing = isEditing(inventoryName, slot.slotIndex);
                   return (
-                    <TableRow key={`${inventoryName}-${slot.slotIndex}`} sx={{ backgroundColor: isCurrentlyEditing ? '#f5f5f5' : 'inherit' }}>
+                    <TableRow key={`${inventoryName}-${slot.slotIndex}`} sx={{ bgcolor: isCurrentlyEditing ? 'action.hover' : 'inherit' }}>
                       <TableCell>{slot.slotIndex}</TableCell>
                       <TableCell>
                         {isCurrentlyEditing ? (

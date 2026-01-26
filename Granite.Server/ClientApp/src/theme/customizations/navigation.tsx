@@ -7,10 +7,9 @@ import { menuItemClasses } from '@mui/material/MenuItem';
 import { selectClasses } from '@mui/material/Select';
 import { tabClasses } from '@mui/material/Tab';
 import UnfoldMoreRoundedIcon from '@mui/icons-material/UnfoldMoreRounded';
-import { gray, brand } from '../themePrimitives';
 
 /* eslint-disable import/prefer-default-export */
-export const navigationCustomizations: Components<Theme> = {
+export const getNavigationCustomizations = (gray: any, brand: any): Components<Theme> => ({
   MuiMenuItem: {
     styleOverrides: {
       root: ({ theme }) => ({
@@ -150,7 +149,7 @@ export const navigationCustomizations: Components<Theme> = {
   MuiDrawer: {
     styleOverrides: {
       paper: ({ theme }) => ({
-        backgroundColor: (theme.vars || theme).palette.background.default,
+        backgroundColor: (theme.vars || theme).palette.background.paper,
       }),
     },
   },
@@ -276,4 +275,4 @@ export const navigationCustomizations: Components<Theme> = {
       }),
     },
   },
-};
+});
