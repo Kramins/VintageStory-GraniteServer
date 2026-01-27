@@ -1,4 +1,5 @@
 using System.Text;
+using Granite.Server.Components;
 using Granite.Server.Configuration;
 using Granite.Server.Extensions;
 using Granite.Server.Hubs;
@@ -131,18 +132,15 @@ builder.Services.AddSignalR(options =>
 });
 
 // Add OpenAPI/Swagger
-builder.Services.AddOpenApi();
+// builder.Services.AddOpenApi();
+
+// Add services to the container.
+builder.Services.AddRazorComponents().AddInteractiveWebAssemblyComponents();
 
 var app = builder.Build();
 
 // Handle exceptions and wrap in JsonApiDocument (must be first to catch all exceptions)
 app.UseMiddleware<Granite.Server.Middleware.ExceptionHandlingMiddleware>();
-
-// Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
 
 // Enable routing to access route values in middleware
 app.UseRouting();
@@ -159,19 +157,33 @@ app.UseAuthorization();
 app.UseMiddleware<Granite.Server.Middleware.ServerIdValidationMiddleware>();
 
 // Serve static files from ClientApp/dist
-app.UseStaticFiles();
-app.UseDefaultFiles();
+// app.UseStaticFiles();
+// app.UseDefaultFiles();
 
 // Map endpoints
+app.MapControllers();
 app.UseEndpoints(endpoints =>
 {
-    endpoints.MapControllers();
     endpoints.MapHub<ModHub>("/hub/mod");
     endpoints.MapHub<ClientHub>("/hub/client");
 });
 
-// Fallback to index.html for SPA routing (must be after MapControllers)
-app.MapFallbackToFile("index.html");
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseWebAssemblyDebugging();
+}
+else
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
+}
+
+// app.MapStaticAssets();
+app.MapRazorComponents<App>()
+    .AddInteractiveWebAssemblyRenderMode()
+    .AddAdditionalAssemblies(typeof(Granite.Web.Client._Imports).Assembly);
 
 // Apply database migrations
 using (var scope = app.Services.CreateScope())

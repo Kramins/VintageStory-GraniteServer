@@ -9,6 +9,7 @@
     <BuildWebApp Condition="'$(BuildWebApp)'=='' and '$(Configuration)'=='Release'">true</BuildWebApp>
     <BuildWebApp Condition="'$(BuildWebApp)'==''">false</BuildWebApp>
     <IncludeClientAppInPublish Condition="'$(IncludeClientAppInPublish)'==''">true</IncludeClientAppInPublish>
+    <BlazorClientOutputDir>$(ProjectDir)..\Granite.Web.Client\bin\$(Configuration)\net9.0\publish\wwwroot\</BlazorClientOutputDir>
     <PackageOutputRoot Condition="'$(PackageOutputRoot)'==''">$(MSBuildThisFileDirectory)..\artifacts\</PackageOutputRoot>
     <PackageVersion Condition="'$(PackageVersion)'=='' and '$(Version)'!=''">$(Version)</PackageVersion>
     <PackageVersion Condition="'$(PackageVersion)'=='' and '$(Version)'==''">1.0.0</PackageVersion>
@@ -18,6 +19,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.9" />
     <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="9.0.0" />
@@ -27,6 +29,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Granite.Data\Granite.Data.csproj" />
     <ProjectReference Include="..\Granite.Common\Granite.Common.csproj" />
+    <ProjectReference Include="..\Granite.Web.Client\Granite.Web.Client.csproj" />
   </ItemGroup>
 
   <!-- Build ClientApp before build/publish when enabled -->
@@ -36,12 +39,22 @@
     <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
   </Target>
 
-  <!-- Include built client files in output directory -->
+  <!-- Include built React client files (legacy) in output directory -->
   <ItemGroup>
     <Content Include="$(SpaRoot)dist/**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Update="$(SpaRoot)dist/**" Condition="'$(IncludeClientAppInPublish)'=='true'">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Include built Blazor WebAssembly client files in output directory -->
+  <ItemGroup>
+    <Content Include="$(BlazorClientOutputDir)**" Condition="Exists('$(BlazorClientOutputDir)')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="$(BlazorClientOutputDir)**" Condition="Exists('$(BlazorClientOutputDir)')">
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
   </ItemGroup>
