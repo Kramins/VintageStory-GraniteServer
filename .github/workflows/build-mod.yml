@@ -31,20 +31,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Cache npm dependencies
-        uses: actions/cache@v4
-        with:
-          path: Granite.Server/ClientApp/node_modules
-          key: ${{ runner.os }}-npm-${{ hashFiles('Granite.Server/ClientApp/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
-
       - name: Restore .NET dependencies
         run: dotnet restore GraniteServer.sln
-
-      - name: Install ClientApp dependencies
-        working-directory: Granite.Server/ClientApp
-        run: npm ci
 
       - name: Extract version and SHA
         id: version
