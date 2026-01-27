@@ -48,7 +48,7 @@ jobs:
 
       - name: Extract version and SHA
         id: version
-        shell: /bin/bash
+        shell: bash
         run: |
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             TAG="${GITHUB_REF##*/}"
@@ -97,7 +97,7 @@ jobs:
     steps:
       - name: Extract version
         id: version
-        shell: /bin/bash
+        shell: bash
         run: |
           TAG="${GITHUB_REF##*/}"
           VERSION="${TAG#v}"

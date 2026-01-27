@@ -36,7 +36,7 @@ jobs:
 
       - name: Extract version and SHA
         id: version
-        shell: /bin/bash
+        shell: bash
         run: |
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             TAG="${GITHUB_REF##*/}"
@@ -65,7 +65,7 @@ jobs:
         run: dotnet publish Granite.Server/Granite.Server.csproj -c ${{ steps.version.outputs.is_release == 'true' && 'Release' || 'Debug' }} -o ./publish/server
 
       - name: Create server artifact archive
-        shell: /bin/bash
+        shell: bash
         run: |
           cd ./publish
           if [[ "${{ steps.version.outputs.is_release }}" == "true" ]]; then
@@ -76,7 +76,7 @@ jobs:
 
       - name: Create artifact name
         id: artifact
-        shell: /bin/bash
+        shell: bash
         run: |
           if [[ "${{ steps.version.outputs.is_release }}" == "true" ]]; then
             echo "name=granite-server-v${{ steps.version.outputs.version }}-${{ steps.version.outputs.sha }}" >> $GITHUB_OUTPUT
@@ -104,7 +104,7 @@ jobs:
     steps:
       - name: Extract version
         id: version
-        shell: /bin/bash
+        shell: bash
         run: |
           TAG="${GITHUB_REF##*/}"
           VERSION="${TAG#v}"
