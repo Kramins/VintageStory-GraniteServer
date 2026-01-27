@@ -60,7 +60,7 @@ public class MessageBusServiceTests
     }
 
     [Fact]
-    public void GetObservable_NewSubscriber_ReceivesBufferedEvents()
+    public void GetObservable_NewSubscriber_DoesNotReceivePastEvents()
     {
         var message1 = new TestCommand { Data = new TestCommandSimpleData { Data = "test1" } };
         var message2 = new TestCommand { Data = new TestCommandSimpleData { Data = "test2" } };
@@ -71,9 +71,8 @@ public class MessageBusServiceTests
         var receivedMessages = new List<MessageBusMessage>();
         _sut.GetObservable().Subscribe(receivedMessages.Add);
 
-        receivedMessages.Should().HaveCount(2);
-        receivedMessages[0].Should().Be(message1);
-        receivedMessages[1].Should().Be(message2);
+        // Subject doesn't replay past events, only new events after subscription
+        receivedMessages.Should().HaveCount(0);
     }
 
     [Fact]
@@ -214,7 +213,7 @@ public class MessageBusServiceTests
         _sut.Publish(message2);
 
         subscriber1Messages.Should().HaveCount(1);
-        subscriber2Messages.Should().HaveCount(2); // Gets buffered message1 + message2
+        subscriber2Messages.Should().HaveCount(1); // Only gets message2, not buffered message1
     }
 }
 

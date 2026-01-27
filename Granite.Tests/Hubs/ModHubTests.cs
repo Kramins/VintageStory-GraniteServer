@@ -2,10 +2,13 @@ using System.Text.Json;
 using FluentAssertions;
 using Granite.Server.Hubs;
 using Granite.Server.Services;
+using GraniteServer.Data;
 using GraniteServer.Messaging;
 using GraniteServer.Messaging.Events;
 using GraniteServer.Services;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -22,8 +25,16 @@ public class ModHubTests
     public ModHubTests()
     {
         _mockLogger = Substitute.For<ILogger<ModHub>>();
-        _mockMessageBus = Substitute.For<PersistentMessageBusService>();
-        _mockServersService = Substitute.For<ServersService>();
+        var mockScopeFactory = Substitute.For<IServiceScopeFactory>();
+        var mockPersistentLogger = Substitute.For<ILogger<PersistentMessageBusService>>();
+        _mockMessageBus = Substitute.For<PersistentMessageBusService>(mockScopeFactory, mockPersistentLogger);
+        
+        var mockServersServiceLogger = Substitute.For<ILogger<ServersService>>();
+        var dbOptions = new DbContextOptionsBuilder<GraniteDataContext>()
+            .UseInMemoryDatabase($"ModHubTests_{Guid.NewGuid()}")
+            .Options;
+        var dbContext = new GraniteDataContext(dbOptions);
+        _mockServersService = Substitute.For<ServersService>(mockServersServiceLogger, dbContext);
 
         _hub = new ModHub(_mockMessageBus, _mockLogger, _mockServersService);
     }
@@ -79,7 +90,7 @@ public class ModHubTests
     }
 
     [Fact]
-    public void DeserializeEvent_MissingOriginServerId_ThrowsInvalidOperationException()
+    public void DeserializeEvent_MissingOriginServerId_UsesEmptyGuid()
     {
         // Arrange
         var eventPayload = new
@@ -92,13 +103,16 @@ public class ModHubTests
         var jsonElement = JsonDocument.Parse(json).RootElement;
         var messageType = typeof(PlayerJoinedEvent);
 
-        // Act & Assert
-        var action = () => _hub.DeserializeEvent(jsonElement, messageType);
-        action.Should().Throw<InvalidOperationException>();
+        // Act
+        var result = _hub.DeserializeEvent(jsonElement, messageType);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.OriginServerId.Should().Be(Guid.Empty);
     }
 
     [Fact]
-    public void DeserializeEvent_MissingTargetServerId_ThrowsInvalidOperationException()
+    public void DeserializeEvent_MissingTargetServerId_UsesEmptyGuid()
     {
         // Arrange
         var eventPayload = new
@@ -111,8 +125,11 @@ public class ModHubTests
         var jsonElement = JsonDocument.Parse(json).RootElement;
         var messageType = typeof(PlayerJoinedEvent);
 
-        // Act & Assert
-        var action = () => _hub.DeserializeEvent(jsonElement, messageType);
-        action.Should().Throw<InvalidOperationException>();
+        // Act
+        var result = _hub.DeserializeEvent(jsonElement, messageType);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.TargetServerId.Should().Be(Guid.Empty);
     }
 }
