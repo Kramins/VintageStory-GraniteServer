@@ -1,5 +1,11 @@
 @page "/server-config"
+@page "/{serverId}/config"
 @attribute [Authorize]
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+}
 
 <PageTitle>Configuration - Granite Server Manager</PageTitle>
 

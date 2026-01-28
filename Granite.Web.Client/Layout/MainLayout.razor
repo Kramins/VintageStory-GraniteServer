@@ -1,10 +1,12 @@
-﻿@inherits LayoutComponentBase
+﻿@using Fluxor
+@inherits LayoutComponentBase
 @implements IDisposable
 @inject ISignalRService SignalRService
 @inject ILogger<MainLayout> Logger
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
+@inject IDispatcher Dispatcher
 
 <MudThemeProvider @ref="_mudThemeProvider" IsDarkMode="_isDarkMode" />
 <MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.ExtraSmall" />
@@ -79,12 +81,16 @@
     {
         try
         {
+            // Fetch servers first
+            Dispatcher.Dispatch(new Granite.Web.Client.Store.Features.Server.FetchServersAction());
+            
+            // Then connect to SignalR
             await SignalRService.ConnectAsync();
             SignalRService.ConnectionStateChanged += OnConnectionStateChanged;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to connect to SignalR hub");
+            Logger.LogError(ex, "Failed to initialize MainLayout");
         }
     }
 

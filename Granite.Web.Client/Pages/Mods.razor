@@ -1,5 +1,11 @@
 @page "/mods"
+@page "/{serverId}/mods"
 @attribute [Authorize]
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+}
 
 <PageTitle>Mods - Granite Server Manager</PageTitle>
 

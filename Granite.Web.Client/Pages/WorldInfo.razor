@@ -1,5 +1,11 @@
 @page "/world-info"
+@page "/{serverId}/world-info"
 @attribute [Authorize]
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+}
 
 <PageTitle>World Info - Granite Server Manager</PageTitle>
 

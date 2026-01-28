@@ -1,0 +1,72 @@
+@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using Granite.Web.Client.Store.Features.Server
+@using MudBlazor
+@inherits FluxorComponent
+
+@inject IState<ServerState> ServerState
+@inject IDispatcher Dispatcher
+@inject NavigationManager Navigation
+
+<div class="server-selector">
+    @if (ServerState.Value.IsLoading)
+    {
+        <div class="px-4 py-2 d-flex align-items-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" />
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            <MudText Typo="Typo.caption" Color="Color.Secondary">Loading servers...</MudText>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(ServerState.Value.Error))
+    {
+        <div class="px-4 py-2">
+            <MudAlert Severity="Severity.Error" Dense="true" Class="py-1">@ServerState.Value.Error</MudAlert>
+        </div>
+    }
+    else if (!ServerState.Value.Servers.Any())
+    {
+        <div class="px-4 py-2">
+            <MudAlert Severity="Severity.Info" Dense="true" Class="py-1">
+                No game servers connected. Start a Vintage Story server with Granite.Mod to begin.
+            </MudAlert>
+        </div>
+    }
+    else
+    {
+        <div class="px-4 py-2">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" Color="Color.Default" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Game Server</MudText>
+            </div>
+            <MudSelect T="string" 
+                       Value="@ServerState.Value.SelectedServerId" 
+                       ValueChanged="@OnServerChanged"
+                       Variant="Variant.Outlined" 
+                       Dense="true"
+                       Margin="Margin.Dense"
+                       FullWidth="true">
+                @foreach (var server in ServerState.Value.Servers)
+                {
+                    <MudSelectItem Value="@server.Id.ToString()">
+                        <div>
+                            <MudText Typo="Typo.body2">@server.Name</MudText>
+                            @if (!string.IsNullOrEmpty(server.Description))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@server.Description</MudText>
+                            }
+                        </div>
+                    </MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+    }
+</div>
+
+@code {
+    private void OnServerChanged(string serverId)
+    {
+        Dispatcher.Dispatch(new SelectServerAction(serverId));
+        // Navigate to overview page for the selected server (client-side only)
+        Navigation.NavigateTo($"/{serverId}", forceLoad: false);
+    }
+}

@@ -1,5 +1,11 @@
 @page "/whitelist"
+@page "/{serverId}/whitelist"
 @attribute [Authorize]
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+}
 
 <PageTitle>Whitelist - Granite Server Manager</PageTitle>
 

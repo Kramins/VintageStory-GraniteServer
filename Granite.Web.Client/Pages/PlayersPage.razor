@@ -1,0 +1,148 @@
+@page "/players"
+@page "/{serverId}/players"
+@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using Granite.Web.Client.Store.Features.Players
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inherits FluxorComponent
+
+@inject IState<PlayersState> PlayersState
+@inject IDispatcher Dispatcher
+@inject NavigationManager Navigation
+
+<PageTitle>Players</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.People" Class="mr-2" /> Players
+    </MudText>
+
+    @if (PlayersState.Value.IsLoading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (!string.IsNullOrEmpty(PlayersState.Value.ErrorMessage))
+    {
+        <MudAlert Severity="Severity.Error">@PlayersState.Value.ErrorMessage</MudAlert>
+    }
+    else
+    {
+        <MudDataGrid T="PlayerDTO" 
+                     Items="@PlayersState.Value.Players" 
+                     Dense="true"
+                     Hover="true"
+                     Striped="true"
+                     SortMode="SortMode.Multiple"
+                     Filterable="true"
+                     QuickFilter="@QuickFilter">
+            <ToolBarContent>
+                <MudTextField @bind-Value="_searchString" 
+                              Placeholder="Search players..." 
+                              Adornment="Adornment.Start" 
+                              AdornmentIcon="@Icons.Material.Filled.Search" 
+                              IconSize="Size.Medium" 
+                              Immediate="true"
+                              Class="mt-0" />
+                <MudSpacer />
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
+                               Color="Color.Primary" 
+                               OnClick="@RefreshPlayers" 
+                               Title="Refresh" />
+            </ToolBarContent>
+            <Columns>
+                <PropertyColumn Property="p => p.Name" Title="Player Name" />
+                <PropertyColumn Property="p => p.PlayerUID" Title="UID" />
+                <TemplateColumn Title="Status">
+                    <CellTemplate>
+                        @if (context.Item.ConnectionState == "Connected")
+                        {
+                            <MudChip Color="Color.Success" Size="Size.Small">Online</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip Color="Color.Default" Size="Size.Small">Offline</MudChip>
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+                <PropertyColumn Property="p => p.RolesCode" Title="Role" />
+                <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
+                    <CellTemplate>
+                        <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                       Size="Size.Small" 
+                                       Color="Color.Primary"
+                                       OnClick="@(() => ViewPlayer(context.Item.PlayerUID))"
+                                       Title="View Details" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Block" 
+                                       Size="Size.Small" 
+                                       Color="Color.Error"
+                                       OnClick="@(() => BanPlayer(context.Item.PlayerUID))"
+                                       Title="Ban Player" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Logout" 
+                                       Size="Size.Small" 
+                                       Color="Color.Warning"
+                                       OnClick="@(() => KickPlayer(context.Item.PlayerUID))"
+                                       Title="Kick Player" />
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="PlayerDTO" />
+            </PagerContent>
+        </MudDataGrid>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public string ServerId { get; set; } = string.Empty;
+
+    private string _searchString = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        // TODO: Dispatch action to fetch players for this serverId
+        // Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+    }
+
+    private Func<PlayerDTO, bool> QuickFilter => player =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        if (player.Name?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+
+        if (player.PlayerUID?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+
+        return false;
+    };
+
+    private void RefreshPlayers()
+    {
+        // TODO: Dispatch action to fetch players
+        // Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+    }
+
+    private void ViewPlayer(string? playerUid)
+    {
+        if (!string.IsNullOrEmpty(playerUid))
+        {
+            Navigation.NavigateTo($"/{ServerId}/players/{playerUid}");
+        }
+    }
+
+    private async Task BanPlayer(string? playerUid)
+    {
+        // TODO: Show ban dialog
+        await Task.CompletedTask;
+    }
+
+    private async Task KickPlayer(string? playerUid)
+    {
+        // TODO: Show kick dialog
+        await Task.CompletedTask;
+    }
+}

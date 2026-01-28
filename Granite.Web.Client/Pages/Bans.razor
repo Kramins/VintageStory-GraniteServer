@@ -1,5 +1,11 @@
 @page "/bans"
+@page "/{serverId}/bans"
 @attribute [Authorize]
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+}
 
 <PageTitle>Bans - Granite Server Manager</PageTitle>
 

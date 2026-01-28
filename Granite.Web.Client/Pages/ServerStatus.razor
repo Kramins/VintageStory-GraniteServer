@@ -1,5 +1,11 @@
 @page "/server-status"
+@page "/{serverId}/status"
 @attribute [Authorize]
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+}
 
 <PageTitle>Status - Granite Server Manager</PageTitle>
 

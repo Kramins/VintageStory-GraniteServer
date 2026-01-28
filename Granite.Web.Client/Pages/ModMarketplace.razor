@@ -1,5 +1,11 @@
 @page "/mod-marketplace"
+@page "/{serverId}/mod-marketplace"
 @attribute [Authorize]
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+}
 
 <PageTitle>Mod Marketplace - Granite Server Manager</PageTitle>
 

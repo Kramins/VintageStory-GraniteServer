@@ -1,5 +1,11 @@
 @page "/collectibles"
+@page "/{serverId}/collectibles"
 @attribute [Authorize]
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+}
 
 <PageTitle>Collectibles - Granite Server Manager</PageTitle>
 
