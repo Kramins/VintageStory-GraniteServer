@@ -148,7 +148,7 @@ app.UseRouting();
 // Apply CORS before authentication
 app.UseCors();
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -214,5 +214,3 @@ using (var scope = app.Services.CreateScope())
         throw;
     }
 }
-
-app.Run();
