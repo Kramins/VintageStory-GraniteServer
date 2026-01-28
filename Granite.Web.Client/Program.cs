@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Granite.Web.Client;
 using Granite.Web.Client.Services.Api;
+using Granite.Web.Client.Services.SignalR;
 using MudBlazor.Services;
 using Fluxor;
 
@@ -27,5 +28,8 @@ builder.Services.AddScoped<IModsApiClient, ModsApiClient>();
 builder.Services.AddScoped<IServerApiClient, ServerApiClient>();
 builder.Services.AddScoped<IAuthApiClient, AuthApiClient>();
 builder.Services.AddScoped<IWorldApiClient, WorldApiClient>();
+
+// Register SignalR service
+builder.Services.AddScoped<ISignalRService, SignalRService>();
 
 await builder.Build().RunAsync();

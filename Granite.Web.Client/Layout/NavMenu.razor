@@ -1,39 +1,33 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Granite.Web.Client</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
-</div>
+﻿<MudNavMenu>
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">
+        Dashboard
+    </MudNavLink>
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-    </nav>
-</div>
+    <MudNavGroup Title="Server Management" Icon="@Icons.Material.Filled.Storage" Expandable="true">
+        <MudNavLink Href="/servers" Icon="@Icons.Material.Filled.Dns">Servers</MudNavLink>
+        <MudNavLink Href="/server-config" Icon="@Icons.Material.Filled.Settings">Configuration</MudNavLink>
+        <MudNavLink Href="/server-status" Icon="@Icons.Material.Filled.Info">Status</MudNavLink>
+    </MudNavGroup>
 
-@code {
-    private bool collapseNavMenu = true;
+    <MudNavGroup Title="Players" Icon="@Icons.Material.Filled.People" Expandable="true">
+        <MudNavLink Href="/players" Icon="@Icons.Material.Filled.PersonSearch">Manage Players</MudNavLink>
+        <MudNavLink Href="/whitelist" Icon="@Icons.Material.Filled.CheckCircle">Whitelist</MudNavLink>
+        <MudNavLink Href="/bans" Icon="@Icons.Material.Filled.NotInterested">Bans</MudNavLink>
+    </MudNavGroup>
 
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    <MudNavGroup Title="Mods" Icon="@Icons.Material.Filled.Extension" Expandable="true">
+        <MudNavLink Href="/mods" Icon="@Icons.Material.Filled.ListAlt">Installed Mods</MudNavLink>
+        <MudNavLink Href="/mod-marketplace" Icon="@Icons.Material.Filled.StoreMallDirectory">Mod Marketplace</MudNavLink>
+    </MudNavGroup>
 
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
-}
+    <MudNavGroup Title="World" Icon="@Icons.Material.Filled.Public" Expandable="true">
+        <MudNavLink Href="/world-info" Icon="@Icons.Material.Filled.Map">World Info</MudNavLink>
+        <MudNavLink Href="/world-map" Icon="@Icons.Material.Filled.Terrain">Map</MudNavLink>
+        <MudNavLink Href="/collectibles" Icon="@Icons.Material.Filled.Inventory2">Collectibles</MudNavLink>
+    </MudNavGroup>
+
+    <MudDivider Class="my-3" />
+
+    <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
+    <MudNavLink Href="/help" Icon="@Icons.Material.Filled.Help">Help & Support</MudNavLink>
+</MudNavMenu>

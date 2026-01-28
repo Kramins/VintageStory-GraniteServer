@@ -1,16 +1,82 @@
 ﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
+@implements IDisposable
+@inject ISignalRService SignalRService
+@inject ILogger<MainLayout> Logger
+
+<MudThemeProvider @ref="_mudThemeProvider" IsDarkMode="_isDarkMode" />
+<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.ExtraSmall" />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="2" Color="Color.Primary" Dense="true">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@DrawerToggle" />
+        <MudText Typo="Typo.h6" Class="ml-3">Granite Server Manager</MudText>
+        <MudSpacer />
+        <MudBadge Overlap="true" Color="@(SignalRService.IsConnected ? Color.Success : Color.Error)" Dot="true">
+            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" />
+        </MudBadge>
+        <MudMenu Icon="@Icons.Material.Filled.MoreVert" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Color="Color.Inherit">
+            <MudMenuItem OnClick="@ToggleDarkMode">Toggle Dark Mode</MudMenuItem>
+            <MudMenuItem>Settings</MudMenuItem>
+            <MudDivider />
+            <MudMenuItem>Logout</MudMenuItem>
+        </MudMenu>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
+        <MudDrawerHeader>
+            <div class="d-flex align-items-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.Castle" Size="Size.Large" />
+                <MudText Typo="Typo.h6">Granite</MudText>
+            </div>
+        </MudDrawerHeader>
         <NavMenu />
-    </div>
+    </MudDrawer>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-8">
             @Body
-        </article>
-    </main>
-</div>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _isDarkMode = false;
+    private MudThemeProvider? _mudThemeProvider;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await SignalRService.ConnectAsync();
+            SignalRService.ConnectionStateChanged += OnConnectionStateChanged;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to connect to SignalR hub");
+        }
+    }
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private void ToggleDarkMode()
+    {
+        _isDarkMode = !_isDarkMode;
+    }
+
+    private void OnConnectionStateChanged(object? sender, ConnectionStateChangedEventArgs e)
+    {
+        Logger.LogInformation("SignalR connection state changed: {IsConnected}", e.IsConnected);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        SignalRService.ConnectionStateChanged -= OnConnectionStateChanged;
+    }
+}
