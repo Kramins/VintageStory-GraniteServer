@@ -1,0 +1,14 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider IsDarkMode="_isDarkMode" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center" Style="min-height: 100vh;">
+    @Body
+</MudContainer>
+
+@code {
+    private bool _isDarkMode = false;
+}

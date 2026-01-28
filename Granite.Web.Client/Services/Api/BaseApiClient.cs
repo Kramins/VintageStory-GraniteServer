@@ -109,6 +109,8 @@ public abstract class BaseApiClient
             try
             {
                 var content = await response.Content.ReadAsStringAsync();
+                Logger.LogInformation("API Response Content: {Content}", content);
+                
                 if (string.IsNullOrEmpty(content))
                 {
                     return new JsonApiDocument<T> { Data = default };
@@ -117,13 +119,19 @@ public abstract class BaseApiClient
                 // Deserialize as JsonApiDocument<T>
                 var document = JsonSerializer.Deserialize<JsonApiDocument<T>>(content, _jsonSerializerOptions);
                 
-                if (document != null)
+                Logger.LogInformation("Deserialized as JsonApiDocument - Document is null: {IsNull}", document == null);
+                
+                // Check if we got a valid JsonApiDocument with data
+                if (document != null && document.Data != null)
                 {
+                    Logger.LogInformation("JsonApiDocument has data, returning it");
                     return document;
                 }
 
-                // Fallback: If we can't deserialize as JsonApiDocument, wrap the data
+                // Fallback: If we can't deserialize as JsonApiDocument or Data is null, try direct deserialization
+                Logger.LogInformation("Attempting fallback deserialization...");
                 var data = JsonSerializer.Deserialize<T>(content, _jsonSerializerOptions);
+                Logger.LogInformation("Fallback deserialization - HasData: {HasData}", data is not null);
                 return new JsonApiDocument<T> { Data = data };
             }
             catch (JsonException ex)

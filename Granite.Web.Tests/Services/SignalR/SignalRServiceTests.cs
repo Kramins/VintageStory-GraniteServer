@@ -1,4 +1,5 @@
 using Granite.Web.Client.Services.SignalR;
+using Granite.Web.Client.Services.Auth;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -11,19 +12,26 @@ public class SignalRServiceTests
 {
     private readonly Mock<ILogger<SignalRService>> _mockLogger;
     private readonly Mock<IConfiguration> _mockConfiguration;
+    private readonly Mock<CustomAuthenticationStateProvider> _mockAuthStateProvider;
     private readonly SignalRService _signalRService;
 
     public SignalRServiceTests()
     {
         _mockLogger = new Mock<ILogger<SignalRService>>();
         _mockConfiguration = new Mock<IConfiguration>();
+        _mockAuthStateProvider = new Mock<CustomAuthenticationStateProvider>(MockBehavior.Loose, null, null);
         
         // Setup configuration mock
         _mockConfiguration
             .Setup(c => c["ApiBaseUrl"])
             .Returns("http://localhost:5000");
+        
+        // Setup auth state provider to return a token
+        _mockAuthStateProvider
+            .Setup(a => a.GetTokenAsync())
+            .ReturnsAsync("test-token");
 
-        _signalRService = new SignalRService(_mockLogger.Object, _mockConfiguration.Object);
+        _signalRService = new SignalRService(_mockLogger.Object, _mockConfiguration.Object, _mockAuthStateProvider.Object);
     }
 
     [Fact]
@@ -135,7 +143,7 @@ public class SignalRServiceTests
             .Returns("http://custom-server:8080");
 
         // Act
-        var service = new SignalRService(_mockLogger.Object, _mockConfiguration.Object);
+        var service = new SignalRService(_mockLogger.Object, _mockConfiguration.Object, _mockAuthStateProvider.Object);
 
         // Assert
         // Service is created successfully with custom configuration
@@ -152,7 +160,7 @@ public class SignalRServiceTests
             .Returns((string?)null);
 
         // Act
-        var service = new SignalRService(_mockLogger.Object, _mockConfiguration.Object);
+        var service = new SignalRService(_mockLogger.Object, _mockConfiguration.Object, _mockAuthStateProvider.Object);
 
         // Assert
         // Service is created successfully with default configuration

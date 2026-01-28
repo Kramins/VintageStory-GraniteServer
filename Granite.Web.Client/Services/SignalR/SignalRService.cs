@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR.Client;
 using GraniteServer.Messaging;
+using Granite.Web.Client.Services.Auth;
 
 namespace Granite.Web.Client.Services.SignalR;
 
@@ -11,6 +12,7 @@ public class SignalRService : ISignalRService, IAsyncDisposable
     private HubConnection? _hubConnection;
     private readonly ILogger<SignalRService> _logger;
     private readonly string _hubUrl;
+    private readonly CustomAuthenticationStateProvider _authStateProvider;
     private bool _isConnected;
     private Task? _reconnectTask;
     private CancellationTokenSource _reconnectCancellationTokenSource = new();
@@ -34,11 +36,12 @@ public class SignalRService : ISignalRService, IAsyncDisposable
         }
     }
 
-    public SignalRService(ILogger<SignalRService> logger, IConfiguration configuration)
+    public SignalRService(ILogger<SignalRService> logger, IConfiguration configuration, CustomAuthenticationStateProvider authStateProvider)
     {
         _logger = logger;
+        _authStateProvider = authStateProvider;
         var apiBaseUrl = configuration["ApiBaseUrl"] ?? "http://localhost:5000";
-        _hubUrl = $"{apiBaseUrl}/events-hub";
+        _hubUrl = $"{apiBaseUrl}/hub/client";
     }
 
     /// <summary>
@@ -54,8 +57,17 @@ public class SignalRService : ISignalRService, IAsyncDisposable
 
         try
         {
+            // Get the authentication token
+            var token = await _authStateProvider.GetTokenAsync();
+            
             _hubConnection = new HubConnectionBuilder()
-                .WithUrl(_hubUrl)
+                .WithUrl(_hubUrl, options =>
+                {
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        options.AccessTokenProvider = () => Task.FromResult<string?>(token);
+                    }
+                })
                 .WithAutomaticReconnect(
                     new[]
                     {
@@ -68,8 +80,8 @@ public class SignalRService : ISignalRService, IAsyncDisposable
                 .WithStatefulReconnect()
                 .Build();
 
-            // Register hub method handlers
-            _hubConnection.On<object>(SignalRHubMethods.ReceiveEvent, OnServerEventReceived);
+            // Register hub method handlers - the server uses "ServerEvent" not "ReceiveEvent"
+            _hubConnection.On<object>("ServerEvent", OnServerEventReceived);
             
             _hubConnection.Reconnecting += OnReconnecting;
             _hubConnection.Reconnected += OnReconnected;

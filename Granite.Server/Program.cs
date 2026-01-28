@@ -1,5 +1,4 @@
 using System.Text;
-using Granite.Server.Components;
 using Granite.Server.Configuration;
 using Granite.Server.Extensions;
 using Granite.Server.Hubs;
@@ -114,7 +113,10 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
     {
         policy
-            .WithOrigins("http://localhost:3000", "https://localhost:3000") // Vite dev server
+            .WithOrigins(
+                "http://localhost:3000", "https://localhost:3000",  // Vite dev server (React)
+                "http://localhost:5148", "https://localhost:7171"   // Blazor WebAssembly dev server
+            )
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials(); // Required for SignalR
@@ -134,8 +136,6 @@ builder.Services.AddSignalR(options =>
 // Add OpenAPI/Swagger
 // builder.Services.AddOpenApi();
 
-// Add services to the container.
-builder.Services.AddRazorComponents().AddInteractiveWebAssemblyComponents();
 
 var app = builder.Build();
 
@@ -171,7 +171,7 @@ app.UseEndpoints(endpoints =>
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseWebAssemblyDebugging();
+
 }
 else
 {
@@ -180,10 +180,7 @@ else
     app.UseHsts();
 }
 
-// app.MapStaticAssets();
-app.MapRazorComponents<App>()
-    .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(Granite.Web.Client._Imports).Assembly);
+
 
 // Apply database migrations
 using (var scope = app.Services.CreateScope())
@@ -214,3 +211,5 @@ using (var scope = app.Services.CreateScope())
         throw;
     }
 }
+
+app.Run();

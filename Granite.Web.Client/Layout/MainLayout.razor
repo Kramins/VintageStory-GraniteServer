@@ -2,6 +2,9 @@
 @implements IDisposable
 @inject ISignalRService SignalRService
 @inject ILogger<MainLayout> Logger
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
 
 <MudThemeProvider @ref="_mudThemeProvider" IsDarkMode="_isDarkMode" />
 <MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.ExtraSmall" />
@@ -16,12 +19,38 @@
         <MudBadge Overlap="true" Color="@(SignalRService.IsConnected ? Color.Success : Color.Error)" Dot="true">
             <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" />
         </MudBadge>
-        <MudMenu Icon="@Icons.Material.Filled.MoreVert" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Color="Color.Inherit">
-            <MudMenuItem OnClick="@ToggleDarkMode">Toggle Dark Mode</MudMenuItem>
-            <MudMenuItem>Settings</MudMenuItem>
-            <MudDivider />
-            <MudMenuItem>Logout</MudMenuItem>
-        </MudMenu>
+        <AuthorizeView>
+            <Authorized>
+                <MudMenu Icon="@Icons.Material.Filled.AccountCircle" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Color="Color.Inherit">
+                    <div class="px-4 py-2">
+                        <MudText Typo="Typo.body2" Color="Color.Dark">@context.User.Identity?.Name</MudText>
+                    </div>
+                    <MudDivider />
+                    <MudMenuItem OnClick="@ToggleDarkMode">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.DarkMode" Size="Size.Small" />
+                            <MudText>Toggle Dark Mode</MudText>
+                        </div>
+                    </MudMenuItem>
+                    <MudMenuItem>
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" />
+                            <MudText>Settings</MudText>
+                        </div>
+                    </MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem OnClick="@HandleLogout">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" />
+                            <MudText>Logout</MudText>
+                        </div>
+                    </MudMenuItem>
+                </MudMenu>
+            </Authorized>
+            <NotAuthorized>
+                <MudIconButton Icon="@Icons.Material.Filled.Login" Color="Color.Inherit" Href="/login" />
+            </NotAuthorized>
+        </AuthorizeView>
     </MudAppBar>
 
     <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
@@ -73,6 +102,21 @@
     {
         Logger.LogInformation("SignalR connection state changed: {IsConnected}", e.IsConnected);
         StateHasChanged();
+    }
+
+    private async Task HandleLogout()
+    {
+        try
+        {
+            await AuthStateProvider.ClearTokenAsync();
+            Snackbar.Add("Logged out successfully", Severity.Success);
+            Navigation.NavigateTo("/login", replace: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to logout");
+            Snackbar.Add("Failed to logout", Severity.Error);
+        }
     }
 
     public void Dispose()

@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.AspNetCore.Components.Authorization;
 using Granite.Web.Client;
 using Granite.Web.Client.Services.Api;
 using Granite.Web.Client.Services.SignalR;
+using Granite.Web.Client.Services.Auth;
 using MudBlazor.Services;
 using Fluxor;
 
@@ -19,8 +21,27 @@ builder.Services.AddFluxor(options =>
 // Add MudBlazor services
 builder.Services.AddMudServices();
 
-// Configure HttpClient with base address
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.Configuration["ApiBaseUrl"] ?? builder.HostEnvironment.BaseAddress) });
+// Add Authentication services
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<CustomAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(provider => 
+    provider.GetRequiredService<CustomAuthenticationStateProvider>());
+
+// Configure HttpClient with authentication handler
+builder.Services.AddScoped<AuthenticationDelegatingHandler>();
+builder.Services.AddScoped(sp =>
+{
+    var handler = sp.GetRequiredService<AuthenticationDelegatingHandler>();
+    handler.InnerHandler = new HttpClientHandler();
+    
+    var httpClient = new HttpClient(handler)
+    {
+        BaseAddress = new Uri(builder.Configuration["ApiBaseUrl"] ?? builder.HostEnvironment.BaseAddress)
+    };
+    
+    return httpClient;
+});
 
 // Register API clients
 builder.Services.AddScoped<IPlayersApiClient, PlayersApiClient>();
