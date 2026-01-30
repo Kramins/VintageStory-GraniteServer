@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Granite.Data.Migrations.Sqlite
 {
     [DbContext(typeof(GraniteDataContextSqlite))]
-    [Migration("20260124163121_v100")]
+    [Migration("20260130140959_v100")]
     partial class v100
     {
         /// <inheritdoc />

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Granite.Data.Migrations.Postgres
 {
     [DbContext(typeof(GraniteDataContextPostgres))]
-    [Migration("20260124163119_v100")]
+    [Migration("20260130140956_v100")]
     partial class v100
     {
         /// <inheritdoc />
