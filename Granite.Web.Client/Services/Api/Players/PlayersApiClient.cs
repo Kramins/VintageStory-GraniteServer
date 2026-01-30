@@ -8,16 +8,16 @@ namespace Granite.Web.Client.Services.Api;
 /// </summary>
 public class PlayersApiClient : BaseApiClient, IPlayersApiClient
 {
-    private const string BasePath = "/api/players";
-
     public PlayersApiClient(HttpClient httpClient, ILogger<PlayersApiClient> logger)
         : base(httpClient, logger)
     {
     }
 
-    public async Task<JsonApiDocument<List<PlayerDTO>>> GetPlayersAsync(string? filter = null, int pageSize = 20, int pageNumber = 1)
+    private string GetBasePath(string serverId) => $"/api/{serverId}/players";
+
+    public async Task<JsonApiDocument<List<PlayerDTO>>> GetPlayersAsync(string serverId, string? filter = null, int pageSize = 20, int pageNumber = 1)
     {
-        var url = BasePath;
+        var url = GetBasePath(serverId);
         var queryParams = new List<string>();
 
         if (!string.IsNullOrEmpty(filter))
@@ -25,8 +25,8 @@ public class PlayersApiClient : BaseApiClient, IPlayersApiClient
             queryParams.Add($"filters={Uri.EscapeDataString(filter)}");
         }
 
+        queryParams.Add($"page={pageNumber}");
         queryParams.Add($"pageSize={pageSize}");
-        queryParams.Add($"pageNumber={pageNumber}");
 
         if (queryParams.Any())
         {
@@ -39,84 +39,83 @@ public class PlayersApiClient : BaseApiClient, IPlayersApiClient
         }
         catch (ApiException ex)
         {
-            Logger.LogError(ex, "Failed to fetch players");
+            Logger.LogError(ex, "Failed to fetch players for server {ServerId}", serverId);
             throw;
         }
     }
 
-    public async Task<JsonApiDocument<PlayerDTO>> GetPlayerAsync(string playerUid)
+    public async Task<JsonApiDocument<PlayerDTO>> GetPlayerAsync(string serverId, string playerUid)
     {
         try
         {
-            return await GetAsync<PlayerDTO>($"{BasePath}/{playerUid}");
+            return await GetAsync<PlayerDTO>($"{GetBasePath(serverId)}/{playerUid}");
         }
         catch (ApiException ex)
         {
-            Logger.LogError(ex, "Failed to fetch player {PlayerUid}", playerUid);
+            Logger.LogError(ex, "Failed to fetch player {PlayerUid} for server {ServerId}", playerUid, serverId);
             throw;
         }
     }
 
-    public async Task<JsonApiDocument<PlayerDTO>> UpdatePlayerAsync(string playerUid, PlayerDetailsDTO playerData)
+    public async Task<JsonApiDocument<PlayerDTO>> UpdatePlayerAsync(string serverId, string playerUid, PlayerDetailsDTO playerData)
     {
         try
         {
-            return await PutAsync<PlayerDTO>($"{BasePath}/{playerUid}", playerData);
+            return await PutAsync<PlayerDTO>($"{GetBasePath(serverId)}/{playerUid}", playerData);
         }
         catch (ApiException ex)
         {
-            Logger.LogError(ex, "Failed to update player {PlayerUid}", playerUid);
+            Logger.LogError(ex, "Failed to update player {PlayerUid} for server {ServerId}", playerUid, serverId);
             throw;
         }
     }
 
-    public async Task<JsonApiDocument<object>> KickPlayerAsync(string playerUid, string? reason = null)
+    public async Task<JsonApiDocument<object>> KickPlayerAsync(string serverId, string playerUid, string? reason = null)
     {
         try
         {
             var request = new { reason };
-            return await PostAsync<object>($"{BasePath}/{playerUid}/kick", request);
+            return await PostAsync<object>($"{GetBasePath(serverId)}/{playerUid}/kick", request);
         }
         catch (ApiException ex)
         {
-            Logger.LogError(ex, "Failed to kick player {PlayerUid}", playerUid);
+            Logger.LogError(ex, "Failed to kick player {PlayerUid} for server {ServerId}", playerUid, serverId);
             throw;
         }
     }
 
-    public async Task<JsonApiDocument<object>> BanPlayerAsync(string playerUid, string? reason = null)
+    public async Task<JsonApiDocument<object>> BanPlayerAsync(string serverId, string playerUid, string? reason = null)
     {
         try
         {
             var request = new { reason };
-            return await PostAsync<object>($"{BasePath}/{playerUid}/ban", request);
+            return await PostAsync<object>($"{GetBasePath(serverId)}/{playerUid}/ban", request);
         }
         catch (ApiException ex)
         {
-            Logger.LogError(ex, "Failed to ban player {PlayerUid}", playerUid);
+            Logger.LogError(ex, "Failed to ban player {PlayerUid} for server {ServerId}", playerUid, serverId);
             throw;
         }
     }
 
-    public async Task<JsonApiDocument<object>> WhitelistPlayerAsync(string playerUid)
+    public async Task<JsonApiDocument<object>> WhitelistPlayerAsync(string serverId, string playerUid)
     {
         try
         {
-            return await PostAsync<object>($"{BasePath}/{playerUid}/whitelist", null);
+            return await PostAsync<object>($"{GetBasePath(serverId)}/{playerUid}/whitelist", null);
         }
         catch (ApiException ex)
         {
-            Logger.LogError(ex, "Failed to whitelist player {PlayerUid}", playerUid);
+            Logger.LogError(ex, "Failed to whitelist player {PlayerUid} for server {ServerId}", playerUid, serverId);
             throw;
         }
     }
 
-    public async Task<JsonApiDocument<object>> RemoveFromWhitelistAsync(string playerUid)
+    public async Task<JsonApiDocument<object>> RemoveFromWhitelistAsync(string serverId, string playerUid)
     {
         try
         {
-            // For DELETE operations, we need to handle them specially since DeleteAsync doesn't return data
-            var response = await HttpClient.DeleteAsync($"{BasePath}/{playerUid}/whitelist");
+            var response = await HttpClient.DeleteAsync($"{GetBasePath(serverId)}/{playerUid}/whitelist");
             if (!response.IsSuccessStatusCode)
             {
                 throw new ApiException($"Failed to remove player from whitelist: {response.StatusCode}");
@@ -125,7 +124,7 @@ public class PlayersApiClient : BaseApiClient, IPlayersApiClient
         }
         catch (ApiException ex)
         {
-            Logger.LogError(ex, "Failed to remove player from whitelist {PlayerUid}", playerUid);
+            Logger.LogError(ex, "Failed to remove player from whitelist {PlayerUid} for server {ServerId}", playerUid, serverId);
             throw;
         }
     }

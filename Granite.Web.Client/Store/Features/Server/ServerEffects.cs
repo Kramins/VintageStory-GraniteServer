@@ -1,5 +1,6 @@
 using Fluxor;
 using Granite.Web.Client.Services.Api;
+using Granite.Web.Client.Store.Features.Players;
 
 namespace Granite.Web.Client.Store.Features.Server;
 
@@ -38,5 +39,13 @@ public class ServerEffects
             _logger.LogError(ex, "Failed to fetch servers");
             dispatcher.Dispatch(new FetchServersFailureAction(ex.Message));
         }
+    }
+
+    [EffectMethod]
+    public Task HandleSelectServerAction(SelectServerAction action, IDispatcher dispatcher)
+    {
+        _logger.LogInformation("Server changed to {ServerId}, clearing player state", action.ServerId);
+        dispatcher.Dispatch(new ClearPlayersAction());
+        return Task.CompletedTask;
     }
 }

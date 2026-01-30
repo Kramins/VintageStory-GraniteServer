@@ -12,4 +12,5 @@ public record PlayersState
     public bool IsLoading { get; init; }
     public string? ErrorMessage { get; init; }
     public DateTime? LastUpdated { get; init; }
+    public string? CurrentServerId { get; init; }
 }

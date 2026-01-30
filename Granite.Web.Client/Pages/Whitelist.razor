@@ -1,13 +1,223 @@
 @page "/whitelist"
 @page "/{serverId}/whitelist"
+@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using Granite.Web.Client.Store.Features.Players
+@using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
+@inherits FluxorComponent
+
+@inject IState<PlayersState> PlayersState
+@inject IDispatcher Dispatcher
+@inject NavigationManager Navigation
+
+<PageTitle>Whitelist</PageTitle>
+
+@if (string.IsNullOrEmpty(ServerId))
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+        <MudPaper Class="pa-8 d-flex flex-column align-center justify-center" Style="min-height: 400px;" Elevation="0">
+            <MudText Typo="Typo.h5" Color="Color.Secondary" Class="mb-2">
+                Select a server to manage the whitelist
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Use the server dropdown in the navigation to select a server.
+            </MudText>
+        </MudPaper>
+    </MudContainer>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2" Justify="Justify.SpaceBetween">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudText Typo="Typo.h4">Whitelist</MudText>
+                <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
+                           OnClick="@HandleRefresh" 
+                           Disabled="@PlayersState.Value.IsLoading">
+                    Refresh
+                </MudButton>
+            </MudStack>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="@(() => _addDialogOpen = true)">
+                Add Player
+            </MudButton>
+        </MudStack>
+
+        <MudPaper Elevation="0" Style="height: 600px;">
+            <MudDataGrid T="PlayerDTO" 
+                         Items="@GetWhitelistedPlayers()" 
+                         Dense="true"
+                         Hover="true"
+                         Loading="@PlayersState.Value.IsLoading"
+                         Height="560px">
+                <Columns>
+                    <TemplateColumn Title="Player" Sortable="false">
+                        <CellTemplate>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudAvatar Size="Size.Small" Color="Color.Primary">
+                                    @(context.Item.Name?.FirstOrDefault().ToString().ToUpper() ?? "?")
+                                </MudAvatar>
+                                <MudLink Href="@GetPlayerDetailsLink(context.Item.PlayerUID)" Underline="Underline.None">
+                                    @(context.Item.Name?.Length > 15 ? context.Item.Name.Substring(0, 15) : context.Item.Name)
+                                </MudLink>
+                            </MudStack>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    <TemplateColumn Title="Role" Sortable="false">
+                        <CellTemplate>
+                            <MudChip Size="Size.Small" 
+                                     Color="@(context.Item.IsAdmin ? Color.Error : Color.Default)">
+                                @(context.Item.IsAdmin ? "Admin" : "Player")
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    <TemplateColumn Title="Status" Sortable="false">
+                        <CellTemplate>
+                            <MudChip Size="Size.Small" 
+                                     Variant="Variant.Outlined"
+                                     Color="@(context.Item.ConnectionState == "Connected" ? Color.Success : Color.Default)">
+                                @(context.Item.ConnectionState ?? "Offline")
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    <PropertyColumn Property="p => p.WhitelistedBy" Title="Whitelisted By" />
+                    <PropertyColumn Property="p => p.WhitelistedReason" Title="Reason" />
+                    
+                    <TemplateColumn Title="Actions" Sortable="false">
+                        <CellTemplate>
+                            <MudIconButton Icon="@Icons.Material.Filled.RemoveCircle" 
+                                           Size="Size.Small" 
+                                           Color="Color.Error"
+                                           OnClick="@(() => HandleRemoveFromWhitelist(context.Item.Id))"
+                                           Title="Remove from Whitelist" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="PlayerDTO" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudPaper>
+    </MudContainer>
+
+    @* Add to Whitelist Dialog *@
+    <MudDialog @bind-IsVisible="_addDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+        <DialogContent>
+            <MudText Typo="Typo.h6" Class="mb-4">Add Player to Whitelist</MudText>
+            <MudTextField @bind-Value="_searchQuery" 
+                          Placeholder="Search by player name or UID..." 
+                          Variant="Variant.Outlined" 
+                          FullWidth="true"
+                          Immediate="true" />
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@(() => _addDialogOpen = false)">Cancel</MudButton>
+            <MudButton Color="Color.Primary" 
+                       Variant="Variant.Filled" 
+                       OnClick="@HandleAddConfirm"
+                       Disabled="@_isSubmitting">
+                @if (_isSubmitting)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                }
+                else
+                {
+                    <span>Add</span>
+                }
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+}
 
 @code {
     [Parameter]
     public string? ServerId { get; set; }
+
+    private bool _addDialogOpen = false;
+    private string _searchQuery = string.Empty;
+    private bool _isSubmitting = false;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+        }
+    }
+
+    private IEnumerable<PlayerDTO> GetWhitelistedPlayers()
+    {
+        return PlayersState.Value.Players.Where(p => p.IsWhitelisted);
+    }
+
+    private void HandleRefresh()
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+        }
+    }
+
+    private string GetPlayerDetailsLink(string? playerUid)
+    {
+        return !string.IsNullOrEmpty(playerUid) && !string.IsNullOrEmpty(ServerId)
+            ? $"/{ServerId}/players/{playerUid}"
+            : "#";
+    }
+
+    private async Task HandleAddConfirm()
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery) || string.IsNullOrEmpty(ServerId))
+            return;
+
+        _isSubmitting = true;
+        try
+        {
+            // TODO: Search for player and add to whitelist
+            // var player = await _playersApiClient.FindPlayerByName(ServerId, _searchQuery);
+            // if (player != null)
+            // {
+            //     await _playersApiClient.WhitelistPlayerAsync(ServerId, player.PlayerUID);
+            //     Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+            // }
+            
+            await Task.Delay(600); // Simulate API call
+            _addDialogOpen = false;
+            _searchQuery = string.Empty;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private async Task HandleRemoveFromWhitelist(Guid playerId)
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            // TODO: Call API to remove from whitelist
+            // var player = PlayersState.Value.Players.FirstOrDefault(p => p.Id == playerId);
+            // if (player != null)
+            // {
+            //     await _playersApiClient.RemoveFromWhitelistAsync(ServerId, player.PlayerUID);
+            //     Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+            // }
+        }
+        await Task.CompletedTask;
+    }
 }
-
-<PageTitle>Whitelist - Granite Server Manager</PageTitle>
-
-<MudText Typo="Typo.h3" GutterBottom="true">Whitelist</MudText>
-<MudText Typo="Typo.body1">Whitelist management page</MudText>

@@ -1,6 +1,7 @@
-using Microsoft.AspNetCore.SignalR.Client;
-using GraniteServer.Messaging;
 using Granite.Web.Client.Services.Auth;
+using GraniteServer.Messaging;
+using GraniteServer.Messaging.Events;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Granite.Web.Client.Services.SignalR;
 
@@ -36,7 +37,11 @@ public class SignalRService : ISignalRService, IAsyncDisposable
         }
     }
 
-    public SignalRService(ILogger<SignalRService> logger, IConfiguration configuration, CustomAuthenticationStateProvider authStateProvider)
+    public SignalRService(
+        ILogger<SignalRService> logger,
+        IConfiguration configuration,
+        CustomAuthenticationStateProvider authStateProvider
+    )
     {
         _logger = logger;
         _authStateProvider = authStateProvider;
@@ -59,15 +64,18 @@ public class SignalRService : ISignalRService, IAsyncDisposable
         {
             // Get the authentication token
             var token = await _authStateProvider.GetTokenAsync();
-            
+
             _hubConnection = new HubConnectionBuilder()
-                .WithUrl(_hubUrl, options =>
-                {
-                    if (!string.IsNullOrEmpty(token))
+                .WithUrl(
+                    _hubUrl,
+                    options =>
                     {
-                        options.AccessTokenProvider = () => Task.FromResult<string?>(token);
+                        if (!string.IsNullOrEmpty(token))
+                        {
+                            options.AccessTokenProvider = () => Task.FromResult<string?>(token);
+                        }
                     }
-                })
+                )
                 .WithAutomaticReconnect(
                     new[]
                     {
@@ -75,14 +83,15 @@ public class SignalRService : ISignalRService, IAsyncDisposable
                         TimeSpan.FromSeconds(1),
                         TimeSpan.FromSeconds(3),
                         TimeSpan.FromSeconds(5),
-                        TimeSpan.FromSeconds(10)
-                    })
+                        TimeSpan.FromSeconds(10),
+                    }
+                )
                 .WithStatefulReconnect()
                 .Build();
 
             // Register hub method handlers - the server uses "ServerEvent" not "ReceiveEvent"
-            _hubConnection.On<object>("ServerEvent", OnServerEventReceived);
-            
+            _hubConnection.On<EventMessage>(SignalRHubMethods.ReceiveEvent, OnServerEventReceived);
+
             _hubConnection.Reconnecting += OnReconnecting;
             _hubConnection.Reconnected += OnReconnected;
             _hubConnection.Closed += OnConnectionClosed;
@@ -108,7 +117,7 @@ public class SignalRService : ISignalRService, IAsyncDisposable
         try
         {
             _reconnectCancellationTokenSource.Cancel();
-            
+
             if (_hubConnection is not null)
             {
                 await _hubConnection.StopAsync();
@@ -126,46 +135,15 @@ public class SignalRService : ISignalRService, IAsyncDisposable
     }
 
     /// <summary>
-    /// Subscribes to server events with the specified handler.
-    /// </summary>
-    public void OnReceiveEvent(Func<object, Task> handler)
-    {
-        if (_hubConnection != null)
-        {
-            _hubConnection.On<object>(SignalRHubMethods.ReceiveEvent, handler);
-        }
-    }
-
-    /// <summary>
-    /// Publishes an event to the server.
-    /// </summary>
-    public async Task PublishEventAsync(object eventData)
-    {
-        if (!IsConnected || _hubConnection is null)
-        {
-            _logger.LogWarning("Cannot publish event: SignalR not connected");
-            throw new InvalidOperationException("SignalR connection not established");
-        }
-
-        try
-        {
-            await _hubConnection.SendAsync(SignalRHubMethods.PublishEvent, eventData);
-            _logger.LogDebug("Event published successfully: {EventType}", eventData.GetType().Name);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to publish event: {EventType}", eventData.GetType().Name);
-            throw;
-        }
-    }
-
-    /// <summary>
     /// Handles server events received from the hub.
     /// </summary>
-    private async Task OnServerEventReceived(object eventData)
+    private async Task OnServerEventReceived(EventMessage eventData)
     {
-        _logger.LogDebug("Event received from server: {EventType}", eventData?.GetType().Name ?? "unknown");
-        
+        _logger.LogDebug(
+            "Event received from server: {EventType}",
+            eventData?.GetType().Name ?? "unknown"
+        );
+
         // Event handling can be extended here or delegated to event subscribers
         await Task.CompletedTask;
     }
@@ -174,10 +152,14 @@ public class SignalRService : ISignalRService, IAsyncDisposable
     {
         IsConnected = false;
         _reconnectAttempts++;
-        
+
         if (ex != null)
         {
-            _logger.LogWarning(ex, "SignalR reconnecting... (Attempt {Attempt})", _reconnectAttempts);
+            _logger.LogWarning(
+                ex,
+                "SignalR reconnecting... (Attempt {Attempt})",
+                _reconnectAttempts
+            );
         }
         else
         {
@@ -191,14 +173,17 @@ public class SignalRService : ISignalRService, IAsyncDisposable
     {
         IsConnected = true;
         _reconnectAttempts = 0;
-        _logger.LogInformation("SignalR connection restored. ConnectionId: {ConnectionId}", connectionId);
+        _logger.LogInformation(
+            "SignalR connection restored. ConnectionId: {ConnectionId}",
+            connectionId
+        );
         await Task.CompletedTask;
     }
 
     private async Task OnConnectionClosed(Exception? ex)
     {
         IsConnected = false;
-        
+
         if (ex != null)
         {
             _logger.LogWarning(ex, "SignalR connection closed unexpectedly");
@@ -219,11 +204,17 @@ public class SignalRService : ISignalRService, IAsyncDisposable
 
     private async Task ReconnectWithBackoffAsync()
     {
-        while (_reconnectAttempts < MaxReconnectAttempts && !_reconnectCancellationTokenSource.Token.IsCancellationRequested)
+        while (
+            _reconnectAttempts < MaxReconnectAttempts
+            && !_reconnectCancellationTokenSource.Token.IsCancellationRequested
+        )
         {
             try
             {
-                await Task.Delay(ReconnectDelayMs * _reconnectAttempts, _reconnectCancellationTokenSource.Token);
+                await Task.Delay(
+                    ReconnectDelayMs * _reconnectAttempts,
+                    _reconnectCancellationTokenSource.Token
+                );
                 await ConnectAsync();
                 break;
             }

@@ -73,21 +73,20 @@ public class ServerPlayersService
             .InventorySlots.GroupBy(slot => slot.InventoryName)
             .ToDictionary(
                 g => g.Key,
-                g =>
-                    new InventoryDTO
-                    {
-                        Name = g.Key,
-                        Slots = g.Select(slot => new InventorySlotDTO
-                            {
-                                SlotIndex = slot.SlotIndex,
-                                EntityId = slot.EntityId,
-                                EntityClass = slot.EntityClass,
-                                Name = slot.Name,
-                                StackSize = slot.StackSize,
-                            })
-                            .OrderBy(s => s.SlotIndex)
-                            .ToList(),
-                    }
+                g => new InventoryDTO
+                {
+                    Name = g.Key,
+                    Slots = g.Select(slot => new InventorySlotDTO
+                        {
+                            SlotIndex = slot.SlotIndex,
+                            EntityId = slot.EntityId,
+                            EntityClass = slot.EntityClass,
+                            Name = slot.Name,
+                            StackSize = slot.StackSize,
+                        })
+                        .OrderBy(s => s.SlotIndex)
+                        .ToList(),
+                }
             );
 
         return new PlayerDetailsDTO

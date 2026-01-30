@@ -61,9 +61,8 @@ public class ClientHub : Hub
                     {
                         // Broadcast event to this specific client using HubContext
                         _hubContext
-                            .Clients
-                            .Client(connectionId)
-                            .SendAsync("ServerEvent", message);
+                            .Clients.Client(connectionId)
+                            .SendAsync(SignalRHubMethods.ReceiveEvent, message);
                     }
                     catch (Exception ex)
                     {
@@ -95,10 +94,8 @@ public class ClientHub : Hub
     /// </summary>
     private static bool ShouldSendToClient(Type messageType)
     {
-        var attribute = (ClientEventAttribute?)Attribute.GetCustomAttribute(
-            messageType,
-            typeof(ClientEventAttribute)
-        );
+        var attribute = (ClientEventAttribute?)
+            Attribute.GetCustomAttribute(messageType, typeof(ClientEventAttribute));
 
         // Default to false if no attribute is present (explicit opt-in)
         return attribute?.SendToClient ?? false;
@@ -127,4 +124,3 @@ public class ClientHub : Hub
         await base.OnDisconnectedAsync(exception);
     }
 }
-

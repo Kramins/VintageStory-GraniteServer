@@ -20,15 +20,7 @@ public interface ISignalRService
     /// </summary>
     bool IsConnected { get; }
 
-    /// <summary>
-    /// Subscribes to hub events with the specified handler.
-    /// </summary>
-    void OnReceiveEvent(Func<object, Task> handler);
 
-    /// <summary>
-    /// Publishes an event to the server.
-    /// </summary>
-    Task PublishEventAsync(object eventData);
 
     /// <summary>
     /// Connection state changed event.
