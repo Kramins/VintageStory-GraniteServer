@@ -1,81 +1,46 @@
 @using Fluxor
 @using Granite.Common.Dto
+@using Granite.Web.Client.Services.Api.Players
 @using MudBlazor
+@inject IPlayersApiClient PlayersApiClient
+
 
 <MudDialog>
     <DialogContent>
-        <MudText Typo="Typo.h6" Class="mb-4">@DialogTitle</MudText>
-        <MudTextField @bind-Value="_searchQuery" 
-                      Placeholder="@SearchPlaceholder" 
-                      Variant="Variant.Outlined" 
-                      FullWidth="true"
-                      Immediate="true"
-                      @onblur="@OnSearchBlurAsync"
-                      Class="mb-3" />
-        <MudText Typo="Typo.subtitle2" Class="mb-2">Available Players:</MudText>
-        <MudPaper Elevation="0" Style="max-height: 300px; overflow-y: auto; position: relative;" Class="pa-2">
-            @if (_isSearching)
-            {
-                <div Style="display: flex; justify-content: center; align-items: center; height: 100px;">
-                    <MudProgressCircular Indeterminate="true" />
-                </div>
-            }
-            else
-            {
-                var filteredPlayers = GetFilteredPlayers();
-                if (!filteredPlayers.Any())
-                {
-                    <MudText Color="Color.Secondary" Class="pa-4 text-center">No players available</MudText>
-                }
-                else
-                {
-                    foreach (var player in filteredPlayers)
-                    {
-                        <MudCard Class="mb-2 cursor-pointer" 
-                                 Elevation="@(_selectedPlayerUid == player.PlayerUID ? 2 : 0)"
-                                 Style="@(_selectedPlayerUid == player.PlayerUID ? "border: 2px solid var(--mud-palette-primary);" : "")"
-                                 @onclick="@(() => _selectedPlayerUid = player.PlayerUID)">
-                            <MudCardContent Class="py-2">
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudAvatar Size="Size.Small" Color="Color.Primary">
-                                        @(player.Name?.FirstOrDefault().ToString().ToUpper() ?? "?")
-                                    </MudAvatar>
-                                    <MudStack Spacing="0">
-                                        <MudText Typo="Typo.body2">@player.Name</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@player.PlayerUID</MudText>
-                                    </MudStack>
-                                </MudStack>
-                            </MudCardContent>
-                        </MudCard>
-                    }
-                }
-            }
-        </MudPaper>
+        <MudAutocomplete T="PlayerNameIdDTO" @bind-Value="_selectedPlayer" SearchFunc="@SearchPlayersAsync"
+            ToStringFunc="@(p => p?.Name ?? string.Empty)" Label="@SearchPlaceholder" Variant="Variant.Outlined"
+            FullWidth="true" ResetValueOnEmptyText="false" CoerceText="true" CoerceValue="true" SelectValueOnTab="true"
+            AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Primary" @onblur="@OnInputBlurAsync"
+            HelperText="@_validationError" HelperTextOnFocus="false" Error="@(!string.IsNullOrEmpty(_validationError))"
+            Class="mb-3">
+            <ItemTemplate Context="player">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudAvatar Size="Size.Small" Color="Color.Primary">
+                        @(player.Name?.FirstOrDefault().ToString().ToUpper() ?? "?")
+                    </MudAvatar>
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.body2">@player.Name</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@player.Id</MudText>
+                    </MudStack>
+                </MudStack>
+            </ItemTemplate>
+            <NoItemsTemplate>
+                <MudText Align="Align.Center" Class="px-4 py-3">No players found</MudText>
+            </NoItemsTemplate>
+        </MudAutocomplete>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" 
-                   Variant="Variant.Filled" 
-                   OnClick="ConfirmAsync"
-                   Disabled="@(_isSearching || string.IsNullOrEmpty(_selectedPlayerUid))">
-            @if (_isSearching)
-            {
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-            }
-            else
-            {
-                <span>@SelectButtonText</span>
-            }
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="ConfirmAsync"
+            Disabled="@(string.IsNullOrEmpty(_selectedPlayerUid) || !string.IsNullOrEmpty(_validationError))">
+            @SelectButtonText
         </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; }
-
-    [Parameter]
-    public string DialogTitle { get; set; } = "Find Player";
+    private IMudDialogInstance MudDialog { get; set; } = null!;
 
     [Parameter]
     public string SelectButtonText { get; set; } = "Select";
@@ -89,27 +54,109 @@
     [Parameter]
     public Func<PlayerDTO, bool> OnFilterPlayer { get; set; } = null!;
 
-    [Parameter]
-    public Func<string, Task<IEnumerable<PlayerDTO>>> OnSearchPlayers { get; set; } = null!;
 
-    private string _searchQuery = string.Empty;
+    private PlayerNameIdDTO? _selectedPlayer = null;
     private string? _selectedPlayerUid = null;
-    private bool _isSearching = false;
-    private List<PlayerDTO> _searchResults = new();
+    private string _validationError = string.Empty;
+    private string _lastSearchText = string.Empty;
 
-    private IEnumerable<PlayerDTO> GetFilteredPlayers()
+    private async Task<IEnumerable<PlayerNameIdDTO>> SearchPlayersAsync(string searchText, CancellationToken
+    cancellationToken)
     {
-        var query = _searchQuery?.ToLower() ?? string.Empty;
-        var allPlayers = _searchResults.Any() ? _searchResults : InitialPlayers;
+        // Track the current input text for validation on blur
+        _lastSearchText = searchText;
 
-        var filtered = allPlayers
-            .Where(OnFilterPlayer)
-            .Where(p => string.IsNullOrEmpty(query) || 
-                       (p.Name?.Contains(query, StringComparison.OrdinalIgnoreCase) == true) ||
-                       (p.PlayerUID?.Contains(query, StringComparison.OrdinalIgnoreCase) == true))
-            .ToList();
+        // Clear validation error when user is actively searching
+        _validationError = string.Empty;
 
-        return filtered;
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            // Return initial filtered players when search is empty, converted to PlayerNameIdDTO
+            return InitialPlayers.Where(OnFilterPlayer).Select(ConvertToPlayerNameIdDTO).ToList();
+        }
+
+        var query = searchText.Trim().ToLower();
+
+        // First, search locally in InitialPlayers
+        var localResults = InitialPlayers
+        .Where(OnFilterPlayer)
+        .Where(p => p.Name?.Contains(query, StringComparison.OrdinalIgnoreCase) == true ||
+        p.PlayerUID?.Contains(query, StringComparison.OrdinalIgnoreCase) == true)
+        .Select(ConvertToPlayerNameIdDTO)
+        .ToList();
+
+        // If we have local results, return them
+        if (localResults.Any())
+        {
+            return localResults;
+        }
+
+        // Otherwise, attempt server-side search
+        try
+        {
+            var serverResults = await FindPlayerByNameAsync(searchText);
+            return serverResults.ToList();
+        }
+        catch (Exception)
+        {
+            // Silently fail - return empty results
+            return Enumerable.Empty<PlayerNameIdDTO>();
+        }
+    }
+
+    private PlayerNameIdDTO ConvertToPlayerNameIdDTO(PlayerDTO dto)
+    {
+        return new PlayerNameIdDTO
+        {
+            Id = dto.PlayerUID ?? string.Empty,
+            Name = dto.Name ?? string.Empty
+        };
+    }
+
+    private async Task ValidatePlayerInputAsync(string? input)
+    {
+        _validationError = string.Empty;
+        _selectedPlayerUid = null;
+
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return;
+        }
+
+        var query = input.Trim().ToLower();
+
+        // Search in InitialPlayers first (by name or UID)
+        var foundPlayer = InitialPlayers
+        .Where(OnFilterPlayer)
+        .FirstOrDefault(p => p.Name?.Equals(query, StringComparison.OrdinalIgnoreCase) == true ||
+        p.PlayerUID?.Equals(query, StringComparison.OrdinalIgnoreCase) == true);
+
+        if (foundPlayer != null)
+        {
+            _selectedPlayerUid = foundPlayer.PlayerUID;
+            return;
+        }
+
+        // Attempt server-side search if not found locally
+        try
+        {
+            var serverResults = await FindPlayerByNameAsync(input);
+            var foundServerPlayer = serverResults
+            .FirstOrDefault(p => p.Name?.Equals(query, StringComparison.OrdinalIgnoreCase) == true);
+
+            if (foundServerPlayer != null)
+            {
+                _selectedPlayerUid = foundServerPlayer.Id;
+                return;
+            }
+        }
+        catch (Exception)
+        {
+            // Server search failed
+        }
+
+        // No matching player found
+        _validationError = $"No player found matching '{input}'";
     }
 
     private void Cancel()
@@ -117,58 +164,50 @@
         MudDialog.Close(DialogResult.Cancel());
     }
 
-    private async Task ConfirmAsync()
+    private async Task<IEnumerable<PlayerNameIdDTO>> FindPlayerByNameAsync(string playerName)
     {
-        if (string.IsNullOrEmpty(_selectedPlayerUid))
-            return;
-
-        // Perform fallback search if we have search text but no local results
-        var currentFiltered = GetFilteredPlayers();
-        if (!currentFiltered.Any() && !string.IsNullOrEmpty(_searchQuery) && OnSearchPlayers != null)
-        {
-            await PerformFallbackSearchAsync();
-            
-            // Re-check if we now have results after the server search
-            currentFiltered = GetFilteredPlayers();
-        }
-
-        if (currentFiltered.Any(p => p.PlayerUID == _selectedPlayerUid))
-        {
-            MudDialog.Close(DialogResult.Ok(_selectedPlayerUid));
-        }
-    }
-
-    private async Task OnSearchBlurAsync()
-    {
-        // Perform fallback search if we have search text but no local results
-        if (!string.IsNullOrEmpty(_searchQuery) && OnSearchPlayers != null)
-        {
-            var currentFiltered = GetFilteredPlayers();
-            if (!currentFiltered.Any())
-            {
-                await PerformFallbackSearchAsync();
-            }
-        }
-    }
-
-    private async Task PerformFallbackSearchAsync()
-    {
-        if (string.IsNullOrEmpty(_searchQuery) || OnSearchPlayers == null)
-            return;
-
-        _isSearching = true;
         try
         {
-            var results = await OnSearchPlayers(_searchQuery);
-            _searchResults = results.Where(OnFilterPlayer).ToList();
+            var response = await PlayersApiClient.FindPlayerByNameAsync(playerName);
+            return response.Data ?? Enumerable.Empty<PlayerNameIdDTO>();
         }
-        catch (Exception)
+        catch
         {
-            // Silently fail - keep existing results
+            return Enumerable.Empty<PlayerNameIdDTO>();
         }
-        finally
+    }
+
+    private async Task ConfirmAsync()
+    {
+        // Validate input if a player object is selected
+        if (_selectedPlayer != null)
         {
-            _isSearching = false;
+            _selectedPlayerUid = _selectedPlayer.Id;
+        }
+        else if (!string.IsNullOrEmpty(_selectedPlayerUid))
+        {
+            // Player UID is already set from dropdown selection
+        }
+        else
+        {
+            _validationError = "Please select or enter a valid player";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(_selectedPlayerUid) || !string.IsNullOrEmpty(_validationError))
+        {
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(_selectedPlayerUid));
+    }
+
+    private async Task OnInputBlurAsync()
+    {
+        // When user leaves the input field, validate the current text if no player selected
+        if (string.IsNullOrEmpty(_selectedPlayerUid) && !string.IsNullOrEmpty(_lastSearchText))
+        {
+            await ValidatePlayerInputAsync(_lastSearchText);
         }
     }
 }

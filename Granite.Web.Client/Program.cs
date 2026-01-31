@@ -1,17 +1,18 @@
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.AspNetCore.Components.Authorization;
+using Fluxor;
 using Granite.Web.Client;
-using Granite.Web.Client.Services.Api;
-using Granite.Web.Client.Services.SignalR;
-using Granite.Web.Client.Services.Auth;
-using Granite.Web.Client.Services;
 using Granite.Web.Client.Handlers.Events;
 using Granite.Web.Client.HostedServices;
+using Granite.Web.Client.Services;
+using Granite.Web.Client.Services.Api;
+using Granite.Web.Client.Services.Api.Players;
+using Granite.Web.Client.Services.Auth;
+using Granite.Web.Client.Services.SignalR;
 using GraniteServer.Messaging.Events;
 using GraniteServer.Messaging.Handlers.Events;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
-using Fluxor;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -20,9 +21,10 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // Add Fluxor state management
 builder.Services.AddFluxor(options =>
 {
-    options.ScanAssemblies(typeof(Program).Assembly)
-    .AddMiddleware<LoggingMiddleware>()
-    .WithLifetime(StoreLifetime.Singleton);
+    options
+        .ScanAssemblies(typeof(Program).Assembly)
+        .AddMiddleware<LoggingMiddleware>()
+        .WithLifetime(StoreLifetime.Singleton);
 });
 
 // Add MudBlazor services
@@ -32,18 +34,26 @@ builder.Services.AddMudServices();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
-builder.Services.AddScoped<AuthenticationStateProvider>(provider => 
-    provider.GetRequiredService<CustomAuthenticationStateProvider>());
+builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
+    provider.GetRequiredService<CustomAuthenticationStateProvider>()
+);
 
 // Configure HttpClient with IHttpClientFactory and authentication handler
 builder.Services.AddScoped<AuthenticationDelegatingHandler>();
-builder.Services.AddHttpClient("GraniteApi", client =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["ApiBaseUrl"] ?? builder.HostEnvironment.BaseAddress);
-})
-.AddHttpMessageHandler<AuthenticationDelegatingHandler>();
+builder
+    .Services.AddHttpClient(
+        "GraniteApi",
+        client =>
+        {
+            client.BaseAddress = new Uri(
+                builder.Configuration["ApiBaseUrl"] ?? builder.HostEnvironment.BaseAddress
+            );
+        }
+    )
+    .AddHttpMessageHandler<AuthenticationDelegatingHandler>();
 
 // Register API clients as Singleton - they use IHttpClientFactory which properly manages scopes
+builder.Services.AddSingleton<IServerPlayersApiClient, ServerPlayersApiClient>();
 builder.Services.AddSingleton<IPlayersApiClient, PlayersApiClient>();
 builder.Services.AddSingleton<IModsApiClient, ModsApiClient>();
 builder.Services.AddSingleton<IServerApiClient, ServerApiClient>();
@@ -67,5 +77,3 @@ builder.Services.AddScoped<IEventHandler<PlayerKickedEvent>, PlayerEventHandlers
 builder.Services.AddScoped<ISignalRService, SignalRService>();
 
 await builder.Build().RunAsync();
-
-

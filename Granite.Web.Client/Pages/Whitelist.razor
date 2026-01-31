@@ -12,7 +12,7 @@
 @inject IState<PlayersState> PlayersState
 @inject IDispatcher Dispatcher
 @inject NavigationManager Navigation
-@inject IPlayersApiClient PlayersApiClient
+@inject IServerPlayersApiClient PlayersApiClient
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
@@ -145,23 +145,11 @@ else
 
         var parameters = new DialogParameters<Components.FindPlayerDialog>
         {
-            { x => x.DialogTitle, "Add Player to Whitelist" },
             { x => x.SelectButtonText, "Add to Whitelist" },
             { x => x.SearchPlaceholder, "Search by player name or UID..." },
             { x => x.InitialPlayers, PlayersState.Value.Players },
             { x => x.OnFilterPlayer, (Func<PlayerDTO, bool>)(p => !p.IsWhitelisted) },
-            { x => x.OnSearchPlayers, (Func<string, Task<IEnumerable<PlayerDTO>>>)(async query => 
-            {
-                try
-                {
-                    var response = await PlayersApiClient.FindPlayerByNameAsync(ServerId, query);
-                    return response.Data ?? Enumerable.Empty<PlayerDTO>();
-                }
-                catch
-                {
-                    return Enumerable.Empty<PlayerDTO>();
-                }
-            }) }
+            
         };
 
         var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true };

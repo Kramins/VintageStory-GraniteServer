@@ -7,14 +7,14 @@ namespace Granite.Web.Tests.Services.Api;
 
 public class PlayersApiClientTests
 {
-    private readonly Mock<ILogger<PlayersApiClient>> _mockLogger;
+    private readonly Mock<ILogger<ServerPlayersApiClient>> _mockLogger;
     private readonly MockHttpMessageHandler _mockHttpHandler;
     private readonly HttpClient _httpClient;
-    private readonly PlayersApiClient _apiClient;
+    private readonly ServerPlayersApiClient _apiClient;
 
     public PlayersApiClientTests()
     {
-        _mockLogger = new Mock<ILogger<PlayersApiClient>>();
+        _mockLogger = new Mock<ILogger<ServerPlayersApiClient>>();
         _mockHttpHandler = new MockHttpMessageHandler();
         _httpClient = new HttpClient(_mockHttpHandler)
         {

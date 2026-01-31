@@ -6,12 +6,12 @@ namespace Granite.Web.Client.Store.Features.Players;
 
 public class PlayersEffects
 {
-    private readonly IPlayersApiClient _playersApiClient;
+    private readonly IServerPlayersApiClient _playersApiClient;
     private readonly ILogger<PlayersEffects> _logger;
     private readonly IState<PlayersState> _playersState;
 
     public PlayersEffects(
-        IPlayersApiClient playersApiClient,
+        IServerPlayersApiClient playersApiClient,
         ILogger<PlayersEffects> logger,
         IState<PlayersState> playersState
     )

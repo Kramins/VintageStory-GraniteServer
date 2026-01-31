@@ -9,7 +9,7 @@
 @inject IState<PlayersState> PlayersState
 @inject IDispatcher Dispatcher
 @inject NavigationManager Navigation
-@inject IPlayersApiClient PlayersApiClient
+@inject IServerPlayersApiClient PlayersApiClient
 @inject ISnackbar Snackbar
 
 <PageTitle>Player Details - @(PlayersState.Value.SelectedPlayerDetails?.Name ?? "Loading...")</PageTitle>
