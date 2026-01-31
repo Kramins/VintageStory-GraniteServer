@@ -2,6 +2,7 @@ using Granite.Web.Client.Services.Auth;
 using GraniteServer.Messaging;
 using GraniteServer.Messaging.Events;
 using Microsoft.AspNetCore.SignalR.Client;
+using System.Text.Json;
 
 namespace Granite.Web.Client.Services.SignalR;
 
@@ -14,6 +15,7 @@ public class SignalRService : ISignalRService, IAsyncDisposable
     private readonly ILogger<SignalRService> _logger;
     private readonly string _hubUrl;
     private readonly CustomAuthenticationStateProvider _authStateProvider;
+    private readonly ClientMessageBusService _messageBus;
     private bool _isConnected;
     private Task? _reconnectTask;
     private CancellationTokenSource _reconnectCancellationTokenSource = new();
@@ -40,11 +42,13 @@ public class SignalRService : ISignalRService, IAsyncDisposable
     public SignalRService(
         ILogger<SignalRService> logger,
         IConfiguration configuration,
-        CustomAuthenticationStateProvider authStateProvider
+        CustomAuthenticationStateProvider authStateProvider,
+        ClientMessageBusService messageBus
     )
     {
         _logger = logger;
         _authStateProvider = authStateProvider;
+        _messageBus = messageBus;
         var apiBaseUrl = configuration["ApiBaseUrl"] ?? "http://localhost:5000";
         _hubUrl = $"{apiBaseUrl}/hub/client";
     }
@@ -89,8 +93,8 @@ public class SignalRService : ISignalRService, IAsyncDisposable
                 .WithStatefulReconnect()
                 .Build();
 
-            // Register hub method handlers - the server uses "ServerEvent" not "ReceiveEvent"
-            _hubConnection.On<EventMessage>(SignalRHubMethods.ReceiveEvent, OnServerEventReceived);
+            // Register hub method handlers - receive as JsonElement to handle polymorphic deserialization
+            _hubConnection.On<JsonElement>(SignalRHubMethods.ReceiveEvent, OnServerEventReceived);
 
             _hubConnection.Reconnecting += OnReconnecting;
             _hubConnection.Reconnected += OnReconnected;
@@ -136,15 +140,45 @@ public class SignalRService : ISignalRService, IAsyncDisposable
 
     /// <summary>
     /// Handles server events received from the hub.
+    /// Deserializes the JSON payload and publishes events to the client message bus for processing by event handlers.
     /// </summary>
-    private async Task OnServerEventReceived(EventMessage eventData)
+    private async Task OnServerEventReceived(JsonElement payload)
     {
-        _logger.LogDebug(
-            "Event received from server: {EventType}",
-            eventData?.GetType().Name ?? "unknown"
-        );
+        try
+        {
+            var messageType =
+                payload.GetProperty("messageType").GetString()
+                ?? throw new InvalidOperationException("messageType is required");
 
-        // Event handling can be extended here or delegated to event subscribers
+            _logger.LogDebug("Event received from server: {EventType}", messageType);
+
+            var type = MessageDeserializer.FindMessageTypeByName(messageType);
+            if (type == null)
+            {
+                _logger.LogError("Could not find message type: {MessageType}", messageType);
+                return;
+            }
+
+            var message = MessageDeserializer.DeserializeMessage(payload, type);
+
+            if (message is EventMessage eventMessage)
+            {
+                // Publish the event to the message bus for processing by event handlers
+                _messageBus.Publish(eventMessage);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Received non-event message type: {MessageType}",
+                    messageType
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing server event");
+        }
+
         await Task.CompletedTask;
     }
 

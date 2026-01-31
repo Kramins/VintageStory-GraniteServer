@@ -2,23 +2,23 @@ using System.Collections.Generic;
 
 namespace Granite.Common.Dto;
 
-public class InventoryDTO
+public record InventoryDTO
 {
-    public string Name { get; set; } = string.Empty;
-    public List<InventorySlotDTO> Slots { get; set; } = new List<InventorySlotDTO>();
+    public string Name { get; init; } = string.Empty;
+    public List<InventorySlotDTO> Slots { get; init; } = new List<InventorySlotDTO>();
 }
 
-public class InventorySlotDTO
+public record InventorySlotDTO
 {
-    public string? EntityClass { get; set; }
-    public int EntityId { get; set; }
-    public string? Name { get; set; }
-    public int SlotIndex { get; set; }
-    public int StackSize { get; set; }
+    public string? EntityClass { get; init; }
+    public int EntityId { get; init; }
+    public string? Name { get; init; }
+    public int SlotIndex { get; init; }
+    public int StackSize { get; init; }
 }
 
-public class PlayerDetailsDTO : PlayerDTO
+public record PlayerDetailsDTO : PlayerDTO
 {
-    public Dictionary<string, InventoryDTO> Inventories { get; set; } =
+    public Dictionary<string, InventoryDTO> Inventories { get; init; } =
         new Dictionary<string, InventoryDTO>();
 }

@@ -57,7 +57,7 @@ public class ModHubTests
         var messageType = typeof(PlayerJoinedEvent);
 
         // Act
-        var result = _hub.DeserializeEvent(jsonElement, messageType);
+        var result = MessageDeserializer.DeserializeMessage(jsonElement, messageType);
 
         // Assert
         result.Should().NotBeNull();
@@ -82,7 +82,7 @@ public class ModHubTests
         var messageType = typeof(PlayerJoinedEvent);
 
         // Act
-        var result = _hub.DeserializeEvent(jsonElement, messageType);
+        var result = MessageDeserializer.DeserializeMessage(jsonElement, messageType);
 
         // Assert
         result.Should().NotBeNull();
@@ -104,7 +104,7 @@ public class ModHubTests
         var messageType = typeof(PlayerJoinedEvent);
 
         // Act
-        var result = _hub.DeserializeEvent(jsonElement, messageType);
+        var result = MessageDeserializer.DeserializeMessage(jsonElement, messageType);
 
         // Assert
         result.Should().NotBeNull();
@@ -126,7 +126,7 @@ public class ModHubTests
         var messageType = typeof(PlayerJoinedEvent);
 
         // Act
-        var result = _hub.DeserializeEvent(jsonElement, messageType);
+        var result = MessageDeserializer.DeserializeMessage(jsonElement, messageType);
 
         // Assert
         result.Should().NotBeNull();

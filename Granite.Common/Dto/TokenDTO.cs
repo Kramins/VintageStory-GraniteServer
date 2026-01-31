@@ -2,20 +2,20 @@ using System.Text.Json.Serialization;
 
 namespace Granite.Common.Dto;
 
-public class TokenDTO
+public record TokenDTO
 {
     [JsonPropertyName("access_token")]
-    public string AccessToken { get; set; } = string.Empty;
+    public string AccessToken { get; init; } = string.Empty;
 
     [JsonPropertyName("token_type")]
-    public string TokenType { get; set; } = "bearer";
+    public string TokenType { get; init; } = "bearer";
 
     [JsonPropertyName("expires_in")]
-    public int ExpiresIn { get; set; }
+    public int ExpiresIn { get; init; }
 
     [JsonPropertyName("refresh_token")]
-    public string? RefreshToken { get; set; }
+    public string? RefreshToken { get; init; }
 
     [JsonPropertyName("scope")]
-    public string? Scope { get; set; }
+    public string? Scope { get; init; }
 }

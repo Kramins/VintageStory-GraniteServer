@@ -10,13 +10,13 @@ namespace Granite.Web.Client.Services.Api;
 /// </summary>
 public abstract class BaseApiClient
 {
-    protected readonly HttpClient HttpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     protected readonly ILogger<BaseApiClient> Logger;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
 
-    protected BaseApiClient(HttpClient httpClient, ILogger<BaseApiClient> logger)
+    protected BaseApiClient(IHttpClientFactory httpClientFactory, ILogger<BaseApiClient> logger)
     {
-        HttpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         Logger = logger;
         _jsonSerializerOptions = new JsonSerializerOptions
         {
@@ -26,13 +26,19 @@ public abstract class BaseApiClient
     }
 
     /// <summary>
+    /// Gets an HttpClient instance from the factory.
+    /// </summary>
+    protected HttpClient GetHttpClient() => _httpClientFactory.CreateClient("GraniteApi");
+
+    /// <summary>
     /// Makes a GET request and deserializes the response as JsonApiDocument{T}.
     /// </summary>
     protected async Task<JsonApiDocument<T>> GetAsync<T>(string url)
     {
         try
         {
-            var response = await HttpClient.GetAsync(url);
+            var httpClient = GetHttpClient();
+            var response = await httpClient.GetAsync(url);
             return await HandleResponse<T>(response);
         }
         catch (HttpRequestException ex)
@@ -49,9 +55,10 @@ public abstract class BaseApiClient
     {
         try
         {
+            var httpClient = GetHttpClient();
             var response = content == null
-                ? await HttpClient.PostAsync(url, null)
-                : await HttpClient.PostAsJsonAsync(url, content);
+                ? await httpClient.PostAsync(url, null)
+                : await httpClient.PostAsJsonAsync(url, content);
 
             return await HandleResponse<T>(response);
         }
@@ -69,7 +76,8 @@ public abstract class BaseApiClient
     {
         try
         {
-            var response = await HttpClient.PutAsJsonAsync(url, content);
+            var httpClient = GetHttpClient();
+            var response = await httpClient.PutAsJsonAsync(url, content);
             return await HandleResponse<T>(response);
         }
         catch (HttpRequestException ex)
@@ -86,7 +94,8 @@ public abstract class BaseApiClient
     {
         try
         {
-            var response = await HttpClient.DeleteAsync(url);
+            var httpClient = GetHttpClient();
+            var response = await httpClient.DeleteAsync(url);
             if (!response.IsSuccessStatusCode)
             {
                 await HandleErrorResponse(response);

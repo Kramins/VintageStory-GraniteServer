@@ -9,6 +9,7 @@ public record PlayersState
 {
     public ImmutableList<PlayerDTO> Players { get; init; } = ImmutableList<PlayerDTO>.Empty;
     public PlayerDTO? SelectedPlayer { get; init; }
+    public PlayerDetailsDTO? SelectedPlayerDetails { get; init; }
     public bool IsLoading { get; init; }
     public string? ErrorMessage { get; init; }
     public DateTime? LastUpdated { get; init; }

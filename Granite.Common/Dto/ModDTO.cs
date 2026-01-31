@@ -2,12 +2,12 @@ using System;
 
 namespace Granite.Common.Dto;
 
-public class ModDTO
+public record ModDTO
 {
-    public Guid ModId { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public string Author { get; set; } = string.Empty;
-    public string? RunningVersion { get; set; }
-    public string? InstalledVersion { get; set; }
+    public Guid ModId { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
+    public string Author { get; init; } = string.Empty;
+    public string? RunningVersion { get; init; }
+    public string? InstalledVersion { get; init; }
 }

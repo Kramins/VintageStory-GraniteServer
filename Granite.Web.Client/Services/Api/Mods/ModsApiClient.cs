@@ -10,8 +10,8 @@ public class ModsApiClient : BaseApiClient, IModsApiClient
 {
     private const string BasePath = "/api/mods";
 
-    public ModsApiClient(HttpClient httpClient, ILogger<ModsApiClient> logger)
-        : base(httpClient, logger)
+    public ModsApiClient(IHttpClientFactory httpClientFactory, ILogger<ModsApiClient> logger)
+        : base(httpClientFactory, logger)
     {
     }
 
@@ -75,7 +75,8 @@ public class ModsApiClient : BaseApiClient, IModsApiClient
     {
         try
         {
-            var response = await HttpClient.DeleteAsync($"{BasePath}/{modId}");
+            var httpClient = GetHttpClient();
+            var response = await httpClient.DeleteAsync($"{BasePath}/{modId}");
             if (!response.IsSuccessStatusCode)
             {
                 throw new ApiException($"Failed to uninstall mod: {response.StatusCode}");

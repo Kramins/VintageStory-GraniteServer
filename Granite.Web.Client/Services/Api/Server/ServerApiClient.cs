@@ -10,8 +10,8 @@ public class ServerApiClient : BaseApiClient, IServerApiClient
 {
     private const string BasePath = "/api/servers";
 
-    public ServerApiClient(HttpClient httpClient, ILogger<ServerApiClient> logger)
-        : base(httpClient, logger)
+    public ServerApiClient(IHttpClientFactory httpClientFactory, ILogger<ServerApiClient> logger)
+        : base(httpClientFactory, logger)
     {
     }
 

@@ -3,31 +3,31 @@ using Sieve.Attributes;
 
 namespace Granite.Common.Dto;
 
-public class PlayerSessionDTO
+public record PlayerSessionDTO
 {
     [Sieve(CanFilter = true, CanSort = true)]
-    public Guid Id { get; set; }
+    public Guid Id { get; init; }
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string PlayerId { get; set; } = string.Empty;
+    public string PlayerId { get; init; } = string.Empty;
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public Guid ServerId { get; set; }
+    public Guid ServerId { get; init; }
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string ServerName { get; set; } = string.Empty;
+    public string ServerName { get; init; } = string.Empty;
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public DateTime JoinDate { get; set; }
+    public DateTime JoinDate { get; init; }
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public DateTime? LeaveDate { get; set; }
+    public DateTime? LeaveDate { get; init; }
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string IpAddress { get; set; } = string.Empty;
+    public string IpAddress { get; init; } = string.Empty;
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string PlayerName { get; set; } = string.Empty;
+    public string PlayerName { get; init; } = string.Empty;
 
     [Sieve(CanFilter = true, CanSort = true)]
     public double? Duration { get; set; }

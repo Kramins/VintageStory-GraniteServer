@@ -1,4 +1,5 @@
 ﻿@using Fluxor
+@using Granite.Web.Client.HostedServices
 @inherits LayoutComponentBase
 @implements IDisposable
 @inject ISignalRService SignalRService
@@ -7,6 +8,7 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject IDispatcher Dispatcher
+@inject MessageBridgeService MessageBridgeService
 
 <MudThemeProvider @ref="_mudThemeProvider" IsDarkMode="_isDarkMode" />
 <MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.ExtraSmall" />
@@ -81,7 +83,10 @@
     {
         try
         {
-            // Fetch servers first
+            // Start the message bridge service first
+            await MessageBridgeService.StartAsync();
+            
+            // Fetch servers
             Dispatcher.Dispatch(new Granite.Web.Client.Store.Features.Server.FetchServersAction());
             
             // Then connect to SignalR

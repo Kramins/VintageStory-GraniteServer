@@ -74,12 +74,7 @@ public class ServerPlayersController : ControllerBase
         string playerId
     )
     {
-        if (!Guid.TryParse(playerId, out var playerGuid))
-        {
-            return BadRequest("Invalid playerId format");
-        }
-
-        var playerDetails = await _playerService.GetPlayerDetailsAsync(serverId, playerGuid);
+        var playerDetails = await _playerService.GetPlayerDetailsAsync(serverId, playerId);
 
         if (playerDetails == null)
         {

@@ -1,6 +1,6 @@
 namespace Granite.Common.Dto;
 
-public class WhitelistRequestDTO
+public record WhitelistRequestDTO
 {
-    public string? Reason { get; set; }
+    public string? Reason { get; init; }
 }

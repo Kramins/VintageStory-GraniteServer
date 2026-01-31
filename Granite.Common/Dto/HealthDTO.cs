@@ -2,8 +2,8 @@ using System;
 
 namespace Granite.Common.Dto;
 
-public class HealthDTO
+public record HealthDTO
 {
-    public string Status { get; set; } = "ok";
-    public DateTime UtcNow { get; set; } = DateTime.UtcNow;
+    public string Status { get; init; } = "ok";
+    public DateTime UtcNow { get; init; } = DateTime.UtcNow;
 }

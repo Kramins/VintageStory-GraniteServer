@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Granite.Common.Dto.JsonApi;
 
-public class JsonApiDocument<T>
+public record JsonApiDocument<T>
 {
     public JsonApiDocument() { }
 
@@ -11,7 +11,7 @@ public class JsonApiDocument<T>
         Data = data;
     }
 
-    public T? Data { get; set; }
-    public JsonApiMeta? Meta { get; set; }
-    public List<JsonApiError> Errors { get; set; } = new();
+    public T? Data { get; init; }
+    public JsonApiMeta? Meta { get; init; }
+    public List<JsonApiError> Errors { get; init; } = new();
 }

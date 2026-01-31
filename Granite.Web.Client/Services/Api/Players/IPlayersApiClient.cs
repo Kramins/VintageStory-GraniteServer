@@ -19,6 +19,11 @@ public interface IPlayersApiClient
     Task<JsonApiDocument<PlayerDTO>> GetPlayerAsync(string serverId, string playerUid);
 
     /// <summary>
+    /// Gets detailed player information including inventories by UID.
+    /// </summary>
+    Task<JsonApiDocument<PlayerDetailsDTO>> GetPlayerDetailsAsync(string serverId, string playerUid);
+
+    /// <summary>
     /// Updates a player's data.
     /// </summary>
     Task<JsonApiDocument<PlayerDTO>> UpdatePlayerAsync(string serverId, string playerUid, PlayerDetailsDTO playerData);

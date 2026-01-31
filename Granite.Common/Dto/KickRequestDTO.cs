@@ -1,6 +1,6 @@
 namespace Granite.Common.Dto;
 
-public class KickRequestDTO
+public record KickRequestDTO
 {
-    public string Reason { get; set; } = string.Empty;
+    public string Reason { get; init; } = string.Empty;
 }

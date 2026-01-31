@@ -1,6 +1,6 @@
 namespace Granite.Common.Dto;
 
-public class AnnounceMessageDTO
+public record AnnounceMessageDTO
 {
-    public string Message { get; set; } = string.Empty;
+    public string Message { get; init; } = string.Empty;
 }

@@ -1,8 +1,8 @@
 namespace Granite.Common.Dto.JsonApi;
 
-public class JsonApiError
+public record JsonApiError
 {
-    public string Code { get; set; } = string.Empty;
-    public string Message { get; set; } = string.Empty;
-    public object? StackTrace { get; set; }
+    public string Code { get; init; } = string.Empty;
+    public string Message { get; init; } = string.Empty;
+    public object? StackTrace { get; init; }
 }

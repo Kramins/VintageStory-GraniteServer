@@ -53,12 +53,12 @@ public class ServerPlayersService
         return await serverPlayers.ToListAsync();
     }
 
-    public async Task<PlayerDetailsDTO?> GetPlayerDetailsAsync(Guid serverId, Guid playerId)
+    public async Task<PlayerDetailsDTO?> GetPlayerDetailsAsync(Guid serverId, string playerUid)
     {
         var player = await _dbContext
             .Players.Include(p => p.Sessions)
             .Include(p => p.InventorySlots)
-            .FirstOrDefaultAsync(p => p.ServerId == serverId && p.Id == playerId);
+            .FirstOrDefaultAsync(p => p.ServerId == serverId && p.PlayerUID == playerUid);
 
         if (player == null)
         {

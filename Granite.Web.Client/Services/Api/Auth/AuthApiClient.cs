@@ -10,8 +10,8 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
 {
     private const string BasePath = "/api/auth";
 
-    public AuthApiClient(HttpClient httpClient, ILogger<AuthApiClient> logger)
-        : base(httpClient, logger)
+    public AuthApiClient(IHttpClientFactory httpClientFactory, ILogger<AuthApiClient> logger)
+        : base(httpClientFactory, logger)
     {
     }
 

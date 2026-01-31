@@ -5,6 +5,11 @@ using Granite.Web.Client;
 using Granite.Web.Client.Services.Api;
 using Granite.Web.Client.Services.SignalR;
 using Granite.Web.Client.Services.Auth;
+using Granite.Web.Client.Services;
+using Granite.Web.Client.Handlers.Events;
+using Granite.Web.Client.HostedServices;
+using GraniteServer.Messaging.Events;
+using GraniteServer.Messaging.Handlers.Events;
 using MudBlazor.Services;
 using Fluxor;
 
@@ -15,7 +20,9 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // Add Fluxor state management
 builder.Services.AddFluxor(options =>
 {
-    options.ScanAssemblies(typeof(Program).Assembly);
+    options.ScanAssemblies(typeof(Program).Assembly)
+    .AddMiddleware<LoggingMiddleware>()
+    .WithLifetime(StoreLifetime.Singleton);
 });
 
 // Add MudBlazor services
@@ -28,29 +35,37 @@ builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider => 
     provider.GetRequiredService<CustomAuthenticationStateProvider>());
 
-// Configure HttpClient with authentication handler
+// Configure HttpClient with IHttpClientFactory and authentication handler
 builder.Services.AddScoped<AuthenticationDelegatingHandler>();
-builder.Services.AddScoped(sp =>
+builder.Services.AddHttpClient("GraniteApi", client =>
 {
-    var handler = sp.GetRequiredService<AuthenticationDelegatingHandler>();
-    handler.InnerHandler = new HttpClientHandler();
-    
-    var httpClient = new HttpClient(handler)
-    {
-        BaseAddress = new Uri(builder.Configuration["ApiBaseUrl"] ?? builder.HostEnvironment.BaseAddress)
-    };
-    
-    return httpClient;
-});
+    client.BaseAddress = new Uri(builder.Configuration["ApiBaseUrl"] ?? builder.HostEnvironment.BaseAddress);
+})
+.AddHttpMessageHandler<AuthenticationDelegatingHandler>();
 
-// Register API clients
-builder.Services.AddScoped<IPlayersApiClient, PlayersApiClient>();
-builder.Services.AddScoped<IModsApiClient, ModsApiClient>();
-builder.Services.AddScoped<IServerApiClient, ServerApiClient>();
-builder.Services.AddScoped<IAuthApiClient, AuthApiClient>();
-builder.Services.AddScoped<IWorldApiClient, WorldApiClient>();
+// Register API clients as Singleton - they use IHttpClientFactory which properly manages scopes
+builder.Services.AddSingleton<IPlayersApiClient, PlayersApiClient>();
+builder.Services.AddSingleton<IModsApiClient, ModsApiClient>();
+builder.Services.AddSingleton<IServerApiClient, ServerApiClient>();
+builder.Services.AddSingleton<IAuthApiClient, AuthApiClient>();
+builder.Services.AddSingleton<IWorldApiClient, WorldApiClient>();
+
+// Register message bus and event handling infrastructure
+builder.Services.AddSingleton<ClientMessageBusService>();
+builder.Services.AddSingleton<MessageBridgeService>();
+
+// Register event handlers as Scoped - they'll inject IDispatcher from their own scope
+builder.Services.AddScoped<IEventHandler<PlayerWhitelistedEvent>, PlayerEventHandlers>();
+builder.Services.AddScoped<IEventHandler<PlayerUnwhitelistedEvent>, PlayerEventHandlers>();
+builder.Services.AddScoped<IEventHandler<PlayerBannedEvent>, PlayerEventHandlers>();
+builder.Services.AddScoped<IEventHandler<PlayerUnbannedEvent>, PlayerEventHandlers>();
+builder.Services.AddScoped<IEventHandler<PlayerLeaveEvent>, PlayerEventHandlers>();
+builder.Services.AddScoped<IEventHandler<PlayerJoinedEvent>, PlayerEventHandlers>();
+builder.Services.AddScoped<IEventHandler<PlayerKickedEvent>, PlayerEventHandlers>();
 
 // Register SignalR service
 builder.Services.AddScoped<ISignalRService, SignalRService>();
 
 await builder.Build().RunAsync();
+
+

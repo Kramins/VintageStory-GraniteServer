@@ -9,8 +9,8 @@ public class WorldApiClient : BaseApiClient, IWorldApiClient
 {
     private const string BasePath = "/api/world";
 
-    public WorldApiClient(HttpClient httpClient, ILogger<WorldApiClient> logger)
-        : base(httpClient, logger)
+    public WorldApiClient(IHttpClientFactory httpClientFactory, ILogger<WorldApiClient> logger)
+        : base(httpClientFactory, logger)
     {
     }
 

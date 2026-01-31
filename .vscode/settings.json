@@ -11,6 +11,7 @@
     "code-butler.cleanupOnSave": true,
     "cSpell.words": [
       "Itemstack",
-      "Unban"
+      "Unban",
+      "Unwhitelisted"
     ]
 }

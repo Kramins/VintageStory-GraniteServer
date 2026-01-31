@@ -8,8 +8,8 @@ namespace Granite.Web.Client.Services.Api;
 /// </summary>
 public class PlayersApiClient : BaseApiClient, IPlayersApiClient
 {
-    public PlayersApiClient(HttpClient httpClient, ILogger<PlayersApiClient> logger)
-        : base(httpClient, logger)
+    public PlayersApiClient(IHttpClientFactory httpClientFactory, ILogger<PlayersApiClient> logger)
+        : base(httpClientFactory, logger)
     {
     }
 
@@ -53,6 +53,19 @@ public class PlayersApiClient : BaseApiClient, IPlayersApiClient
         catch (ApiException ex)
         {
             Logger.LogError(ex, "Failed to fetch player {PlayerUid} for server {ServerId}", playerUid, serverId);
+            throw;
+        }
+    }
+
+    public async Task<JsonApiDocument<PlayerDetailsDTO>> GetPlayerDetailsAsync(string serverId, string playerUid)
+    {
+        try
+        {
+            return await GetAsync<PlayerDetailsDTO>($"{GetBasePath(serverId)}/{playerUid}");
+        }
+        catch (ApiException ex)
+        {
+            Logger.LogError(ex, "Failed to fetch player details for {PlayerUid} for server {ServerId}", playerUid, serverId);
             throw;
         }
     }
@@ -115,7 +128,8 @@ public class PlayersApiClient : BaseApiClient, IPlayersApiClient
     {
         try
         {
-            var response = await HttpClient.DeleteAsync($"{GetBasePath(serverId)}/{playerUid}/whitelist");
+            var httpClient = GetHttpClient();
+            var response = await httpClient.DeleteAsync($"{GetBasePath(serverId)}/{playerUid}/whitelist");
             if (!response.IsSuccessStatusCode)
             {
                 throw new ApiException($"Failed to remove player from whitelist: {response.StatusCode}");

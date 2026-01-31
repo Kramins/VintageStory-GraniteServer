@@ -5,6 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch and Debug Standalone Blazor WebAssembly App",
+            "type": "blazorwasm",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/Granite.Web.Client"
+        },
+        {
             "name": "Launch Mod",
             "type": "coreclr",
             "request": "launch",
@@ -55,7 +61,25 @@
             },
             "console": "integratedTerminal",
             "stopAtEntry": false
-        }
+        },
+        {
+            "name": "Launch Blazor Client",
+                "type": "coreclr",
+                "request": "launch",
+                "preLaunchTask": "build-blazor-client",
+                "program": "dotnet",
+                "args": [
+                    "run",
+                    "--project",
+                    "${workspaceFolder}/Granite.Web.Client"
+                ],
+                "cwd": "${workspaceFolder}/Granite.Web.Client",
+                "env": {
+                    "ASPNETCORE_ENVIRONMENT": "Development"
+                },
+                "console": "integratedTerminal",
+                "stopAtEntry": false
+        },
     ],
     "compounds": [
         {
@@ -72,14 +96,6 @@
                 "Launch Mod",
                 "Launch Granite Server (SQLite)"
             ],
-            "stopAll": true
-        },
-        {
-            "name": "Full Dev Environment",
-            "configurations": [
-                "Launch Granite Server (Postgres)"
-            ],
-            "preLaunchTask": "npm dev",
             "stopAll": true
         }
     ]

@@ -1,16 +1,16 @@
 namespace Granite.Common.Dto;
 
-public class ServerStatusDTO
+public record ServerStatusDTO
 {
-    public string ServerIp { get; set; } = string.Empty;
-    public int UpTime { get; set; }
-    public int CurrentPlayers { get; set; }
-    public int MaxPlayers { get; set; }
-    public string ServerName { get; set; } = string.Empty;
-    public int WorldAgeDays { get; set; }
-    public long MemoryUsageBytes { get; set; }
-    public bool IsOnline { get; set; }
-    public string GameVersion { get; set; } = string.Empty;
-    public string WorldName { get; set; } = string.Empty;
-    public int WorldSeed { get; set; }
+    public string ServerIp { get; init; } = string.Empty;
+    public int UpTime { get; init; }
+    public int CurrentPlayers { get; init; }
+    public int MaxPlayers { get; init; }
+    public string ServerName { get; init; } = string.Empty;
+    public int WorldAgeDays { get; init; }
+    public long MemoryUsageBytes { get; init; }
+    public bool IsOnline { get; init; }
+    public string GameVersion { get; init; } = string.Empty;
+    public string WorldName { get; init; } = string.Empty;
+    public int WorldSeed { get; init; }
 }

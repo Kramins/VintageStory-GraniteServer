@@ -90,4 +90,46 @@ public class PlayersEffects
         dispatcher.Dispatch(new FetchPlayersAction(action.ServerId));
         return Task.CompletedTask;
     }
+
+    [EffectMethod]
+    public async Task HandleFetchPlayerDetailsAction(
+        FetchPlayerDetailsAction action,
+        IDispatcher dispatcher
+    )
+    {
+        try
+        {
+            _logger.LogInformation(
+                "Fetching player details for player {PlayerUid} on server {ServerId}",
+                action.PlayerUid,
+                action.ServerId
+            );
+
+            var response = await _playersApiClient.GetPlayerDetailsAsync(
+                action.ServerId,
+                action.PlayerUid
+            );
+
+            if (response?.Data != null)
+            {
+                dispatcher.Dispatch(new FetchPlayerDetailsSuccessAction(response.Data));
+            }
+            else
+            {
+                dispatcher.Dispatch(
+                    new FetchPlayerDetailsFailureAction("Player details not found")
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to fetch player details for {PlayerUid} on server {ServerId}",
+                action.PlayerUid,
+                action.ServerId
+            );
+            dispatcher.Dispatch(new FetchPlayerDetailsFailureAction(ex.Message));
+        }
+    }
 }
