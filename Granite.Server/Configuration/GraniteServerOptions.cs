@@ -24,6 +24,9 @@ public class GraniteServerOptions
     public Guid GraniteModServerId { get; set; }
     public string? GraniteModToken { get; set; }
 
+    // Vintage Story Auth Server configuration
+    public string? AuthServerUrl { get; set; }
+
     public void ApplyEnvironmentVariables()
     {
         // Use reflection to automatically apply environment variables with GS_ prefix

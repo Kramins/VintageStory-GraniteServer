@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Granite.Web.Client", "Grani
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Granite.Web.Tests", "Granite.Web.Tests\Granite.Web.Tests.csproj", "{3F5AF7D6-6DE9-418F-A9A2-03DCD33A65D1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Granite.Integration.Tests", "Granite.Integration.Tests\Granite.Integration.Tests.csproj", "{ECD3D562-B266-4C4B-8CA5-78648D556341}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,10 @@ Global
 		{3F5AF7D6-6DE9-418F-A9A2-03DCD33A65D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3F5AF7D6-6DE9-418F-A9A2-03DCD33A65D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3F5AF7D6-6DE9-418F-A9A2-03DCD33A65D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ECD3D562-B266-4C4B-8CA5-78648D556341}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ECD3D562-B266-4C4B-8CA5-78648D556341}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ECD3D562-B266-4C4B-8CA5-78648D556341}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECD3D562-B266-4C4B-8CA5-78648D556341}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

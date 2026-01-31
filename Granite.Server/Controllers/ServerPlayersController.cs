@@ -84,14 +84,7 @@ public class ServerPlayersController : ControllerBase
         return Ok(new JsonApiDocument<PlayerDetailsDTO> { Data = playerDetails });
     }
 
-    [HttpGet("find")]
-    public Task<ActionResult<PlayerNameIdDTO>> FindPlayerByName(
-        [FromRoute] Guid serverId,
-        [FromQuery] string name
-    )
-    {
-        throw new NotImplementedException("FindPlayerByName endpoint not yet implemented");
-    }
+   
 
     [HttpGet("sessions")]
     public Task<ActionResult<JsonApiDocument<IList<PlayerSessionDTO>>>> GetPlayerSessions(

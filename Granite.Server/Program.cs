@@ -1,4 +1,5 @@
 using System.Text;
+using Granite.Common.Services;
 using Granite.Server.Configuration;
 using Granite.Server.Extensions;
 using Granite.Server.Hubs;
@@ -30,6 +31,9 @@ var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder.AddCon
 var logger = loggerFactory.CreateLogger<Program>();
 builder.Services.AddGraniteDatabase(builder.Configuration, logger);
 
+// Add memory cache for player name resolution caching
+builder.Services.AddMemoryCache();
+
 // Add authentication services
 builder.Services.AddScoped<BasicAuthService>();
 builder.Services.AddScoped<JwtTokenService>();
@@ -39,6 +43,14 @@ builder.Services.AddScoped<ServersService>();
 builder.Services.AddScoped<ServerPlayersService>();
 builder.Services.AddScoped<ServerConfigService>();
 builder.Services.AddScoped<ServerService>();
+builder.Services.AddScoped<IPlayersService, PlayersService>();
+
+// Add player name resolver for Vintage Story auth server integration
+builder.Services.AddHttpClient<IPlayerNameResolver, VintageStoryPlayerNameResolver>()
+    .ConfigureHttpClient(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(10);
+    });
 
 // Add PersistentMessageBusService as singleton (also registers as MessageBusService)
 builder.Services.AddSingleton<PersistentMessageBusService>();
