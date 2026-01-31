@@ -8,9 +8,11 @@ namespace Granite.Web.Tests.Services.Api;
 public class PlayersApiClientTests
 {
     private readonly Mock<ILogger<ServerPlayersApiClient>> _mockLogger;
+    private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
     private readonly MockHttpMessageHandler _mockHttpHandler;
     private readonly HttpClient _httpClient;
     private readonly ServerPlayersApiClient _apiClient;
+    private const string TestServerId = "test-server-id";
 
     public PlayersApiClientTests()
     {
@@ -20,7 +22,9 @@ public class PlayersApiClientTests
         {
             BaseAddress = new Uri("http://localhost:5000")
         };
-        _apiClient = new PlayersApiClient(_httpClient, _mockLogger.Object);
+        _mockHttpClientFactory = new Mock<IHttpClientFactory>();
+        _mockHttpClientFactory.Setup(f => f.CreateClient("GraniteApi")).Returns(_httpClient);
+        _apiClient = new ServerPlayersApiClient(_mockHttpClientFactory.Object, _mockLogger.Object);
     }
 
     [Fact]
@@ -32,7 +36,7 @@ public class PlayersApiClientTests
         _mockHttpHandler.SetResponse(json, System.Net.HttpStatusCode.OK);
 
         // Act
-        var result = await _apiClient.GetPlayersAsync();
+        var result = await _apiClient.GetPlayersAsync(TestServerId);
 
         // Assert
         Assert.NotNull(result);
@@ -48,12 +52,12 @@ public class PlayersApiClientTests
         _mockHttpHandler.SetResponse(json, System.Net.HttpStatusCode.OK);
 
         // Act
-        var result = await _apiClient.GetPlayerAsync("uid1");
+        var result = await _apiClient.GetPlayerAsync(TestServerId, "uid1");
 
         // Assert
         Assert.NotNull(result);
         Assert.NotNull(result.Data);
-        _mockHttpHandler.VerifyRequest("/api/players/uid1", System.Net.Http.HttpMethod.Get);
+        _mockHttpHandler.VerifyRequest($"/api/{TestServerId}/players/uid1", System.Net.Http.HttpMethod.Get);
     }
 
     [Fact]
@@ -63,7 +67,7 @@ public class PlayersApiClientTests
         _mockHttpHandler.SetResponse("", System.Net.HttpStatusCode.NotFound);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ApiException>(() => _apiClient.GetPlayerAsync("nonexistent"));
+        await Assert.ThrowsAsync<ApiException>(() => _apiClient.GetPlayerAsync(TestServerId, "nonexistent"));
     }
 
     [Fact]
@@ -73,10 +77,10 @@ public class PlayersApiClientTests
         _mockHttpHandler.SetResponse("{}", System.Net.HttpStatusCode.OK);
 
         // Act
-        await _apiClient.KickPlayerAsync("uid1", "Reason");
+        await _apiClient.KickPlayerAsync(TestServerId, "uid1", "Reason");
 
         // Assert
-        _mockHttpHandler.VerifyRequest("/api/players/uid1/kick", System.Net.Http.HttpMethod.Post);
+        _mockHttpHandler.VerifyRequest($"/api/{TestServerId}/players/uid1/kick", System.Net.Http.HttpMethod.Post);
     }
 
     [Fact]
@@ -86,10 +90,10 @@ public class PlayersApiClientTests
         _mockHttpHandler.SetResponse("{}", System.Net.HttpStatusCode.OK);
 
         // Act
-        await _apiClient.BanPlayerAsync("uid1", "Reason");
+        await _apiClient.BanPlayerAsync(TestServerId, "uid1", "Reason");
 
         // Assert
-        _mockHttpHandler.VerifyRequest("/api/players/uid1/ban", System.Net.Http.HttpMethod.Post);
+        _mockHttpHandler.VerifyRequest($"/api/{TestServerId}/players/uid1/ban", System.Net.Http.HttpMethod.Post);
     }
 
     [Fact]
@@ -99,10 +103,10 @@ public class PlayersApiClientTests
         _mockHttpHandler.SetResponse("{}", System.Net.HttpStatusCode.OK);
 
         // Act
-        await _apiClient.WhitelistPlayerAsync("uid1");
+        await _apiClient.WhitelistPlayerAsync(TestServerId, "uid1");
 
         // Assert
-        _mockHttpHandler.VerifyRequest("/api/players/uid1/whitelist", System.Net.Http.HttpMethod.Post);
+        _mockHttpHandler.VerifyRequest($"/api/{TestServerId}/players/uid1/whitelist", System.Net.Http.HttpMethod.Post);
     }
 
     [Fact]
@@ -112,9 +116,9 @@ public class PlayersApiClientTests
         _mockHttpHandler.SetResponse("{}", System.Net.HttpStatusCode.OK);
 
         // Act
-        await _apiClient.RemoveFromWhitelistAsync("uid1");
+        await _apiClient.RemoveFromWhitelistAsync(TestServerId, "uid1");
 
         // Assert
-        _mockHttpHandler.VerifyRequest("/api/players/uid1/whitelist", System.Net.Http.HttpMethod.Delete);
+        _mockHttpHandler.VerifyRequest($"/api/{TestServerId}/players/uid1/whitelist", System.Net.Http.HttpMethod.Delete);
     }
 }

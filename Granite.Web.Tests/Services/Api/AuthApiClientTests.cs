@@ -8,6 +8,7 @@ namespace Granite.Web.Tests.Services.Api;
 public class AuthApiClientTests
 {
     private readonly Mock<ILogger<AuthApiClient>> _mockLogger;
+    private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
     private readonly MockHttpMessageHandler _mockHttpHandler;
     private readonly HttpClient _httpClient;
     private readonly AuthApiClient _apiClient;
@@ -20,7 +21,9 @@ public class AuthApiClientTests
         {
             BaseAddress = new Uri("http://localhost:5000")
         };
-        _apiClient = new AuthApiClient(_httpClient, _mockLogger.Object);
+        _mockHttpClientFactory = new Mock<IHttpClientFactory>();
+        _mockHttpClientFactory.Setup(f => f.CreateClient("GraniteApi")).Returns(_httpClient);
+        _apiClient = new AuthApiClient(_mockHttpClientFactory.Object, _mockLogger.Object);
     }
 
     [Fact]

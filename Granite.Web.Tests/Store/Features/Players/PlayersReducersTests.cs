@@ -12,7 +12,7 @@ public class PlayersReducersTests
     {
         // Arrange
         var state = new PlayersState();
-        var action = new FetchPlayersAction();
+        var action = new FetchPlayersAction("test-server-id");
 
         // Act
         var result = PlayersReducers.OnFetchPlayers(state, action);
@@ -32,7 +32,7 @@ public class PlayersReducersTests
             new() { PlayerUID = "uid1", Name = "Player1" },
             new() { PlayerUID = "uid2", Name = "Player2" }
         };
-        var action = new FetchPlayersSuccessAction(players);
+        var action = new FetchPlayersSuccessAction(players, "test-server-id");
 
         // Act
         var result = PlayersReducers.OnFetchPlayersSuccess(state, action);
