@@ -135,7 +135,7 @@ public class PlayerEventHandlers
                 @event.OriginServerId,
                 "Disconnected",
                 playerEventData.PlayerName,
-                playerEventData.IpAddress
+                playerEventData.IpAddress ?? string.Empty
             )
         );
 
@@ -158,7 +158,7 @@ public class PlayerEventHandlers
                 @event.OriginServerId,
                 "Connected",
                 playerEventData.PlayerName,
-                playerEventData.IpAddress
+                playerEventData.IpAddress ?? string.Empty
             )
         );
 
@@ -182,7 +182,7 @@ public class PlayerEventHandlers
                 @event.OriginServerId,
                 "Disconnected",
                 playerEventData.PlayerName,
-                playerEventData.IpAddress
+                playerEventData.IpAddress ?? string.Empty
             )
         );
 

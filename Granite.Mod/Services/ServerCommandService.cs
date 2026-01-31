@@ -81,6 +81,6 @@ public class ServerCommandService
     {
         var args = new CmdArgs([playerName, reason]);
         var result = await ExecuteCommandAsync("kick", args);
-        return result.StatusMessage ?? $"Failed to kick player {playerName}";
+        return result?.StatusMessage ?? $"Failed to kick player {playerName}";
     }
 }
