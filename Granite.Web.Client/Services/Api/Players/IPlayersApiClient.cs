@@ -23,11 +23,7 @@ public interface IPlayersApiClient
     /// </summary>
     Task<JsonApiDocument<PlayerDetailsDTO>> GetPlayerDetailsAsync(string serverId, string playerUid);
 
-    /// <summary>
-    /// Updates a player's data.
-    /// </summary>
-    Task<JsonApiDocument<PlayerDTO>> UpdatePlayerAsync(string serverId, string playerUid, PlayerDetailsDTO playerData);
-
+    
     /// <summary>
     /// Kicks a player from the server.
     /// </summary>
@@ -47,4 +43,9 @@ public interface IPlayersApiClient
     /// Removes a player from the whitelist.
     /// </summary>
     Task<JsonApiDocument<object>> RemoveFromWhitelistAsync(string serverId, string playerUid);
+
+    /// <summary>
+    /// Finds a player by name, searching the Vintage Story user database as a fallback.
+    /// </summary>
+    Task<JsonApiDocument<List<PlayerDTO>>> FindPlayerByNameAsync(string serverId, string playerName);
 }

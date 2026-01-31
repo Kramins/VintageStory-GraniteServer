@@ -3,6 +3,8 @@
 @using Fluxor
 @using Fluxor.Blazor.Web.Components
 @using Granite.Web.Client.Store.Features.Players
+@using Granite.Web.Client.Services.Api
+@using MudBlazor
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @inherits FluxorComponent
@@ -10,6 +12,9 @@
 @inject IState<PlayersState> PlayersState
 @inject IDispatcher Dispatcher
 @inject NavigationManager Navigation
+@inject IPlayersApiClient PlayersApiClient
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <PageTitle>Whitelist</PageTitle>
 
@@ -41,7 +46,7 @@ else
             <MudButton Variant="Variant.Filled" 
                        Color="Color.Primary" 
                        StartIcon="@Icons.Material.Filled.Add"
-                       OnClick="@(() => _addDialogOpen = true)">
+                       OnClick="OpenAddPlayerDialogAsync">
                 Add Player
             </MudButton>
         </MudStack>
@@ -105,50 +110,18 @@ else
             </MudDataGrid>
         </MudPaper>
     </MudContainer>
-
-    @* Add to Whitelist Dialog *@
-    <MudDialog @bind-IsVisible="_addDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
-        <DialogContent>
-            <MudText Typo="Typo.h6" Class="mb-4">Add Player to Whitelist</MudText>
-            <MudTextField @bind-Value="_searchQuery" 
-                          Placeholder="Search by player name or UID..." 
-                          Variant="Variant.Outlined" 
-                          FullWidth="true"
-                          Immediate="true" />
-        </DialogContent>
-        <DialogActions>
-            <MudButton OnClick="@(() => _addDialogOpen = false)">Cancel</MudButton>
-            <MudButton Color="Color.Primary" 
-                       Variant="Variant.Filled" 
-                       OnClick="@HandleAddConfirm"
-                       Disabled="@_isSubmitting">
-                @if (_isSubmitting)
-                {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-                }
-                else
-                {
-                    <span>Add</span>
-                }
-            </MudButton>
-        </DialogActions>
-    </MudDialog>
 }
 
 @code {
     [Parameter]
     public string? ServerId { get; set; }
 
-    private bool _addDialogOpen = false;
-    private string _searchQuery = string.Empty;
-    private bool _isSubmitting = false;
-
     protected override void OnInitialized()
     {
         base.OnInitialized();
         if (!string.IsNullOrEmpty(ServerId))
         {
-            Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+            Dispatcher.Dispatch(new LoadPlayersIfNeededAction(ServerId));
         }
     }
 
@@ -163,6 +136,52 @@ else
     private IEnumerable<PlayerDTO> GetWhitelistedPlayers()
     {
         return PlayersState.Value.Players.Where(p => p.IsWhitelisted);
+    }
+
+    private async Task OpenAddPlayerDialogAsync()
+    {
+        if (string.IsNullOrEmpty(ServerId))
+            return;
+
+        var parameters = new DialogParameters<Components.FindPlayerDialog>
+        {
+            { x => x.DialogTitle, "Add Player to Whitelist" },
+            { x => x.SelectButtonText, "Add to Whitelist" },
+            { x => x.SearchPlaceholder, "Search by player name or UID..." },
+            { x => x.InitialPlayers, PlayersState.Value.Players },
+            { x => x.OnFilterPlayer, (Func<PlayerDTO, bool>)(p => !p.IsWhitelisted) },
+            { x => x.OnSearchPlayers, (Func<string, Task<IEnumerable<PlayerDTO>>>)(async query => 
+            {
+                try
+                {
+                    var response = await PlayersApiClient.FindPlayerByNameAsync(ServerId, query);
+                    return response.Data ?? Enumerable.Empty<PlayerDTO>();
+                }
+                catch
+                {
+                    return Enumerable.Empty<PlayerDTO>();
+                }
+            }) }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true };
+        var result = await DialogService.ShowAsync<Components.FindPlayerDialog>("Add Player to Whitelist", parameters, options);
+        var dialogResult = await result.Result;
+
+        if (dialogResult is not null && !dialogResult.Canceled && dialogResult.Data is string selectedPlayerUid)
+        {
+            try
+            {
+                await PlayersApiClient.WhitelistPlayerAsync(ServerId, selectedPlayerUid);
+                Snackbar.Add("Player whitelisted successfully", Severity.Success);
+                // Refresh players list to reflect the change
+                Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Failed to whitelist player: {ex.Message}", Severity.Error);
+            }
+        }
     }
 
     private void HandleRefresh()
@@ -180,44 +199,26 @@ else
             : "#";
     }
 
-    private async Task HandleAddConfirm()
-    {
-        if (string.IsNullOrWhiteSpace(_searchQuery) || string.IsNullOrEmpty(ServerId))
-            return;
-
-        _isSubmitting = true;
-        try
-        {
-            // TODO: Search for player and add to whitelist
-            // var player = await _playersApiClient.FindPlayerByName(ServerId, _searchQuery);
-            // if (player != null)
-            // {
-            //     await _playersApiClient.WhitelistPlayerAsync(ServerId, player.PlayerUID);
-            //     Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
-            // }
-            
-            await Task.Delay(600); // Simulate API call
-            _addDialogOpen = false;
-            _searchQuery = string.Empty;
-        }
-        finally
-        {
-            _isSubmitting = false;
-        }
-    }
-
     private async Task HandleRemoveFromWhitelist(Guid playerId)
     {
-        if (!string.IsNullOrEmpty(ServerId))
+        if (string.IsNullOrEmpty(ServerId))
+            return;
+
+        try
         {
-            // TODO: Call API to remove from whitelist
-            // var player = PlayersState.Value.Players.FirstOrDefault(p => p.Id == playerId);
-            // if (player != null)
-            // {
-            //     await _playersApiClient.RemoveFromWhitelistAsync(ServerId, player.PlayerUID);
-            //     Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
-            // }
+            var player = PlayersState.Value.Players.FirstOrDefault(p => p.Id == playerId);
+            if (player == null)
+            {
+                Snackbar.Add("Player not found", Severity.Warning);
+                return;
+            }
+
+            await PlayersApiClient.RemoveFromWhitelistAsync(ServerId, player.PlayerUID!);
+            Snackbar.Add("Player removed from whitelist", Severity.Success);
         }
-        await Task.CompletedTask;
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to remove from whitelist: {ex.Message}", Severity.Error);
+        }
     }
 }

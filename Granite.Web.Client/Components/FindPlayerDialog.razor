@@ -1,0 +1,174 @@
+@using Fluxor
+@using Granite.Common.Dto
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">@DialogTitle</MudText>
+        <MudTextField @bind-Value="_searchQuery" 
+                      Placeholder="@SearchPlaceholder" 
+                      Variant="Variant.Outlined" 
+                      FullWidth="true"
+                      Immediate="true"
+                      @onblur="@OnSearchBlurAsync"
+                      Class="mb-3" />
+        <MudText Typo="Typo.subtitle2" Class="mb-2">Available Players:</MudText>
+        <MudPaper Elevation="0" Style="max-height: 300px; overflow-y: auto; position: relative;" Class="pa-2">
+            @if (_isSearching)
+            {
+                <div Style="display: flex; justify-content: center; align-items: center; height: 100px;">
+                    <MudProgressCircular Indeterminate="true" />
+                </div>
+            }
+            else
+            {
+                var filteredPlayers = GetFilteredPlayers();
+                if (!filteredPlayers.Any())
+                {
+                    <MudText Color="Color.Secondary" Class="pa-4 text-center">No players available</MudText>
+                }
+                else
+                {
+                    foreach (var player in filteredPlayers)
+                    {
+                        <MudCard Class="mb-2 cursor-pointer" 
+                                 Elevation="@(_selectedPlayerUid == player.PlayerUID ? 2 : 0)"
+                                 Style="@(_selectedPlayerUid == player.PlayerUID ? "border: 2px solid var(--mud-palette-primary);" : "")"
+                                 @onclick="@(() => _selectedPlayerUid = player.PlayerUID)">
+                            <MudCardContent Class="py-2">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudAvatar Size="Size.Small" Color="Color.Primary">
+                                        @(player.Name?.FirstOrDefault().ToString().ToUpper() ?? "?")
+                                    </MudAvatar>
+                                    <MudStack Spacing="0">
+                                        <MudText Typo="Typo.body2">@player.Name</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@player.PlayerUID</MudText>
+                                    </MudStack>
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    }
+                }
+            }
+        </MudPaper>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="ConfirmAsync"
+                   Disabled="@(_isSearching || string.IsNullOrEmpty(_selectedPlayerUid))">
+            @if (_isSearching)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            }
+            else
+            {
+                <span>@SelectButtonText</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public string DialogTitle { get; set; } = "Find Player";
+
+    [Parameter]
+    public string SelectButtonText { get; set; } = "Select";
+
+    [Parameter]
+    public string SearchPlaceholder { get; set; } = "Search by player name or UID...";
+
+    [Parameter]
+    public IEnumerable<PlayerDTO> InitialPlayers { get; set; } = Enumerable.Empty<PlayerDTO>();
+
+    [Parameter]
+    public Func<PlayerDTO, bool> OnFilterPlayer { get; set; } = null!;
+
+    [Parameter]
+    public Func<string, Task<IEnumerable<PlayerDTO>>> OnSearchPlayers { get; set; } = null!;
+
+    private string _searchQuery = string.Empty;
+    private string? _selectedPlayerUid = null;
+    private bool _isSearching = false;
+    private List<PlayerDTO> _searchResults = new();
+
+    private IEnumerable<PlayerDTO> GetFilteredPlayers()
+    {
+        var query = _searchQuery?.ToLower() ?? string.Empty;
+        var allPlayers = _searchResults.Any() ? _searchResults : InitialPlayers;
+
+        var filtered = allPlayers
+            .Where(OnFilterPlayer)
+            .Where(p => string.IsNullOrEmpty(query) || 
+                       (p.Name?.Contains(query, StringComparison.OrdinalIgnoreCase) == true) ||
+                       (p.PlayerUID?.Contains(query, StringComparison.OrdinalIgnoreCase) == true))
+            .ToList();
+
+        return filtered;
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Close(DialogResult.Cancel());
+    }
+
+    private async Task ConfirmAsync()
+    {
+        if (string.IsNullOrEmpty(_selectedPlayerUid))
+            return;
+
+        // Perform fallback search if we have search text but no local results
+        var currentFiltered = GetFilteredPlayers();
+        if (!currentFiltered.Any() && !string.IsNullOrEmpty(_searchQuery) && OnSearchPlayers != null)
+        {
+            await PerformFallbackSearchAsync();
+            
+            // Re-check if we now have results after the server search
+            currentFiltered = GetFilteredPlayers();
+        }
+
+        if (currentFiltered.Any(p => p.PlayerUID == _selectedPlayerUid))
+        {
+            MudDialog.Close(DialogResult.Ok(_selectedPlayerUid));
+        }
+    }
+
+    private async Task OnSearchBlurAsync()
+    {
+        // Perform fallback search if we have search text but no local results
+        if (!string.IsNullOrEmpty(_searchQuery) && OnSearchPlayers != null)
+        {
+            var currentFiltered = GetFilteredPlayers();
+            if (!currentFiltered.Any())
+            {
+                await PerformFallbackSearchAsync();
+            }
+        }
+    }
+
+    private async Task PerformFallbackSearchAsync()
+    {
+        if (string.IsNullOrEmpty(_searchQuery) || OnSearchPlayers == null)
+            return;
+
+        _isSearching = true;
+        try
+        {
+            var results = await OnSearchPlayers(_searchQuery);
+            _searchResults = results.Where(OnFilterPlayer).ToList();
+        }
+        catch (Exception)
+        {
+            // Silently fail - keep existing results
+        }
+        finally
+        {
+            _isSearching = false;
+        }
+    }
+}
