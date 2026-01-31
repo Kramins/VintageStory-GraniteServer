@@ -7,5 +7,5 @@ public class PlayerCommonEventData
     public string PlayerName { get; set; } = string.Empty;
     public string PlayerUID { get; set; } = string.Empty;
     public Guid? SessionId { get; set; }
-    public string IpAddress { get; set; }
+    public string? IpAddress { get; set; }
 }

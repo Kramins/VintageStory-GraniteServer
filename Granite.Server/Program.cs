@@ -174,11 +174,8 @@ app.UseMiddleware<Granite.Server.Middleware.ServerIdValidationMiddleware>();
 
 // Map endpoints
 app.MapControllers();
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapHub<ModHub>("/hub/mod");
-    endpoints.MapHub<ClientHub>("/hub/client");
-});
+app.MapHub<ModHub>("/hub/mod");
+app.MapHub<ClientHub>("/hub/client");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

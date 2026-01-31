@@ -39,11 +39,11 @@ namespace GraniteServer.Services
             {
                 _subject.OnNext(@event);
             }
-            catch (ObjectDisposedException ex)
+            catch (ObjectDisposedException)
             {
                 // Log that the subject has been disposed - this indicates the message bus has been shut down
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Silently handle other exceptions to prevent message publishing from blocking
             }
@@ -73,7 +73,7 @@ namespace GraniteServer.Services
             {
                 _subject.OnCompleted();
             }
-            catch (Exception ex) { }
+            catch (Exception) { }
         }
 
         public T CreateCommand<T>(Guid serverId, Action<T> value)

@@ -49,7 +49,7 @@ public class ServerInitializationHostedService : IHostedService
                     Id = _options.GraniteModServerId,
                     Name = "Vintage Story Server",
                     Description = "Granite Server Instance",
-                    AccessToken = _options.GraniteModToken,
+                    AccessToken = _options.GraniteModToken!,
                     CreatedAt = DateTime.UtcNow,
                 };
 
@@ -71,7 +71,7 @@ public class ServerInitializationHostedService : IHostedService
                         "Updating access token for server: {ServerId}",
                         serverEntity.Id
                     );
-                    serverEntity.AccessToken = _options.GraniteModToken;
+                    serverEntity.AccessToken = _options.GraniteModToken!;
                     await dbContext.SaveChangesAsync(cancellationToken);
                 }
                 else
