@@ -267,7 +267,7 @@ else if (PlayersState.Value.SelectedPlayerDetails != null)
     </MudContainer>
 
     @* Kick Dialog *@
-    <MudDialog @bind-IsVisible="_kickDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <MudDialog @bind-Visible="_kickDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
         <DialogContent>
             <MudText Typo="Typo.h6" Class="mb-4">Kick Player</MudText>
             <MudText Class="mb-4">Enter a reason for kicking this player:</MudText>
@@ -284,7 +284,7 @@ else if (PlayersState.Value.SelectedPlayerDetails != null)
     </MudDialog>
 
     @* Ban Dialog *@
-    <MudDialog @bind-IsVisible="_banDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <MudDialog @bind-Visible="_banDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
         <DialogContent>
             <MudText Typo="Typo.h6" Class="mb-4">Ban Player</MudText>
             <MudText Class="mb-4">Enter a reason for banning this player:</MudText>
@@ -301,7 +301,7 @@ else if (PlayersState.Value.SelectedPlayerDetails != null)
     </MudDialog>
 
     @* Unban Dialog *@
-    <MudDialog @bind-IsVisible="_unbanDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <MudDialog @bind-Visible="_unbanDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
         <DialogContent>
             <MudText Typo="Typo.h6" Class="mb-4">Unban Player</MudText>
             <MudText>Are you sure you want to unban @(PlayersState.Value.SelectedPlayerDetails?.Name)?</MudText>
@@ -313,7 +313,7 @@ else if (PlayersState.Value.SelectedPlayerDetails != null)
     </MudDialog>
 
     @* Whitelist Dialog *@
-    <MudDialog @bind-IsVisible="_whitelistDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <MudDialog @bind-Visible="_whitelistDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
         <DialogContent>
             <MudText Typo="Typo.h6" Class="mb-4">Whitelist Player</MudText>
             <MudText>Are you sure you want to add @(PlayersState.Value.SelectedPlayerDetails?.Name) to the whitelist?</MudText>
@@ -325,7 +325,7 @@ else if (PlayersState.Value.SelectedPlayerDetails != null)
     </MudDialog>
 
     @* Remove Whitelist Dialog *@
-    <MudDialog @bind-IsVisible="_removeWhitelistDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <MudDialog @bind-Visible="_removeWhitelistDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
         <DialogContent>
             <MudText Typo="Typo.h6" Class="mb-4">Remove from Whitelist</MudText>
             <MudText>Are you sure you want to remove @(PlayersState.Value.SelectedPlayerDetails?.Name) from the whitelist?</MudText>

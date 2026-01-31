@@ -177,7 +177,7 @@
         }
     }
 
-    private async Task ConfirmAsync()
+    private void ConfirmAsync()
     {
         // Validate input if a player object is selected
         if (_selectedPlayer != null)
@@ -202,12 +202,13 @@
         MudDialog.Close(DialogResult.Ok(_selectedPlayerUid));
     }
 
-    private async Task OnInputBlurAsync()
+    private Task OnInputBlurAsync()
     {
         // When user leaves the input field, validate the current text if no player selected
         if (string.IsNullOrEmpty(_selectedPlayerUid) && !string.IsNullOrEmpty(_lastSearchText))
         {
-            await ValidatePlayerInputAsync(_lastSearchText);
+            return ValidatePlayerInputAsync(_lastSearchText);
         }
+        return Task.CompletedTask;
     }
 }

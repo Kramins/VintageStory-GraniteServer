@@ -20,7 +20,7 @@ public class PlayersApiClient : BaseApiClient, IPlayersApiClient
     {
         try
         {
-            return await GetAsync<JsonApiDocument<List<PlayerNameIdDTO>>>(
+            return await GetAsync<List<PlayerNameIdDTO>>(
                 $"{GetBasePath()}/find?name={Uri.EscapeDataString(playerName)}"
             );
         }

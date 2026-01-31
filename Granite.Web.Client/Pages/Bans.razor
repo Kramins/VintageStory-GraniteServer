@@ -97,8 +97,7 @@ else
                             <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" 
                                            Size="Size.Small" 
                                            Color="Color.Success"
-                                           OnClick="@(() => HandleUnban(context.Item.Id))"
-                                           Title="Unban Player" />
+                                           OnClick="@(() => HandleUnban(context.Item.Id))" />
                         </CellTemplate>
                     </TemplateColumn>
                 </Columns>
@@ -110,7 +109,7 @@ else
     </MudContainer>
 
     @* Ban Player Dialog *@
-    <MudDialog @bind-IsVisible="_addDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <MudDialog @bind-Visible="_addDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
         <DialogContent>
             <MudText Typo="Typo.h6" Class="mb-4">Ban Player</MudText>
             <MudTextField @bind-Value="_searchQuery" 
