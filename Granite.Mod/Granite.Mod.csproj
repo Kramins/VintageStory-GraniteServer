@@ -31,9 +31,9 @@
   <ItemGroup>
     <ProjectReference Include="../Granite.Common/Granite.Common.csproj" />
   </ItemGroup>
-  <Target Name="PreClean" BeforeTargets="PreBuildEvent">
+  <!-- Only run PreClean when building this project directly, not as a dependency -->
+  <Target Name="PreClean" BeforeTargets="PreBuildEvent" Condition="'$(BuildingInsideVisualStudio)' == 'true' or '$(BuildProjectReferences)' != 'false'">
     <RemoveDir Directories="bin/mods" />
-    <CallTarget Targets="Clean" />
   </Target>
   <Target Name="CleanupBeforeZip" BeforeTargets="PostBuildEvent">
     <RemoveDir Directories="$(TargetDir)runtimes" Condition="Exists('$(TargetDir)runtimes')" />

@@ -18,6 +18,7 @@ public class GraniteDataContext : DbContext
     public DbSet<ModReleaseEntity> ModReleases { get; set; } = null!;
     public DbSet<ModServerEntity> ModServers { get; set; } = null!;
     public DbSet<CommandEntity> BufferedCommands { get; set; } = null!;
+    public DbSet<MapChunkEntity> MapChunks { get; set; } = null!;
 
     public GraniteDataContext(DbContextOptions options)
         : base(options) { }
@@ -225,6 +226,28 @@ public class GraniteDataContext : DbContext
             entity.Property(e => e.Payload).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.Status).IsRequired();
+            
+            entity
+                .HasOne(e => e.Server)
+                .WithMany()
+                .HasForeignKey(e => e.ServerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MapChunkEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.ServerId, e.ChunkX, e.ChunkZ }).IsUnique();
+            entity.HasIndex(e => new { e.ServerId, e.ContentHash });
+            entity.HasIndex(e => e.LastAccessedAt);
+            entity.Property(e => e.ServerId).IsRequired();
+            entity.Property(e => e.ChunkX).IsRequired();
+            entity.Property(e => e.ChunkZ).IsRequired();
+            entity.Property(e => e.ContentHash).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.RainHeightMapData).IsRequired();
+            entity.Property(e => e.SurfaceBlockIdsData).IsRequired();
+            entity.Property(e => e.ExtractedAt).IsRequired();
+            entity.Property(e => e.ReceivedAt).IsRequired();
             
             entity
                 .HasOne(e => e.Server)

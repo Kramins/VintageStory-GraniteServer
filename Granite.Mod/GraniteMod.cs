@@ -1,4 +1,5 @@
 using System.Reflection;
+using Granite.Mod.Services.Map;
 using GraniteServer.HostedServices;
 using GraniteServer.Messaging.Commands;
 using GraniteServer.Messaging.Handlers.Commands;
@@ -48,6 +49,7 @@ public class GraniteMod : ModSystem
                 services.AddSingleton<ServerCommandService>();
                 services.AddSingleton<ClientMessageBusService>();
                 services.AddSingleton<SignalRConnectionState>();
+                services.AddSingleton<IMapDataExtractionService, MapDataExtractionService>();
                 services.AddSingleton(_config);
 
                 services.AddSingleton<Vintagestory.API.Common.Mod>(Mod);

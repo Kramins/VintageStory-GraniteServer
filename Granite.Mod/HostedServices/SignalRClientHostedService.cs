@@ -233,7 +233,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
                 msg.OriginServerId == _config.ServerId
             )
             .Subscribe(
-                message => HandleMessage(message),
+                message => _ = HandleMessageAsync(message),
                 error =>
                 {
                     _logger.Error(
@@ -358,7 +358,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     /// Handles a message from the local message bus and sends it to the server via SignalR.
     /// Drops the message if the connection is not currently active.
     /// </summary>
-    private void HandleMessage(MessageBusMessage message)
+    private async Task HandleMessageAsync(MessageBusMessage message)
     {
         try
         {
@@ -381,7 +381,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
                 _logger.Warning($"[SignalR] Large message detected: {message.MessageType} is {sizeKB:F2} KB");
             }
 
-            _ = _hubConnection.InvokeAsync(
+            await _hubConnection.InvokeAsync(
                 SignalRHubMethods.PublishEvent,
                 message,
                 CancellationToken.None

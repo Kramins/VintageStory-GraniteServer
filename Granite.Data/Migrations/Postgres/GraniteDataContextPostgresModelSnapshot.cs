@@ -101,6 +101,57 @@ namespace Granite.Data.Migrations.Postgres
                     b.ToTable("BufferedCommands");
                 });
 
+            modelBuilder.Entity("GraniteServer.Data.Entities.MapChunkEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChunkX")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ChunkZ")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("ExtractedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastAccessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int[]>("RainHeightMapData")
+                        .IsRequired()
+                        .HasColumnType("integer[]");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int[]>("SurfaceBlockIdsData")
+                        .IsRequired()
+                        .HasColumnType("integer[]");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastAccessedAt");
+
+                    b.HasIndex("ServerId", "ContentHash");
+
+                    b.HasIndex("ServerId", "ChunkX", "ChunkZ")
+                        .IsUnique();
+
+                    b.ToTable("MapChunks");
+                });
+
             modelBuilder.Entity("GraniteServer.Data.Entities.ModEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -524,6 +575,17 @@ namespace Granite.Data.Migrations.Postgres
                 });
 
             modelBuilder.Entity("GraniteServer.Data.Entities.CommandEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
+                        .WithMany()
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Server");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.MapChunkEntity", b =>
                 {
                     b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
                         .WithMany()

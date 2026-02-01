@@ -4,6 +4,7 @@ using Granite.Server.Configuration;
 using Granite.Server.Extensions;
 using Granite.Server.Hubs;
 using Granite.Server.Services;
+using Granite.Server.Services.Map;
 using GraniteServer.Server.HostedServices;
 using GraniteServer.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -43,7 +44,11 @@ builder.Services.AddScoped<ServersService>();
 builder.Services.AddScoped<ServerPlayersService>();
 builder.Services.AddScoped<ServerConfigService>();
 builder.Services.AddScoped<ServerService>();
+builder.Services.AddScoped<ServerWorldMapService>();
 builder.Services.AddScoped<IPlayersService, PlayersService>();
+builder.Services.AddScoped<IMapDataStorageService, MapDataStorageService>();
+builder.Services.AddScoped<IMapRenderingService, MapRenderingService>();
+
 
 // Add player name resolver for Vintage Story auth server integration
 builder.Services.AddHttpClient<IPlayerNameResolver, VintageStoryPlayerNameResolver>()

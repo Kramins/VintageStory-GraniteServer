@@ -42,8 +42,14 @@ public class MessageBridgeHostedService : IHostedService
                 .Where(msg => msg is CommandMessage)
                 .Subscribe(msg =>
                 {
-                    var cmd = msg as CommandMessage;
-                    HandleCommandMessage(cmd!);
+                    try{
+                        var cmd = msg as CommandMessage;
+                        HandleCommandMessage(cmd!);
+                    }
+                    catch(Exception ex)
+                    {
+                        _logger.Error($"[EventBridge] Error processing command message: {ex.Message}");
+                    }
                 });
 
             // Subscribe to events and dispatch handlers
@@ -52,8 +58,14 @@ public class MessageBridgeHostedService : IHostedService
                 .Where(msg => msg is EventMessage)
                 .Subscribe(msg =>
                 {
-                    var evt = msg as EventMessage;
-                    HandleEventMessage(evt!);
+                    try {
+                        var evt = msg as EventMessage;
+                        HandleEventMessage(evt!);
+                    }
+                    catch(Exception ex)
+                    {
+                        _logger.Error($"[EventBridge] Error processing event message: {ex.Message}");
+                    }
                 });
 
             _logger.Notification(

@@ -35,6 +35,7 @@ public class ClientMessageBusService : MessageBusService
 
     /// <summary>
     /// Publishes a message. Commands are deduplicated to prevent duplicate execution.
+    /// Publishing happens on the ThreadPool to avoid blocking the game thread.
     /// </summary>
     public new void Publish(MessageBusMessage message)
     {
@@ -56,8 +57,8 @@ public class ClientMessageBusService : MessageBusService
             }
         }
 
-        // Publish to subscribers
-        base.Publish(message);
+        // Publish to subscribers on ThreadPool to avoid blocking the game thread
+        System.Threading.ThreadPool.QueueUserWorkItem(_ => base.Publish(message), null);
     }
 
     /// <summary>

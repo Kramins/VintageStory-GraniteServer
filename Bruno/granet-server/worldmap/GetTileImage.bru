@@ -1,0 +1,20 @@
+meta {
+  name: GetTileImage
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://{{HOST}}/api/worldmap/{{serverId}}/tiles/{{chunkX}}/{{chunkZ}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

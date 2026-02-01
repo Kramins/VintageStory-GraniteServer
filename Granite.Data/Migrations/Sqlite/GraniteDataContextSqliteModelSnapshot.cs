@@ -96,6 +96,55 @@ namespace Granite.Data.Migrations.Sqlite
                     b.ToTable("BufferedCommands");
                 });
 
+            modelBuilder.Entity("GraniteServer.Data.Entities.MapChunkEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ChunkX")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ChunkZ")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExtractedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastAccessedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RainHeightMapData")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SurfaceBlockIdsData")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastAccessedAt");
+
+                    b.HasIndex("ServerId", "ContentHash");
+
+                    b.HasIndex("ServerId", "ChunkX", "ChunkZ")
+                        .IsUnique();
+
+                    b.ToTable("MapChunks");
+                });
+
             modelBuilder.Entity("GraniteServer.Data.Entities.ModEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -519,6 +568,17 @@ namespace Granite.Data.Migrations.Sqlite
                 });
 
             modelBuilder.Entity("GraniteServer.Data.Entities.CommandEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
+                        .WithMany()
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Server");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.MapChunkEntity", b =>
                 {
                     b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
                         .WithMany()

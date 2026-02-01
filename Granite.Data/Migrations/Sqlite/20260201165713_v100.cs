@@ -151,6 +151,33 @@ namespace Granite.Data.Migrations.Sqlite
                 });
 
             migrationBuilder.CreateTable(
+                name: "MapChunks",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    ServerId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ChunkX = table.Column<int>(type: "INTEGER", nullable: false),
+                    ChunkZ = table.Column<int>(type: "INTEGER", nullable: false),
+                    ContentHash = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    RainHeightMapData = table.Column<string>(type: "TEXT", nullable: false),
+                    SurfaceBlockIdsData = table.Column<string>(type: "TEXT", nullable: false),
+                    ExtractedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    ReceivedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    LastAccessedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MapChunks", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MapChunks_Servers_ServerId",
+                        column: x => x.ServerId,
+                        principalTable: "Servers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Players",
                 columns: table => new
                 {
@@ -302,6 +329,22 @@ namespace Granite.Data.Migrations.Sqlite
                 column: "ServerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_MapChunks_LastAccessedAt",
+                table: "MapChunks",
+                column: "LastAccessedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MapChunks_ServerId_ChunkX_ChunkZ",
+                table: "MapChunks",
+                columns: new[] { "ServerId", "ChunkX", "ChunkZ" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MapChunks_ServerId_ContentHash",
+                table: "MapChunks",
+                columns: new[] { "ServerId", "ContentHash" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ModReleases_ModId",
                 table: "ModReleases",
                 column: "ModId");
@@ -381,6 +424,9 @@ namespace Granite.Data.Migrations.Sqlite
 
             migrationBuilder.DropTable(
                 name: "Collectibles");
+
+            migrationBuilder.DropTable(
+                name: "MapChunks");
 
             migrationBuilder.DropTable(
                 name: "ModServers");

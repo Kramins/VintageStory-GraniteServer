@@ -34,18 +34,21 @@ namespace GraniteServer.Services
                 return;
             }
 
-
             try
             {
                 _subject.OnNext(@event);
             }
             catch (ObjectDisposedException)
             {
-                // Log that the subject has been disposed - this indicates the message bus has been shut down
+                // Silently ignore - the subject has been disposed, message bus is shut down
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Silently handle other exceptions to prevent message publishing from blocking
+                // Log subscriber exceptions to prevent message publishing from blocking
+                // This prevents a single broken subscriber from hanging the entire message bus
+                System.Diagnostics.Debug.WriteLine($"[MessageBus] Exception in subscriber: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[MessageBus] Stack trace: {ex.StackTrace}");
+                // Don't rethrow - allow other processing to continue
             }
         }
 
