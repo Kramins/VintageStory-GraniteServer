@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Vintage Story World Map Test</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@latest/ol.css" />
+
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #111;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .ol-attribution {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ol@latest/dist/ol.js"></script>
+    <script>
+    const WORLD_ID = "d3cd8403-ebd3-4cba-a88b-7cc63eb2c0c6";
+    
+    // Center chunk coordinates - this is where your map data exists
+    const CENTER_CHUNK_X = 15998;
+    const CENTER_CHUNK_Z = 16000;
+    
+    // Tile size = 32x32 pixels = 1 chunk
+    const TILE_SIZE = 32;
+    
+    // Offset to convert from tile grid index to chunk coordinate
+    // The extent goes from -512000 to 512000 (total 1024000 units)
+    // With 32-unit tiles, that's 32000 tiles from origin to center
+    // Tile index 0 starts at extent min, so we need to offset
+    const TILE_OFFSET = 16000; // 512000 / 32 = 16000
+    
+    // Extent in map units (blocks)
+    const EXTENT = [-512000, -512000, 512000, 512000];
+    
+    // TileGrid for 32x32 pixel tiles - only one resolution since we have no LOD
+    const vsTileGrid = new ol.tilegrid.TileGrid({
+      extent: EXTENT,
+      origin: [EXTENT[0], EXTENT[3]], // top-left: minX, maxY
+      resolutions: [1], // Single resolution - no additional detail levels
+      tileSize: TILE_SIZE
+    });
+
+    // XYZ source with custom tileUrlFunction to convert coordinates
+    const tileSource = new ol.source.XYZ({
+      interpolate: false,
+      wrapX: false,
+      crossOrigin: 'anonymous', // Enable CORS for image loading
+      tileGrid: vsTileGrid,
+      tileUrlFunction: function(tileCoord) {
+        const z = tileCoord[0];
+        const tileX = tileCoord[1];
+        const tileY = tileCoord[2];
+        
+        // Convert from tile grid index to chunk coordinate
+        // Both tileX and tileY start at 0 at the extent origin
+        // Tile index 16000 corresponds to chunk 0 (center of world)
+        // So: chunk = tile - 16000
+        const chunkX = tileX - TILE_OFFSET;
+        const chunkZ = tileY - TILE_OFFSET;
+        
+        console.log(`Tile [${tileX}, ${tileY}] -> Chunk [${chunkX}, ${chunkZ}]`);
+        
+        return `http://localhost:5000/api/worldmap/${WORLD_ID}/tiles/${chunkX}/${chunkZ}`;
+      }
+    });
+    
+    // Debug tile load events
+    tileSource.on('tileloadstart', function(e) {
+      const coord = e.tile.getTileCoord();
+      console.log(`Loading tile [z:${coord[0]} x:${coord[1]} y:${coord[2]}]`);
+    });
+    
+    tileSource.on('tileloaderror', function(e) {
+      const coord = e.tile.getTileCoord();
+      console.error(`Failed to load tile [z:${coord[0]} x:${coord[1]} y:${coord[2]}]`);
+    });
+
+    const map = new ol.Map({
+      target: "map",
+      layers: [
+        new ol.layer.Tile({
+          source: tileSource
+        })
+      ],
+      view: new ol.View({
+        // Center in map coordinates: chunkX * TILE_SIZE, -chunkZ * TILE_SIZE
+        center: [CENTER_CHUNK_X * TILE_SIZE, -CENTER_CHUNK_Z * TILE_SIZE],
+        constrainResolution: true,
+        resolutions: [64, 32, 16, 8, 4, 2, 1, 0.5, 0.25],
+        zoom: 6,
+        enableRotation: false
+      })
+    });
+    
+    // Debug: show current view info
+    map.on('moveend', function() {
+      const view = map.getView();
+      const center = view.getCenter();
+      const res = view.getResolution();
+      console.log(`Center: [${center[0].toFixed(0)}, ${center[1].toFixed(0)}], Resolution: ${res}`);
+    });
+    </script>
+</body>
+
+</html>
