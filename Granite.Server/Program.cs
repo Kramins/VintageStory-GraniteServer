@@ -168,14 +168,17 @@ app.UseAuthorization();
 // Validate serverid when present (non-blocking for now)
 app.UseMiddleware<Granite.Server.Middleware.ServerIdValidationMiddleware>();
 
-// Serve static files from ClientApp/dist
-// app.UseStaticFiles();
-// app.UseDefaultFiles();
+// Serve static files from wwwroot (Blazor WebAssembly client)
+app.UseStaticFiles();
+app.UseDefaultFiles();
 
 // Map endpoints
 app.MapControllers();
 app.MapHub<ModHub>("/hub/mod");
 app.MapHub<ClientHub>("/hub/client");
+
+// Fallback to index.html for SPA client-side routing
+app.MapFallbackToFile("index.html");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

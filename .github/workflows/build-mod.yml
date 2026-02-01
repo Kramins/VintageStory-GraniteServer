@@ -51,11 +51,11 @@ jobs:
 
       - name: Build Mod (Debug)
         if: steps.version.outputs.is_release == 'false'
-        run: dotnet build -c Debug Granite.Mod/Granite.Mod.csproj /p:BuildWebApp=true
+        run: dotnet build -c Debug Granite.Mod/Granite.Mod.csproj
 
       - name: Build Mod (Release)
         if: steps.version.outputs.is_release == 'true'
-        run: dotnet build -c Release Granite.Mod/Granite.Mod.csproj /p:BuildWebApp=true /p:modinfoVersion=${{ steps.version.outputs.version }}
+        run: dotnet build -c Release Granite.Mod/Granite.Mod.csproj /p:modinfoVersion=${{ steps.version.outputs.version }}
 
       - name: Create artifact name
         id: artifact

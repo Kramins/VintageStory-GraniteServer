@@ -3,12 +3,12 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <SpaRoot>ClientApp/</SpaRoot>
-    <ClientDist>$(SpaRoot)dist/</ClientDist>
+    <BlazorWebAssemblyRoot>../Granite.Web.Client/</BlazorWebAssemblyRoot>
+    <BlazorPublishOutput>$(BlazorWebAssemblyRoot)bin/Release/net9.0/publish/wwwroot/</BlazorPublishOutput>
     <BuildWebApp Condition="'$(BuildWebApp)'=='' and '$(Configuration)'=='Release'"
       >true</BuildWebApp
     >
-    <BuildWebApp Condition="'$(BuildWebApp)'==''">false</BuildWebApp>
+    <BuildWebApp Condition="'$(BuildWebApp)'==''">true</BuildWebApp>
     <IncludeClientAppInPublish Condition="'$(IncludeClientAppInPublish)'==''"
       >true</IncludeClientAppInPublish
     >
@@ -36,27 +36,49 @@
   <ItemGroup>
     <ProjectReference Include="..\Granite.Data\Granite.Data.csproj" />
     <ProjectReference Include="..\Granite.Common\Granite.Common.csproj" />
+    <ProjectReference Include="..\Granite.Web.Client\Granite.Web.Client.csproj" />
   </ItemGroup>
 
-  <!-- Build ClientApp before build/publish when enabled -->
+  <!-- Build Blazor WebAssembly client before build/publish when enabled -->
   <Target
     Name="BuildClientApp"
     BeforeTargets="PrepareForPublish;Build"
     Condition="'$(BuildWebApp)' == 'true'"
   >
-    <Exec WorkingDirectory="$(SpaRoot)" Command="npm --version" />
-    <Exec WorkingDirectory="$(SpaRoot)" Command="npm ci" />
-    <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
+    <Exec Command="dotnet publish -c Release $(BlazorWebAssemblyRoot)Granite.Web.Client.csproj -o $(BlazorWebAssemblyRoot)bin/Release/net9.0/publish" />
   </Target>
 
-  <!-- Include built client files in output directory -->
+  <!-- Include built Blazor client static web assets (excluding config files) -->
   <ItemGroup>
-    <Content Include="$(SpaRoot)dist/**">
+    <Content Include="$(BlazorPublishOutput)_framework/**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Update="$(SpaRoot)dist/**" Condition="'$(IncludeClientAppInPublish)'=='true'">
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    <Content Include="$(BlazorPublishOutput)_content/**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="$(BlazorPublishOutput)css/**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(BlazorPublishOutput)lib/**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(BlazorPublishOutput)*.html;$(BlazorPublishOutput)*.js;$(BlazorPublishOutput)*.png;$(BlazorPublishOutput)*.webmanifest">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Include built Blazor client static web assets for publish (excluding config files) -->
+  <ItemGroup Condition="'$(IncludeClientAppInPublish)'=='true'">
+    <Content Update="$(BlazorPublishOutput)_framework/**" 
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="$(BlazorPublishOutput)_content/**" 
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="$(BlazorPublishOutput)css/**" 
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="$(BlazorPublishOutput)lib/**" 
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="$(BlazorPublishOutput)*.html;$(BlazorPublishOutput)*.js;$(BlazorPublishOutput)*.png;$(BlazorPublishOutput)*.webmanifest" 
+             CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Package publish output into artifacts -->
