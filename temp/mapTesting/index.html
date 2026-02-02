@@ -18,51 +18,10 @@
       width: 100%;
       height: 100%;
     }
-
-    #debug {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(0, 0, 0, 0.9);
-      color: #0f0;
-      padding: 15px;
-      font-family: monospace;
-      font-size: 11px;
-      z-index: 1000;
-      max-width: 400px;
-      max-height: 90vh;
-      overflow-y: auto;
-      border: 1px solid #0f0;
-    }
-
-    #debug h3 {
-      margin: 0 0 10px 0;
-      color: #0ff;
-    }
-
-    .success {
-      color: #0f0;
-    }
-
-    .error {
-      color: #f00;
-    }
-
-    .warning {
-      color: #ff0;
-    }
-
-    .info {
-      color: #08f;
-    }
   </style>
 </head>
 
 <body>
-  <div id="debug">
-    <h3>Map Debug Console</h3>
-    <div id="log"></div>
-  </div>
   <div id="map"></div>
   <script src="https://cdn.jsdelivr.net/npm/ol@9.2.4/dist/ol.js"></script>
   <script>
@@ -76,59 +35,8 @@
     const SPAWN_GROUP_X = Math.floor(SPAWN_CHUNK_X / CHUNKS_PER_GROUP);
     const SPAWN_GROUP_Z = Math.floor(SPAWN_CHUNK_Z / CHUNKS_PER_GROUP);
 
-    const logEl = document.getElementById('log');
-    const tileRequests = new Map();
-
-    function log(msg, type = 'info') {
-      const timestamp = new Date().toLocaleTimeString();
-      const line = `<span class="${type}">[${timestamp}] ${msg}</span><br>`;
-      console.log(`[${type.toUpperCase()}] ${msg}`);
-      logEl.innerHTML += line;
-      logEl.scrollTop = logEl.scrollHeight;
-      const lines = logEl.innerHTML.split('<br>');
-      if (lines.length > 50) {
-        logEl.innerHTML = lines.slice(-50).join('<br>');
-      }
-    }
-
-    async function testServerConnection() {
-      log('Testing server...', 'info');
-      const testUrl = `${BASE_URL}/api/worldmap/${SERVER_ID}/tiles/grouped/${SPAWN_GROUP_X}/${SPAWN_GROUP_Z}`;
-      log(`URL: ${testUrl}`, 'info');
-
-      try {
-        const response = await fetch(testUrl);
-        log(`Status: ${response.status}`, response.ok ? 'success' : 'error');
-
-        if (response.ok) {
-          const blob = await response.blob();
-          log(`✓ Blob: ${blob.size} bytes`, 'success');
-
-          const imgUrl = URL.createObjectURL(blob);
-          const testImg = new Image();
-
-          await new Promise((resolve, reject) => {
-            testImg.onload = () => {
-              log(`✓ Image: ${testImg.width}x${testImg.height}`, 'success');
-              URL.revokeObjectURL(imgUrl);
-              resolve();
-            };
-            testImg.onerror = (e) => {
-              log(`✗ Image load failed`, 'error');
-              URL.revokeObjectURL(imgUrl);
-              reject(e);
-            };
-            testImg.src = imgUrl;
-          });
-
-          return true;
-        }
-        return false;
-      } catch (err) {
-        log(`✗ Error: ${err.message}`, 'error');
-        return false;
-      }
-    }
+    console.log('=== Vintage Story Map Initializing ===');
+    console.log(`Spawn: Chunk(${SPAWN_CHUNK_X}, ${SPAWN_CHUNK_Z}) = Group(${SPAWN_GROUP_X}, ${SPAWN_GROUP_Z})`);
 
     const extent = [-1000000, -1000000, 1000000, 1000000];
 
@@ -139,7 +47,7 @@
     });
 
     const tileGrid = new ol.tilegrid.TileGrid({
-      origin: [extent[0], extent[3]],  // Top-left corner
+      origin: [extent[0], extent[3]],
       tileSize: TILE_SIZE,
       resolutions: [1]
     });
@@ -156,17 +64,9 @@
         const tileY = tileCoord[2];
 
         const groupX = tileX + Math.floor(extent[0] / TILE_SIZE);
-
-        // ✅ FIXED: Subtract offset, don't add
         const groupZ = tileY - Math.floor(extent[3] / TILE_SIZE);
 
         const url = `${BASE_URL}/api/worldmap/${SERVER_ID}/tiles/grouped/${groupX}/${groupZ}`;
-
-        const key = `${groupX},${groupZ}`;
-        if (!tileRequests.has(key)) {
-          tileRequests.set(key, { requested: Date.now(), url });
-          log(`📡 (${groupX}, ${groupZ}) [tile: ${tileX},${tileY}]`, 'info');
-        }
 
         return url;
       },
@@ -177,8 +77,9 @@
         const match = src.match(/grouped\/(-?\d+)\/(-?\d+)/);
         const coords = match ? `(${match[1]}, ${match[2]})` : '?';
 
-        img.onload = () => log(`✓ ${coords}`, 'success');
-        img.onerror = () => log(`✗ ${coords}`, 'error');
+        img.onload = () => console.log(`✓ Tile loaded: ${coords}`);
+        img.onerror = () => console.log(`✗ Tile failed: ${coords}`);
+
         img.src = src;
       }
     });
@@ -204,32 +105,37 @@
       const center = map.getView().getCenter();
       const gx = Math.round(center[0] / TILE_SIZE);
       const gz = Math.round(-center[1] / TILE_SIZE);
-      log(`📍 Group(${gx}, ${gz})`, 'info');
+      const cx = gx * CHUNKS_PER_GROUP;
+      const cz = gz * CHUNKS_PER_GROUP;
+      console.log(`View center: Group(${gx}, ${gz}) = Chunk(${cx}, ${cz})`);
     });
 
     map.on('click', (evt) => {
       const [px, py] = evt.coordinate;
       const gx = Math.floor(px / TILE_SIZE);
       const gz = Math.floor(-py / TILE_SIZE);
-      log(`🖱️ (${gx}, ${gz})`, 'info');
+      const cx = gx * CHUNKS_PER_GROUP;
+      const cz = gz * CHUNKS_PER_GROUP;
+      console.log(`Clicked: Group(${gx}, ${gz}) = Chunk(${cx}, ${cz})`);
     });
 
-    log('=== Init ===', 'info');
-    log(`Spawn: Group(${SPAWN_GROUP_X}, ${SPAWN_GROUP_Z})`, 'info');
-
-    testServerConnection().then(ok => {
-      if (ok) {
-        log('=== Ready ===', 'success');
-        setTimeout(() => map.updateSize(), 500);
-      }
-    });
-
-    window.debugMap = {
-      map,
-      goToGroup: (x, z) => {
-        map.getView().setCenter([x * TILE_SIZE, -z * TILE_SIZE]);
+    // Utility functions accessible from console
+    window.vsMap = {
+      map: map,
+      goToGroup: (groupX, groupZ) => {
+        map.getView().setCenter([groupX * TILE_SIZE, -groupZ * TILE_SIZE]);
+        console.log(`Navigated to Group(${groupX}, ${groupZ})`);
+      },
+      goToChunk: (chunkX, chunkZ) => {
+        const groupX = Math.floor(chunkX / CHUNKS_PER_GROUP);
+        const groupZ = Math.floor(chunkZ / CHUNKS_PER_GROUP);
+        map.getView().setCenter([groupX * TILE_SIZE, -groupZ * TILE_SIZE]);
+        console.log(`Navigated to Chunk(${chunkX}, ${chunkZ}) = Group(${groupX}, ${groupZ})`);
       }
     };
+
+    console.log('=== Map Ready ===');
+    console.log('Use window.vsMap.goToGroup(x, z) or window.vsMap.goToChunk(x, z) to navigate');
   </script>
 </body>
 
