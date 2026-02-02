@@ -85,7 +85,7 @@ public class MapDataExtractionService : IMapDataExtractionService
             {
                 try
                 {
-                    var result = ExtractChunkDataInternal(chunkX, chunkZ);
+                    var result = ExtractChunkData(chunkX, chunkZ);
                     tcs.TrySetResult(result);
                 }
                 catch (Exception ex)
@@ -219,7 +219,7 @@ public class MapDataExtractionService : IMapDataExtractionService
     /// <summary>
     /// Internal method to extract chunk data. Must be called on main thread.
     /// </summary>
-    private MapChunkExtractedData? ExtractChunkDataInternal(int chunkX, int chunkZ)
+    public MapChunkExtractedData? ExtractChunkData(int chunkX, int chunkZ)
     {
         var blockAccessor = _api.World.BlockAccessor;
         var mapChunk = blockAccessor.GetMapChunk(chunkX, chunkZ);
@@ -260,6 +260,8 @@ public class MapDataExtractionService : IMapDataExtractionService
 
         // Calculate content hash
         var contentHash = CalculateContentHash(heightMap, surfaceBlockIds);
+        mapChunk.SetModdata<string>("granite-hash", contentHash);
+
 
         return new MapChunkExtractedData(
             chunkX,
@@ -438,5 +440,12 @@ public class MapDataExtractionService : IMapDataExtractionService
         var hashBytes = SHA256.HashData(bytes);
 
         return Convert.ToHexString(hashBytes);
+    }
+
+    public string? GetChunkHash(int chunkX, int chunkZ)
+    {
+        var blockAccessor = _api.World.BlockAccessor;
+        var mapChunk = blockAccessor.GetMapChunk(chunkX, chunkZ);
+        return mapChunk?.GetModdata<string>("granite-hash");
     }
 }

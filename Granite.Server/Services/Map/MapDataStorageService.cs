@@ -180,9 +180,9 @@ public class MapDataStorageService : IMapDataStorageService
         if (entity == null)
             return null;
 
-        // Update last accessed time
-        entity.LastAccessedAt = DateTime.UtcNow;
-        await _dbContext.SaveChangesAsync();
+        // Update last accessed time, I don't think we need todo this
+        // entity.LastAccessedAt = DateTime.UtcNow;
+        // await _dbContext.SaveChangesAsync();
 
         return new StoredChunkData(
             entity.ChunkX,

@@ -76,6 +76,7 @@ public interface IMapDataExtractionService
     Task<IReadOnlyList<ChunkHashData>> GetAllExtractedChunksAsync(
         CancellationToken cancellationToken = default
     );
+    string? GetChunkHash(int chunkX, int chunkZ);
 
     /// <summary>
     /// Gets the block ID for a specific world position.

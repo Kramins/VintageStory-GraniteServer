@@ -1,5 +1,4 @@
 using System.Reflection;
-using Granite.Mod.HostedServices;
 using Granite.Mod.Services.Map;
 using GraniteServer.HostedServices;
 using GraniteServer.Messaging.Commands;
@@ -113,8 +112,10 @@ public class GraniteMod : ModSystem
                 .GetInterfaces()
                 .Where(i =>
                     i.IsGenericType
-                    && (i.GetGenericTypeDefinition() == eventHandlerType
-                        || i.GetGenericTypeDefinition() == commandHandlerType)
+                    && (
+                        i.GetGenericTypeDefinition() == eventHandlerType
+                        || i.GetGenericTypeDefinition() == commandHandlerType
+                    )
                 )
                 .ToList();
 

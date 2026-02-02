@@ -1,4 +1,6 @@
 using System.Threading.Tasks;
+using Granite.Common.Messaging.Events.Client;
+using Granite.Server.Services;
 using Granite.Server.Services.Map;
 using GraniteServer.Messaging.Events;
 using Microsoft.Extensions.Logging;
@@ -14,18 +16,22 @@ public class WorldMapEventHandler
 {
     private readonly IMapDataStorageService _storageService;
     private readonly IMapRenderingService _renderingService;
+    private readonly PersistentMessageBusService _messageBus;
     private readonly ILogger<WorldMapEventHandler> _logger;
 
     public WorldMapEventHandler(
         IMapDataStorageService storageService,
         IMapRenderingService renderingService,
+        PersistentMessageBusService messageBus,
         ILogger<WorldMapEventHandler> logger
     )
     {
         _storageService = storageService;
         _renderingService = renderingService;
+        _messageBus = messageBus;
         _logger = logger;
     }
+
 
     async Task IEventHandler<MapChunkDataEvent>.Handle(MapChunkDataEvent @event)
     {
@@ -61,7 +67,17 @@ public class WorldMapEventHandler
         {
             // Invalidate cached tile for this chunk
             _renderingService.InvalidateChunk(serverId, data.ChunkX, data.ChunkZ);
-
+            _messageBus.CreateEvent<MapTitleUpdateEvent>(
+                @event.OriginServerId,
+                e =>
+                {
+                    e.Data = new MapTitleUpdateEventData
+                    {
+                        ChunkX = data.ChunkX,
+                        ChunkZ = data.ChunkZ,
+                    };
+                }
+            );
             _logger.LogInformation(
                 "Stored chunk ({ChunkX}, {ChunkZ}) for server {ServerId}",
                 data.ChunkX,

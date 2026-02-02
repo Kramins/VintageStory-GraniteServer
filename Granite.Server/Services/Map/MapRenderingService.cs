@@ -204,6 +204,7 @@ public class MapRenderingService : IMapRenderingService
                         var height = chunkData.RainHeightMap[chunkIndex];
                         var blockId = chunkData.SurfaceBlockIds[chunkIndex];
 
+                        //// TODO: Extract method, design better way to color blocks by type.
                         uint color;
                         if (
                             blockIdToColorCode != null
