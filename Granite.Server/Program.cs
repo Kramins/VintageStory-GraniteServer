@@ -44,7 +44,7 @@ builder.Services.AddScoped<ServersService>();
 builder.Services.AddScoped<ServerPlayersService>();
 builder.Services.AddScoped<ServerConfigService>();
 builder.Services.AddScoped<ServerService>();
-builder.Services.AddScoped<ServerWorldMapService>();
+builder.Services.AddScoped<IServerWorldMapService, ServerWorldMapService>();
 builder.Services.AddScoped<IPlayersService, PlayersService>();
 builder.Services.AddScoped<IMapDataStorageService, MapDataStorageService>();
 builder.Services.AddScoped<IMapRenderingService, MapRenderingService>();
@@ -132,7 +132,8 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 "http://localhost:3000", "https://localhost:3000",  // Vite dev server (React)
-                "http://localhost:5148", "https://localhost:7171"   // Blazor WebAssembly dev server
+                "http://localhost:5148", "https://localhost:7171",   // Blazor WebAssembly dev server
+                "http://localhost:5500" // Live Server extension
             )
             .AllowAnyMethod()
             .AllowAnyHeader()

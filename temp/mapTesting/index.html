@@ -2,123 +2,235 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <title>Vintage Story World Map Test</title>
+  <meta charset="UTF-8" />
+  <title>Vintage Story World Map</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@9.2.4/ol.css" />
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #111;
+    }
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@latest/ol.css" />
+    #map {
+      width: 100%;
+      height: 100%;
+    }
 
-    <style>
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background: #111;
-        }
+    #debug {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.9);
+      color: #0f0;
+      padding: 15px;
+      font-family: monospace;
+      font-size: 11px;
+      z-index: 1000;
+      max-width: 400px;
+      max-height: 90vh;
+      overflow-y: auto;
+      border: 1px solid #0f0;
+    }
 
-        #map {
-            width: 100%;
-            height: 100%;
-        }
+    #debug h3 {
+      margin: 0 0 10px 0;
+      color: #0ff;
+    }
 
-        .ol-attribution {
-            display: none;
-        }
-    </style>
+    .success {
+      color: #0f0;
+    }
+
+    .error {
+      color: #f00;
+    }
+
+    .warning {
+      color: #ff0;
+    }
+
+    .info {
+      color: #08f;
+    }
+  </style>
 </head>
 
 <body>
-    <div id="map"></div>
+  <div id="debug">
+    <h3>Map Debug Console</h3>
+    <div id="log"></div>
+  </div>
+  <div id="map"></div>
+  <script src="https://cdn.jsdelivr.net/npm/ol@9.2.4/dist/ol.js"></script>
+  <script>
+    const TILE_SIZE = 256;
+    const CHUNKS_PER_GROUP = 8;
+    const SERVER_ID = 'd3cd8403-ebd3-4cba-a88b-7cc63eb2c0c6';
+    const BASE_URL = 'http://localhost:5000';
 
-    <script src="https://cdn.jsdelivr.net/npm/ol@latest/dist/ol.js"></script>
-    <script>
-    const WORLD_ID = "d3cd8403-ebd3-4cba-a88b-7cc63eb2c0c6";
-    
-    // Center chunk coordinates - this is where your map data exists
-    const CENTER_CHUNK_X = 15998;
-    const CENTER_CHUNK_Z = 16000;
-    
-    // Tile size = 32x32 pixels = 1 chunk
-    const TILE_SIZE = 32;
-    
-    // Offset to convert from tile grid index to chunk coordinate
-    // The extent goes from -512000 to 512000 (total 1024000 units)
-    // With 32-unit tiles, that's 32000 tiles from origin to center
-    // Tile index 0 starts at extent min, so we need to offset
-    const TILE_OFFSET = 16000; // 512000 / 32 = 16000
-    
-    // Extent in map units (blocks)
-    const EXTENT = [-512000, -512000, 512000, 512000];
-    
-    // TileGrid for 32x32 pixel tiles - only one resolution since we have no LOD
-    const vsTileGrid = new ol.tilegrid.TileGrid({
-      extent: EXTENT,
-      origin: [EXTENT[0], EXTENT[3]], // top-left: minX, maxY
-      resolutions: [1], // Single resolution - no additional detail levels
-      tileSize: TILE_SIZE
+    const SPAWN_CHUNK_X = 15998;
+    const SPAWN_CHUNK_Z = 16000;
+    const SPAWN_GROUP_X = Math.floor(SPAWN_CHUNK_X / CHUNKS_PER_GROUP);
+    const SPAWN_GROUP_Z = Math.floor(SPAWN_CHUNK_Z / CHUNKS_PER_GROUP);
+
+    const logEl = document.getElementById('log');
+    const tileRequests = new Map();
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const line = `<span class="${type}">[${timestamp}] ${msg}</span><br>`;
+      console.log(`[${type.toUpperCase()}] ${msg}`);
+      logEl.innerHTML += line;
+      logEl.scrollTop = logEl.scrollHeight;
+      const lines = logEl.innerHTML.split('<br>');
+      if (lines.length > 50) {
+        logEl.innerHTML = lines.slice(-50).join('<br>');
+      }
+    }
+
+    async function testServerConnection() {
+      log('Testing server...', 'info');
+      const testUrl = `${BASE_URL}/api/worldmap/${SERVER_ID}/tiles/grouped/${SPAWN_GROUP_X}/${SPAWN_GROUP_Z}`;
+      log(`URL: ${testUrl}`, 'info');
+
+      try {
+        const response = await fetch(testUrl);
+        log(`Status: ${response.status}`, response.ok ? 'success' : 'error');
+
+        if (response.ok) {
+          const blob = await response.blob();
+          log(`✓ Blob: ${blob.size} bytes`, 'success');
+
+          const imgUrl = URL.createObjectURL(blob);
+          const testImg = new Image();
+
+          await new Promise((resolve, reject) => {
+            testImg.onload = () => {
+              log(`✓ Image: ${testImg.width}x${testImg.height}`, 'success');
+              URL.revokeObjectURL(imgUrl);
+              resolve();
+            };
+            testImg.onerror = (e) => {
+              log(`✗ Image load failed`, 'error');
+              URL.revokeObjectURL(imgUrl);
+              reject(e);
+            };
+            testImg.src = imgUrl;
+          });
+
+          return true;
+        }
+        return false;
+      } catch (err) {
+        log(`✗ Error: ${err.message}`, 'error');
+        return false;
+      }
+    }
+
+    const extent = [-1000000, -1000000, 1000000, 1000000];
+
+    const projection = new ol.proj.Projection({
+      code: 'VS-PIXEL',
+      units: 'pixels',
+      extent: extent
     });
 
-    // XYZ source with custom tileUrlFunction to convert coordinates
-    const tileSource = new ol.source.XYZ({
-      interpolate: false,
+    const tileGrid = new ol.tilegrid.TileGrid({
+      origin: [extent[0], extent[3]],  // Top-left corner
+      tileSize: TILE_SIZE,
+      resolutions: [1]
+    });
+
+    const tileSource = new ol.source.TileImage({
+      projection: projection,
+      tileGrid: tileGrid,
       wrapX: false,
-      crossOrigin: 'anonymous', // Enable CORS for image loading
-      tileGrid: vsTileGrid,
-      tileUrlFunction: function(tileCoord) {
-        const z = tileCoord[0];
+      crossOrigin: 'anonymous',
+      tileUrlFunction: function (tileCoord) {
+        if (!tileCoord) return null;
+
         const tileX = tileCoord[1];
         const tileY = tileCoord[2];
-        
-        // Convert from tile grid index to chunk coordinate
-        // Both tileX and tileY start at 0 at the extent origin
-        // Tile index 16000 corresponds to chunk 0 (center of world)
-        // So: chunk = tile - 16000
-        const chunkX = tileX - TILE_OFFSET;
-        const chunkZ = tileY - TILE_OFFSET;
-        
-        console.log(`Tile [${tileX}, ${tileY}] -> Chunk [${chunkX}, ${chunkZ}]`);
-        
-        return `http://localhost:5000/api/worldmap/${WORLD_ID}/tiles/${chunkX}/${chunkZ}`;
+
+        const groupX = tileX + Math.floor(extent[0] / TILE_SIZE);
+
+        // ✅ FIXED: Subtract offset, don't add
+        const groupZ = tileY - Math.floor(extent[3] / TILE_SIZE);
+
+        const url = `${BASE_URL}/api/worldmap/${SERVER_ID}/tiles/grouped/${groupX}/${groupZ}`;
+
+        const key = `${groupX},${groupZ}`;
+        if (!tileRequests.has(key)) {
+          tileRequests.set(key, { requested: Date.now(), url });
+          log(`📡 (${groupX}, ${groupZ}) [tile: ${tileX},${tileY}]`, 'info');
+        }
+
+        return url;
+      },
+      tileLoadFunction: function (imageTile, src) {
+        const img = imageTile.getImage();
+        img.crossOrigin = 'anonymous';
+
+        const match = src.match(/grouped\/(-?\d+)\/(-?\d+)/);
+        const coords = match ? `(${match[1]}, ${match[2]})` : '?';
+
+        img.onload = () => log(`✓ ${coords}`, 'success');
+        img.onerror = () => log(`✗ ${coords}`, 'error');
+        img.src = src;
       }
-    });
-    
-    // Debug tile load events
-    tileSource.on('tileloadstart', function(e) {
-      const coord = e.tile.getTileCoord();
-      console.log(`Loading tile [z:${coord[0]} x:${coord[1]} y:${coord[2]}]`);
-    });
-    
-    tileSource.on('tileloaderror', function(e) {
-      const coord = e.tile.getTileCoord();
-      console.error(`Failed to load tile [z:${coord[0]} x:${coord[1]} y:${coord[2]}]`);
     });
 
     const map = new ol.Map({
-      target: "map",
-      layers: [
-        new ol.layer.Tile({
-          source: tileSource
-        })
-      ],
+      target: 'map',
+      layers: [new ol.layer.Tile({ source: tileSource })],
       view: new ol.View({
-        // Center in map coordinates: chunkX * TILE_SIZE, -chunkZ * TILE_SIZE
-        center: [CENTER_CHUNK_X * TILE_SIZE, -CENTER_CHUNK_Z * TILE_SIZE],
+        projection: projection,
+        center: [
+          SPAWN_GROUP_X * TILE_SIZE,
+          -SPAWN_GROUP_Z * TILE_SIZE
+        ],
+        resolution: 1,
+        minResolution: 1,
+        maxResolution: 1,
         constrainResolution: true,
-        resolutions: [64, 32, 16, 8, 4, 2, 1, 0.5, 0.25],
-        zoom: 6,
         enableRotation: false
       })
     });
-    
-    // Debug: show current view info
-    map.on('moveend', function() {
-      const view = map.getView();
-      const center = view.getCenter();
-      const res = view.getResolution();
-      console.log(`Center: [${center[0].toFixed(0)}, ${center[1].toFixed(0)}], Resolution: ${res}`);
+
+    map.on('moveend', () => {
+      const center = map.getView().getCenter();
+      const gx = Math.round(center[0] / TILE_SIZE);
+      const gz = Math.round(-center[1] / TILE_SIZE);
+      log(`📍 Group(${gx}, ${gz})`, 'info');
     });
-    </script>
+
+    map.on('click', (evt) => {
+      const [px, py] = evt.coordinate;
+      const gx = Math.floor(px / TILE_SIZE);
+      const gz = Math.floor(-py / TILE_SIZE);
+      log(`🖱️ (${gx}, ${gz})`, 'info');
+    });
+
+    log('=== Init ===', 'info');
+    log(`Spawn: Group(${SPAWN_GROUP_X}, ${SPAWN_GROUP_Z})`, 'info');
+
+    testServerConnection().then(ok => {
+      if (ok) {
+        log('=== Ready ===', 'success');
+        setTimeout(() => map.updateSize(), 500);
+      }
+    });
+
+    window.debugMap = {
+      map,
+      goToGroup: (x, z) => {
+        map.getView().setCenter([x * TILE_SIZE, -z * TILE_SIZE]);
+      }
+    };
+  </script>
 </body>
 
 </html>

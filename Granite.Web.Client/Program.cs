@@ -59,6 +59,7 @@ builder.Services.AddSingleton<IModsApiClient, ModsApiClient>();
 builder.Services.AddSingleton<IServerApiClient, ServerApiClient>();
 builder.Services.AddSingleton<IAuthApiClient, AuthApiClient>();
 builder.Services.AddSingleton<IWorldApiClient, WorldApiClient>();
+builder.Services.AddSingleton<WorldMapService>();
 
 // Register message bus and event handling infrastructure
 builder.Services.AddSingleton<ClientMessageBusService>();

@@ -30,7 +30,7 @@ public class MapRenderingServiceTests
     public void RenderTileFromData_WithValidData_ReturnsTgaBytes()
     {
         // Arrange
-        var heightMap = new ushort[1024];
+        var heightMap = new int[1024];
         var blockIds = new int[1024];
         var chunkData = new StoredChunkData(
             ChunkX: 0,
@@ -56,7 +56,7 @@ public class MapRenderingServiceTests
     public void RenderTileFromData_WithHeightVariation_ProducesDifferentColors()
     {
         // Arrange - create terrain with varying heights
-        var heightMap = new ushort[1024];
+        var heightMap = new int[1024];
         var blockIds = new int[1024];
 
         // Low terrain
@@ -93,7 +93,7 @@ public class MapRenderingServiceTests
     public void RenderTileFromData_WithBlockColorMapping_UsesMapping()
     {
         // Arrange
-        var heightMap = new ushort[1024];
+        var heightMap = new int[1024];
         var blockIds = new int[1024];
 
         for (var i = 0; i < 1024; i++)
@@ -138,7 +138,7 @@ public class MapRenderingServiceTests
     {
         // Arrange
         var serverId = Guid.NewGuid();
-        var heightMap = new ushort[1024];
+        var heightMap = new int[1024];
         var blockIds = new int[1024];
         var chunkData = new StoredChunkData(0, 0, "hash123", heightMap, blockIds);
 
@@ -157,7 +157,7 @@ public class MapRenderingServiceTests
     {
         // Arrange
         var serverId = Guid.NewGuid();
-        var heightMap = new ushort[1024];
+        var heightMap = new int[1024];
         var blockIds = new int[1024];
         var chunkData = new StoredChunkData(0, 0, "hash123", heightMap, blockIds);
 

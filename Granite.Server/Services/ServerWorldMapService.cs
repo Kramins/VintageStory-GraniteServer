@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using Granite.Common.Dto;
 using Granite.Server.Services.Map;
 using GraniteServer.Data;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Granite.Server.Services;
 
-public class ServerWorldMapService
+public class ServerWorldMapService : IServerWorldMapService
 {
     private readonly IMapDataStorageService _mapDataStorage;
     private readonly IMapRenderingService _mapRendering;
@@ -84,6 +85,22 @@ public class ServerWorldMapService
         }
     }
 
+    public async Task<byte[]?> GetGroupedTileImageAsync(Guid serverId, int groupX, int groupZ)
+    {
+        try
+        {
+            // Use the rendering service which includes caching
+            var imageBytes = await _mapRendering.RenderGroupedTileAsync(serverId, groupX, groupZ);
+
+            return imageBytes;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error rendering grouped tile image for group ({GroupX}, {GroupZ}) on server {ServerId}", groupX, groupZ, serverId);
+            throw;
+        }
+    }
+
     public async Task<MapTileMetadataDTO?> GetTileMetadataAsync(Guid serverId, int chunkX, int chunkZ)
     {
         try
@@ -116,4 +133,6 @@ public class ServerWorldMapService
             throw;
         }
     }
+
+    
 }

@@ -1,4 +1,5 @@
 using System.Reflection;
+using Granite.Mod.HostedServices;
 using Granite.Mod.Services.Map;
 using GraniteServer.HostedServices;
 using GraniteServer.Messaging.Commands;
@@ -66,6 +67,7 @@ public class GraniteMod : ModSystem
                 services.AddHostedService<SignalRClientHostedService>();
                 services.AddHostedService<ServerMetricsHostedService>();
                 services.AddHostedService<ServerReadyHostedService>();
+                services.AddHostedService<WorldMapHostedService>();
             })
             .Build();
 

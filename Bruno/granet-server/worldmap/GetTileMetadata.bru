@@ -5,16 +5,20 @@ meta {
 }
 
 get {
-  url: http://{{HOST}}/api/worldmap/{{serverId}}/tiles/{{chunkX}}/{{chunkZ}}/metadata
+  url: http://{{HOST}}/api/worldmap/{{serverId}}/tiles/{{x}}/{{y}}/metadata
   body: none
-  auth: bearer
-}
-
-auth:bearer {
-  token: {{token}}
+  auth: none
 }
 
 settings {
   encodeUrl: true
   timeout: 0
+}
+
+docs {
+  Note: x and y are OpenLayers tile coordinates
+  x = game chunkX (no conversion)
+  y = -game chunkZ (negated for OpenLayers coordinate system)
+  
+  Example: Game chunk (5, 10) = OpenLayers tile (5, -10)
 }
