@@ -106,10 +106,7 @@
                 await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap",
                     "map",
                     baseUrl,
-                    0,  // minZoom
-                    5,  // maxZoom
-                    new[] { centerX, centerZ }, // center [lon, lat]
-                    2   // initial zoom
+                    new[] { centerX, centerZ } // center [lon, lat]
                 );
 
                 _mapInitialized = true;

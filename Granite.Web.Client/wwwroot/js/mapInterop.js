@@ -2,72 +2,131 @@ window.mapInterop = {
     map: null,
     tileLayer: null,
 
-    initializeMap: function (elementId, tileUrlTemplate, minZoom, maxZoom, center, zoom) {
-        console.log('Initializing map with:', { elementId, tileUrlTemplate, center, zoom });
+    initializeMap: function (elementId, tileUrlTemplate, center) {
+        const TILE_SIZE = 256;
+        const CHUNKS_PER_GROUP = 8;
 
-        // Define resolutions matching WebCartographer approach
-        const resolutions = [256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25, 0.125];
+        const SPAWN_CHUNK_X = 15998;
+        const SPAWN_CHUNK_Z = 16000;
+        const SPAWN_GROUP_X = Math.floor(SPAWN_CHUNK_X / CHUNKS_PER_GROUP);
+        const SPAWN_GROUP_Z = Math.floor(SPAWN_CHUNK_Z / CHUNKS_PER_GROUP);
 
-        // Create tile grid with origin at (0,0) so tile coords match chunk coords
-        const tileGrid = new ol.tilegrid.TileGrid({
-            extent: [-100000, -100000, 100000, 100000],
-            origin: [0, 0], // Origin at center so tile indices = chunk coordinates
-            resolutions: resolutions,
-            tileSize: 32 // Our tiles are 32x32 pixels
+        // Tile cache: track which tiles exist and which don't
+        const tileCache = {
+            loaded: new Set(),    // Successfully loaded tiles
+            failed: new Set(),    // Tiles that returned 404
+            pending: new Map(),   // Currently loading tiles
+        };
+
+
+        const extent = [-1000000, -1000000, 1000000, 1000000];
+
+        const projection = new ol.proj.Projection({
+            code: 'VS-PIXEL',
+            units: 'pixels',
+            extent: extent
         });
 
-        // Create XYZ tile source with custom URL function
-        const tileSource = new ol.source.XYZ({
-            interpolate: false,
-            wrapX: false,
+        const tileGrid = new ol.tilegrid.TileGrid({
+            origin: [extent[0], extent[3]],
+            tileSize: TILE_SIZE,
+            resolutions: [1] // This is only one resolution as we only have 256 sized map titles.
+        });
+
+        const tileSource = new ol.source.TileImage({
+            projection: projection,
             tileGrid: tileGrid,
+            wrapX: false,
             crossOrigin: 'anonymous',
-            tileUrlFunction: function(tileCoord) {
-                if (!tileCoord) return undefined;
-                
-                const z = tileCoord[0];
-                const x = tileCoord[1];
-                const y = tileCoord[2];
-                
-                // Convert tile grid coordinates to chunk coordinates
-                const resolution = resolutions[z];
-                const chunkX = Math.floor(x * resolution);
-                const chunkZ = Math.floor(-y * resolution); // Negate Y
-                
+            tileUrlFunction: function (tileCoord) {
+                if (!tileCoord) return null;
+
+                const tileX = tileCoord[1];
+                const tileY = tileCoord[2];
+
+                const groupX = tileX + Math.floor(extent[0] / TILE_SIZE);
+                const groupZ = tileY - Math.floor(extent[3] / TILE_SIZE);
+
+                const key = window.mapInterop.getTileKey(groupX, groupZ);
+
+                // If we know this tile failed before, return a data URL for empty tile
+                if (tileCache.failed.has(key)) {
+                    // Return a 1x1 transparent PNG to avoid the request
+                    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+                }
+
                 const url = tileUrlTemplate
-                    .replace('{z}', z)
-                    .replace('{x}', chunkX)
-                    .replace('{y}', chunkZ);
-                
-                console.log('Tile request: z=' + z + ', tile=(' + x + ',' + y + '), chunk=(' + chunkX + ',' + chunkZ + ')');
+                    .replace('{x}', groupX)
+                    .replace('{y}', groupZ);
+
+               
+
+                // Mark as pending
+                if (!tileCache.loaded.has(key) && !tileCache.pending.has(key)) {
+                    tileCache.pending.set(key, Date.now());
+                }
+
                 return url;
+            },
+            tileLoadFunction: function (imageTile, src) {
+                // Skip if it's a data URL (known failed tile)
+                if (src.startsWith('data:')) {
+                    imageTile.getImage().src = src;
+                    return;
+                }
+
+                const img = imageTile.getImage();
+                img.crossOrigin = 'anonymous';
+
+                const match = src.match(/grouped\/(-?\d+)\/(-?\d+)/);
+                if (!match) {
+                    img.src = src;
+                    return;
+                }
+
+                const groupX = parseInt(match[1]);
+                const groupZ = parseInt(match[2]);
+                const key =  window.mapInterop.getTileKey(groupX, groupZ);
+
+                img.onload = () => {
+                    tileCache.loaded.add(key);
+                    tileCache.pending.delete(key);
+                    console.log(`✓ Tile loaded: (${groupX}, ${groupZ})`);
+                };
+
+                img.onerror = () => {
+                    tileCache.failed.add(key);
+                    tileCache.pending.delete(key);
+                    console.log(`✗ Tile failed: (${groupX}, ${groupZ}) - won't retry`);
+
+                    // Set to transparent tile so it doesn't show a broken image
+                    img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+                };
+
+                img.src = src;
             }
         });
 
-        // Create tile layer
-        this.tileLayer = new ol.layer.Tile({
-            name: "World",
-            source: tileSource
-        });
-
-        // Create view with the passed-in center coordinates
-        const view = new ol.View({
-            center: center, // Use the center passed from C# (chunk coordinates)
-            constrainResolution: true,
-            zoom: zoom,
-            resolutions: resolutions,
-        });
-
-        // Create map
-        this.map = new ol.Map({
+        const map = new ol.Map({
             target: elementId,
-            layers: [this.tileLayer],
-            view: view
+            layers: [new ol.layer.Tile({ source: tileSource })],
+            view: new ol.View({
+                projection: projection,
+                center: [
+                    SPAWN_GROUP_X * TILE_SIZE,
+                    -SPAWN_GROUP_Z * TILE_SIZE
+                ],
+                resolution: 1,
+                minResolution: 0.25,
+                maxResolution: 4,
+                constrainResolution: false,
+                enableRotation: false
+            })
         });
-
-        console.log('OpenLayers map initialized with center:', center, 'zoom:', zoom);
     },
-
+    getTileKey: function(groupX, groupZ) {
+        return `${groupX},${groupZ}`;
+    },
     updateTileUrl: function (tileUrlTemplate) {
         if (this.tileLayer) {
             const newSource = new ol.source.XYZ({

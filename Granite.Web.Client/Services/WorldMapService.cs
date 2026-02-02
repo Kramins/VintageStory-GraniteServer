@@ -63,6 +63,8 @@ public class WorldMapService
 
     public string GetTileImageUrl(Guid serverId, int x, int y)
     {
-        return $"api/worldmap/{serverId}/tiles/{x}/{y}";
+        var httpClient = _httpClientFactory.CreateClient("GraniteApi");
+        var baseAddress = httpClient.BaseAddress;
+        return $"{baseAddress}api/worldmap/{serverId}/tiles/grouped/{x}/{y}";
     }
 }
