@@ -96,8 +96,9 @@
         {
             try
             {
-                var tileUrl = MapService.GetTileImageUrl(_serverGuid, 0, 0);
-                var baseUrl = tileUrl.Replace("/0/0", "/{x}/{y}");
+                var baseTileUrl = MapService.GetBaseTileUrl(_serverGuid);
+                var authToken = await MapService.GetTileServerBearerTokenAsync();
+                
                 
                 // Calculate center from bounds
                 var centerX = (_bounds.MinChunkX + _bounds.MaxChunkX) / 2.0;
@@ -105,8 +106,9 @@
                 
                 await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap",
                     "map",
-                    baseUrl,
+                baseTileUrl,
                     new[] { centerX, centerZ } // center [lon, lat]
+                    ,authToken
                 );
 
                 _mapInitialized = true;

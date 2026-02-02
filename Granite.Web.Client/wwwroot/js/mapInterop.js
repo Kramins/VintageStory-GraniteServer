@@ -2,7 +2,7 @@ window.mapInterop = {
     map: null,
     tileLayer: null,
 
-    initializeMap: function (elementId, tileUrlTemplate, center) {
+    initializeMap: function (elementId, baseUrl, center, authToken) {
         const TILE_SIZE = 256;
         const CHUNKS_PER_GROUP = 8;
 
@@ -55,9 +55,7 @@ window.mapInterop = {
                     return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
                 }
 
-                const url = tileUrlTemplate
-                    .replace('{x}', groupX)
-                    .replace('{y}', groupZ);
+                const url = `${baseUrl}/${groupX}/${groupZ}`;
 
                
 
@@ -69,41 +67,27 @@ window.mapInterop = {
                 return url;
             },
             tileLoadFunction: function (imageTile, src) {
-                // Skip if it's a data URL (known failed tile)
-                if (src.startsWith('data:')) {
-                    imageTile.getImage().src = src;
-                    return;
-                }
-
                 const img = imageTile.getImage();
-                img.crossOrigin = 'anonymous';
-
-                const match = src.match(/grouped\/(-?\d+)\/(-?\d+)/);
-                if (!match) {
+                if (src.startsWith('data:')) {
                     img.src = src;
                     return;
                 }
-
-                const groupX = parseInt(match[1]);
-                const groupZ = parseInt(match[2]);
-                const key =  window.mapInterop.getTileKey(groupX, groupZ);
-
-                img.onload = () => {
-                    tileCache.loaded.add(key);
-                    tileCache.pending.delete(key);
-                    console.log(`✓ Tile loaded: (${groupX}, ${groupZ})`);
-                };
-
-                img.onerror = () => {
-                    tileCache.failed.add(key);
-                    tileCache.pending.delete(key);
-                    console.log(`✗ Tile failed: (${groupX}, ${groupZ}) - won't retry`);
-
-                    // Set to transparent tile so it doesn't show a broken image
-                    img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-                };
-
-                img.src = src;
+                // imageTile.setState(ol.TileState.LOADING);
+                fetch(src, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                }).then(resp => {
+                    if (!resp.ok) throw new Error(resp.statusText);
+                    return resp.blob();
+                }).then(blob => {
+                    const objectUrl = URL.createObjectURL(blob);
+                    img.src = objectUrl;
+                    // imageTile.setState(ol.TileState.LOADED);
+                }).catch(err => {
+                    console.error('Tile load failed', err);
+                    // imageTile.setState(ol.TileState.ERROR);
+                });
             }
         });
 

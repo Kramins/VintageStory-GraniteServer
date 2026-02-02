@@ -75,7 +75,7 @@ namespace Granite.Server.Controllers
         /// <summary>
         /// Gets the rendered PNG image for a specific map chunk.
         /// </summary>
-        [AllowAnonymous]
+        // [AllowAnonymous]
         [HttpGet("{serverid:guid}/tiles/{chunkX:int}/{chunkZ:int}")]
         public async Task<IActionResult> GetTileImage(
             [FromRoute] Guid serverid,
@@ -149,7 +149,7 @@ namespace Granite.Server.Controllers
         /// <summary>
         /// Gets a grouped tile image (256×256 pixels) from 8×8 chunks with fog of war for missing chunks.
         /// </summary>
-        [AllowAnonymous]
+        // [AllowAnonymous]
         [HttpGet("{serverid:guid}/tiles/grouped/{groupX:int}/{groupZ:int}")]
         public async Task<IActionResult> GetGroupedTileImage(
             [FromRoute] Guid serverid,

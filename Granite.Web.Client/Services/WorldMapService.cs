@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using Granite.Common.Dto;
+using Granite.Web.Client.Services.Auth;
 using Microsoft.Extensions.Logging;
 
 namespace Granite.Web.Client.Services;
@@ -7,11 +8,13 @@ namespace Granite.Web.Client.Services;
 public class WorldMapService
 {
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly CustomAuthenticationStateProvider _authProvider;
     private readonly ILogger<WorldMapService> _logger;
 
-    public WorldMapService(IHttpClientFactory httpClientFactory, ILogger<WorldMapService> logger)
+    public WorldMapService(IHttpClientFactory httpClientFactory, CustomAuthenticationStateProvider authenticationStateProvider,  ILogger<WorldMapService> logger)
     {
         _httpClientFactory = httpClientFactory;
+        _authProvider = authenticationStateProvider;
         _logger = logger;
     }
 
@@ -61,10 +64,16 @@ public class WorldMapService
         }
     }
 
-    public string GetTileImageUrl(Guid serverId, int x, int y)
+    public async Task<string> GetTileServerBearerTokenAsync()
+    {
+        var token = await _authProvider.GetTokenAsync();
+        return token ?? string.Empty;
+    }
+
+    public string GetBaseTileUrl(Guid serverId)
     {
         var httpClient = _httpClientFactory.CreateClient("GraniteApi");
         var baseAddress = httpClient.BaseAddress;
-        return $"{baseAddress}api/worldmap/{serverId}/tiles/grouped/{x}/{y}";
+        return $"{baseAddress}api/worldmap/{serverId}/tiles/grouped";
     }
 }
