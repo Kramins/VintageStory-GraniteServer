@@ -31,6 +31,7 @@ public class MessageBridgeService : IAsyncDisposable
 
     public Task StartAsync()
     {
+        // If we start tracking subscription filters this will have to be refactored
         if (_isStarted)
         {
             _logger.LogWarning("[ClientEventBridge] Event bridge already started");

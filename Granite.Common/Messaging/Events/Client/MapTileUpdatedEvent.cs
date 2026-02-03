@@ -9,10 +9,10 @@ namespace Granite.Common.Messaging.Events.Client;
 /// The client can use this to refresh map titles in its UI.
 /// </summary>
 [ClientEvent]
-public class MapTitleUpdateEvent : EventMessage<MapTitleUpdateEventData> { }
+public class MapTileUpdatedEvent : EventMessage<MapTileUpdateEventData> { }
 
-public class MapTitleUpdateEventData
+public class MapTileUpdateEventData
 {
-    public int ChunkX { get; set; }
-    public int ChunkZ { get; set; }
+    public int TileX { get; set; }
+    public int TileZ { get; set; }
 }

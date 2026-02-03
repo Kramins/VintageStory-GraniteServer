@@ -96,6 +96,8 @@ public record MapChunkExtractedData(
     string ContentHash,
     ushort[] RainHeightMap,
     int[] SurfaceBlockIds,
+    float AverageTemperature,
+    float AverageRainfall,
     DateTime ExtractedAt
 );
 

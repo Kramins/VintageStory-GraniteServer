@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Granite.Server.Services.Map;
 using GraniteServer.Map;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -11,13 +12,15 @@ public class MapRenderingServiceTests
 {
     private readonly IMapDataStorageService _mockStorageService;
     private readonly ILogger<MapRenderingService> _mockLogger;
+    private readonly IMemoryCache _mockMemoryCache;
     private readonly MapRenderingService _service;
 
     public MapRenderingServiceTests()
     {
         _mockStorageService = Substitute.For<IMapDataStorageService>();
         _mockLogger = Substitute.For<ILogger<MapRenderingService>>();
-        _service = new MapRenderingService(_mockStorageService, _mockLogger);
+        _mockMemoryCache = Substitute.For<IMemoryCache>();
+        _service = new MapRenderingService(_mockStorageService, _mockMemoryCache, _mockLogger);
     }
 
     [Fact]
@@ -176,19 +179,6 @@ public class MapRenderingServiceTests
 
         // Storage should only be called once for data (second call uses cache)
         await _mockStorageService.Received(1).GetChunkDataAsync(serverId, 0, 0);
-    }
-
-    [Fact]
-    public void InvalidateCache_ClearsServerCache()
-    {
-        // This is mostly for coverage - invalidation is internal state
-        var serverId = Guid.NewGuid();
-
-        // Act - should not throw
-        var act = () => _service.InvalidateCache(serverId);
-
-        // Assert
-        act.Should().NotThrow();
     }
 
     [Fact]

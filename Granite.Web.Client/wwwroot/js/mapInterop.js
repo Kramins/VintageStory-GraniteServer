@@ -3,6 +3,7 @@ window.mapInterop = {
     tileLayer: null,
 
     initializeMap: function (elementId, baseUrl, center, authToken) {
+        var self = this;
         const TILE_SIZE = 256;
         const CHUNKS_PER_GROUP = 8;
 
@@ -12,7 +13,7 @@ window.mapInterop = {
         const SPAWN_GROUP_Z = Math.floor(SPAWN_CHUNK_Z / CHUNKS_PER_GROUP);
 
         // Tile cache: track which tiles exist and which don't
-        const tileCache = {
+        this.tileCache = {
             loaded: new Set(),    // Successfully loaded tiles
             failed: new Set(),    // Tiles that returned 404
             pending: new Map(),   // Currently loading tiles
@@ -50,19 +51,19 @@ window.mapInterop = {
                 const key = window.mapInterop.getTileKey(groupX, groupZ);
 
                 // If we know this tile failed before, return a data URL for empty tile
-                if (tileCache.failed.has(key)) {
-                    // Return a 1x1 transparent PNG to avoid the request
-                    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-                }
+                // if (self.tileCache.failed.has(key)) {
+                //     // Return a 1x1 transparent PNG to avoid the request
+                //     return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+                // }
 
                 const url = `${baseUrl}/${groupX}/${groupZ}`;
 
                
 
                 // Mark as pending
-                if (!tileCache.loaded.has(key) && !tileCache.pending.has(key)) {
-                    tileCache.pending.set(key, Date.now());
-                }
+                // if (!self.tileCache.loaded.has(key) && !self.tileCache.pending.has(key)) {
+                //     self.tileCache.pending.set(key, Date.now());
+                // }
 
                 return url;
             },
@@ -85,7 +86,7 @@ window.mapInterop = {
                     img.src = objectUrl;
                     // imageTile.setState(ol.TileState.LOADED);
                 }).catch(err => {
-                    console.error('Tile load failed', err);
+                    //console.error('Tile load failed', err);
                     // imageTile.setState(ol.TileState.ERROR);
                 });
             }
@@ -107,6 +108,8 @@ window.mapInterop = {
                 enableRotation: false
             })
         });
+
+        this.map = map;
     },
     getTileKey: function(groupX, groupZ) {
         return `${groupX},${groupZ}`;
@@ -140,6 +143,18 @@ window.mapInterop = {
             return { x: center[0], z: center[1], zoom: view.getZoom() };
         }
         return null;
+    },
+    invalidateTile: function (groupX, groupZ) {
+        const key = this.getTileKey(groupX, groupZ);
+
+        this.tileCache.loaded.delete(key);
+        this.tileCache.failed.delete(key);
+        this.tileCache.pending.delete(key);
+
+        const layer = this.map.getLayers().item(0);
+        layer.getSource().refresh();
+
+        console.log(`Invalidated tile ${key}`);
     },
 
     dispose: function () {

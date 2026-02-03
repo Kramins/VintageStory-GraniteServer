@@ -155,6 +155,8 @@ public class WorldMapHostedService : IHostedService, IDisposable
                         ContentHash = chunkData.ContentHash,
                         RainHeightMap = chunkData.RainHeightMap.Select(i => (int)i).ToArray(),
                         SurfaceBlockIds = chunkData.SurfaceBlockIds,
+                        AverageTemperature = chunkData.AverageTemperature,
+                        AverageRainfall = chunkData.AverageRainfall,
                         ExtractedAt = DateTime.UtcNow,
                     };
 

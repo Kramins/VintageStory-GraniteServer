@@ -28,12 +28,20 @@ namespace Granite.Data.Migrations.Postgres
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BlockMaterial")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Class")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
                     b.Property<int>("CollectibleId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("LastSynced")
                         .HasColumnType("timestamp with time zone");
@@ -45,6 +53,10 @@ namespace Granite.Data.Migrations.Postgres
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<Guid>("ServerId")
                         .HasColumnType("uuid");

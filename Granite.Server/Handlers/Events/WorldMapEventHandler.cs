@@ -32,7 +32,6 @@ public class WorldMapEventHandler
         _logger = logger;
     }
 
-
     async Task IEventHandler<MapChunkDataEvent>.Handle(MapChunkDataEvent @event)
     {
         var data = @event.Data;
@@ -67,17 +66,22 @@ public class WorldMapEventHandler
         {
             // Invalidate cached tile for this chunk
             _renderingService.InvalidateChunk(serverId, data.ChunkX, data.ChunkZ);
-            _messageBus.CreateEvent<MapTitleUpdateEvent>(
+
+            var tileCoords = _renderingService.ChunkCoordsToTileCoords(data.ChunkX, data.ChunkZ);
+
+            var mapTileUpdatedEvent = _messageBus.CreateEvent<MapTileUpdatedEvent>(
                 @event.OriginServerId,
                 e =>
                 {
-                    e.Data = new MapTitleUpdateEventData
+                    e.Data = new MapTileUpdateEventData
                     {
-                        ChunkX = data.ChunkX,
-                        ChunkZ = data.ChunkZ,
+                        TileX = tileCoords.TileX,
+                        TileZ = tileCoords.TileZ,
                     };
                 }
             );
+
+            _messageBus.Publish(mapTileUpdatedEvent);
             _logger.LogInformation(
                 "Stored chunk ({ChunkX}, {ChunkZ}) for server {ServerId}",
                 data.ChunkX,

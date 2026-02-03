@@ -137,6 +137,9 @@ namespace Granite.Data.Migrations.Sqlite
                     Type = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     MaxStackSize = table.Column<int>(type: "INTEGER", nullable: false),
                     Class = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    Domain = table.Column<string>(type: "TEXT", nullable: false),
+                    Path = table.Column<string>(type: "TEXT", nullable: false),
+                    BlockMaterial = table.Column<string>(type: "TEXT", nullable: false),
                     LastSynced = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>

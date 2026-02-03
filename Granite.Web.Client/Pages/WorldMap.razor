@@ -13,7 +13,7 @@
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <MudText Typo="Typo.h3" GutterBottom="true">World Map</MudText>
-    
+
     @if (_isLoading)
     {
         <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
@@ -52,8 +52,10 @@
                         <MudText Typo="Typo.body2"><strong>Chunk Z:</strong> @_selectedTileMetadata.ChunkZ</MudText>
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudText Typo="Typo.body2"><strong>Size:</strong> @_selectedTileMetadata.Width x @_selectedTileMetadata.Height</MudText>
-                        <MudText Typo="Typo.body2"><strong>Extracted:</strong> @_selectedTileMetadata.ExtractedAt.ToString("g")</MudText>
+                        <MudText Typo="Typo.body2"><strong>Size:</strong> @_selectedTileMetadata.Width x
+                            @_selectedTileMetadata.Height</MudText>
+                        <MudText Typo="Typo.body2"><strong>Extracted:</strong> @_selectedTileMetadata.ExtractedAt.ToString("g")
+                        </MudText>
                     </MudItem>
                 </MudGrid>
             </MudPaper>
@@ -98,22 +100,29 @@
             {
                 var baseTileUrl = MapService.GetBaseTileUrl(_serverGuid);
                 var authToken = await MapService.GetTileServerBearerTokenAsync();
-                
-                
+
+
                 // Calculate center from bounds
                 var centerX = (_bounds.MinChunkX + _bounds.MaxChunkX) / 2.0;
                 var centerZ = (_bounds.MinChunkZ + _bounds.MaxChunkZ) / 2.0;
-                
+
                 await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap",
-                    "map",
+                "map",
                 baseTileUrl,
-                    new[] { centerX, centerZ } // center [lon, lat]
-                    ,authToken
+                new[] { centerX, centerZ } // center [lon, lat]
+                , authToken
                 );
 
                 _mapInitialized = true;
-                Logger.LogInformation("Map initialized for server {ServerId} with center ({CenterX}, {CenterZ})", 
-                    _serverGuid, centerX, centerZ);
+                Logger.LogInformation("Map initialized for server {ServerId} with center ({CenterX}, {CenterZ})",
+                _serverGuid, centerX, centerZ);
+
+                MapService.SubscribeToTileUpdates(_serverGuid, async (metadata) =>
+                {
+                    Logger.LogInformation("Received map tile update for server {ServerId} at tile ({TileX}, {TileZ})",
+                    _serverGuid, metadata.Data.TileX, metadata.Data.TileZ);
+                    await JSRuntime.InvokeVoidAsync("mapInterop.invalidateTile", metadata.Data.TileX, metadata.Data.TileZ);
+                } );
             }
             catch (Exception ex)
             {
@@ -132,7 +141,7 @@
         try
         {
             _bounds = await MapService.GetWorldBoundsAsync(_serverGuid);
-            
+
             if (_bounds == null)
             {
                 _error = "No map data available for this server.";

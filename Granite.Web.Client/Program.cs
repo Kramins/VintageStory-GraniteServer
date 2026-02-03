@@ -53,12 +53,14 @@ builder
     .AddHttpMessageHandler<AuthenticationDelegatingHandler>();
 
 // Register API clients as Singleton - they use IHttpClientFactory which properly manages scopes
+// I think all these need to be Scoped instead of Singleton? They only depend on HttpClientFactory which is Scoped.
 builder.Services.AddSingleton<IServerPlayersApiClient, ServerPlayersApiClient>();
 builder.Services.AddSingleton<IPlayersApiClient, PlayersApiClient>();
 builder.Services.AddSingleton<IModsApiClient, ModsApiClient>();
 builder.Services.AddSingleton<IServerApiClient, ServerApiClient>();
 builder.Services.AddSingleton<IAuthApiClient, AuthApiClient>();
 builder.Services.AddSingleton<IWorldApiClient, WorldApiClient>();
+
 builder.Services.AddScoped<WorldMapService>();
 
 // Register message bus and event handling infrastructure

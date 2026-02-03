@@ -138,6 +138,9 @@ namespace Granite.Data.Migrations.Postgres
                     Type = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     MaxStackSize = table.Column<int>(type: "integer", nullable: false),
                     Class = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Domain = table.Column<string>(type: "text", nullable: false),
+                    Path = table.Column<string>(type: "text", nullable: false),
+                    BlockMaterial = table.Column<string>(type: "text", nullable: false),
                     LastSynced = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>

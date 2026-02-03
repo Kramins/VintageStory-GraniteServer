@@ -50,22 +50,29 @@ public class SyncCollectiblesCommandHandler : ICommandHandler<SyncCollectiblesCo
     private CollectibleEventData MapCollectibleToEventData(CollectibleObject collectible)
     {
         var text = collectible.ItemClass.Name();
+        
         var itemName = Lang.GetMatching(
             collectible.Code?.Domain + ":" + text + "-" + collectible.Code?.Path,
             new[] { "" }
         );
 
         var type = "item";
+        var blockMaterial = "";
         if (collectible is Block)
         {
+            var block = (Block)collectible;
+            blockMaterial = block.BlockMaterial.ToString();
             type = "block";
         }
 
         return new CollectibleEventData
         {
             Id = collectible.Id,
+            Domain = collectible.Code?.Domain ?? "",
+            Path = collectible.Code?.Path ?? "",
             Name = itemName,
             Class = collectible.Class,
+            BlockMaterial = blockMaterial,
             MaxStackSize = collectible.MaxStackSize,
             Type = type
         };

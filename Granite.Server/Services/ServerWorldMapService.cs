@@ -1,7 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using Granite.Common.Dto;
 using Granite.Server.Services.Map;
 using GraniteServer.Data;
@@ -20,7 +20,8 @@ public class ServerWorldMapService : IServerWorldMapService
         IMapDataStorageService mapDataStorage,
         IMapRenderingService mapRendering,
         GraniteDataContext dbContext,
-        ILogger<ServerWorldMapService> logger)
+        ILogger<ServerWorldMapService> logger
+    )
     {
         _mapDataStorage = mapDataStorage;
         _mapRendering = mapRendering;
@@ -32,8 +33,8 @@ public class ServerWorldMapService : IServerWorldMapService
     {
         try
         {
-            var chunks = await _dbContext.MapChunks
-                .Where(c => c.ServerId == serverId)
+            var chunks = await _dbContext
+                .MapChunks.Where(c => c.ServerId == serverId)
                 .Select(c => new { c.ChunkX, c.ChunkZ })
                 .ToListAsync();
 
@@ -50,7 +51,7 @@ public class ServerWorldMapService : IServerWorldMapService
                 MaxChunkX = chunks.Max(c => c.ChunkX),
                 MinChunkZ = chunks.Min(c => c.ChunkZ),
                 MaxChunkZ = chunks.Max(c => c.ChunkZ),
-                TotalChunks = chunks.Count
+                TotalChunks = chunks.Count,
             };
         }
         catch (Exception ex)
@@ -64,12 +65,18 @@ public class ServerWorldMapService : IServerWorldMapService
     {
         try
         {
-            var chunk = await _dbContext.MapChunks
-                .FirstOrDefaultAsync(c => c.ServerId == serverId && c.ChunkX == chunkX && c.ChunkZ == chunkZ);
+            var chunk = await _dbContext.MapChunks.FirstOrDefaultAsync(c =>
+                c.ServerId == serverId && c.ChunkX == chunkX && c.ChunkZ == chunkZ
+            );
 
             if (chunk == null)
             {
-                _logger.LogWarning("Chunk ({ChunkX}, {ChunkZ}) not found for server {ServerId}", chunkX, chunkZ, serverId);
+                _logger.LogWarning(
+                    "Chunk ({ChunkX}, {ChunkZ}) not found for server {ServerId}",
+                    chunkX,
+                    chunkZ,
+                    serverId
+                );
                 return null;
             }
 
@@ -80,10 +87,18 @@ public class ServerWorldMapService : IServerWorldMapService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error rendering tile image for chunk ({ChunkX}, {ChunkZ}) on server {ServerId}", chunkX, chunkZ, serverId);
+            _logger.LogError(
+                ex,
+                "Error rendering tile image for chunk ({ChunkX}, {ChunkZ}) on server {ServerId}",
+                chunkX,
+                chunkZ,
+                serverId
+            );
             throw;
         }
     }
+
+    
 
     public async Task<byte[]?> GetGroupedTileImageAsync(Guid serverId, int groupX, int groupZ)
     {
@@ -96,21 +111,37 @@ public class ServerWorldMapService : IServerWorldMapService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error rendering grouped tile image for group ({GroupX}, {GroupZ}) on server {ServerId}", groupX, groupZ, serverId);
+            _logger.LogError(
+                ex,
+                "Error rendering grouped tile image for group ({GroupX}, {GroupZ}) on server {ServerId}",
+                groupX,
+                groupZ,
+                serverId
+            );
             throw;
         }
     }
 
-    public async Task<MapTileMetadataDTO?> GetTileMetadataAsync(Guid serverId, int chunkX, int chunkZ)
+    public async Task<MapTileMetadataDTO?> GetTileMetadataAsync(
+        Guid serverId,
+        int chunkX,
+        int chunkZ
+    )
     {
         try
         {
-            var chunk = await _dbContext.MapChunks
-                .FirstOrDefaultAsync(c => c.ServerId == serverId && c.ChunkX == chunkX && c.ChunkZ == chunkZ);
+            var chunk = await _dbContext.MapChunks.FirstOrDefaultAsync(c =>
+                c.ServerId == serverId && c.ChunkX == chunkX && c.ChunkZ == chunkZ
+            );
 
             if (chunk == null)
             {
-                _logger.LogWarning("Chunk ({ChunkX}, {ChunkZ}) not found for server {ServerId}", chunkX, chunkZ, serverId);
+                _logger.LogWarning(
+                    "Chunk ({ChunkX}, {ChunkZ}) not found for server {ServerId}",
+                    chunkX,
+                    chunkZ,
+                    serverId
+                );
                 return null;
             }
 
@@ -124,15 +155,26 @@ public class ServerWorldMapService : IServerWorldMapService
                 ChunkHash = chunk.ContentHash,
                 Width = chunkSize,
                 Height = chunkSize,
-                ExtractedAt = chunk.ExtractedAt
+                ExtractedAt = chunk.ExtractedAt,
             };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving tile metadata for chunk ({ChunkX}, {ChunkZ}) on server {ServerId}", chunkX, chunkZ, serverId);
+            _logger.LogError(
+                ex,
+                "Error retrieving tile metadata for chunk ({ChunkX}, {ChunkZ}) on server {ServerId}",
+                chunkX,
+                chunkZ,
+                serverId
+            );
             throw;
         }
     }
 
-    
+    public async Task<byte[]?> GetNotFoundTileImageAsync(Guid serverid, int chunkX, int chunkZ)
+    {
+        var mapTile = await _mapRendering.GetNotFoundTileImageAsync();
+
+        return mapTile;
+    }
 }

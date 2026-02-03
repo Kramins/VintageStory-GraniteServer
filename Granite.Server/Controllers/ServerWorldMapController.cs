@@ -31,7 +31,8 @@ namespace Granite.Server.Controllers
         /// </summary>
         [HttpGet("{serverid:guid}/bounds")]
         public async Task<ActionResult<JsonApiDocument<WorldMapBoundsDTO>>> GetWorldBounds(
-            [FromRoute] Guid serverid)
+            [FromRoute] Guid serverid
+        )
         {
             try
             {
@@ -39,25 +40,32 @@ namespace Granite.Server.Controllers
 
                 if (bounds == null)
                 {
-                    return NotFound(new JsonApiDocument<WorldMapBoundsDTO>
+                    return NotFound(
+                        new JsonApiDocument<WorldMapBoundsDTO>
                         {
                             Errors = new List<JsonApiError>
                             {
                                 new JsonApiError
                                 {
                                     Code = "404",
-                                Message = $"No map data found for server {serverid}"
-                            }
+                                    Message = $"No map data found for server {serverid}",
+                                },
+                            },
                         }
-                    });
+                    );
                 }
 
                 return Ok(new JsonApiDocument<WorldMapBoundsDTO> { Data = bounds });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving world bounds for server {ServerId}", serverid);
-                return StatusCode(StatusCodes.Status500InternalServerError,
+                _logger.LogError(
+                    ex,
+                    "Error retrieving world bounds for server {ServerId}",
+                    serverid
+                );
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
                     new JsonApiDocument<WorldMapBoundsDTO>
                     {
                         Errors = new List<JsonApiError>
@@ -65,80 +73,7 @@ namespace Granite.Server.Controllers
                             new JsonApiError
                             {
                                 Code = "500",
-                                Message = "An error occurred while retrieving world bounds"
-                    }
-                        }
-                    });
-            }
-        }
-
-        /// <summary>
-        /// Gets the rendered PNG image for a specific map chunk.
-        /// </summary>
-        // [AllowAnonymous]
-        [HttpGet("{serverid:guid}/tiles/{chunkX:int}/{chunkZ:int}")]
-        public async Task<IActionResult> GetTileImage(
-            [FromRoute] Guid serverid,
-            [FromRoute] int chunkX,
-            [FromRoute] int chunkZ
-        )
-        {
-            try
-            {
-                var imageBytes = await _worldMapService.GetTileImageAsync(serverid, chunkX, chunkZ);
-
-                if (imageBytes == null)
-                {
-                    return NotFound(
-                        new JsonApiDocument<object>
-                        {
-                            Errors = new List<JsonApiError>
-                            {
-                                new JsonApiError
-                                {
-                                    Code = "404",
-                                    Message =
-                                        $"Tile  chunk={chunkX},{chunkZ}) not found for server {serverid}",
-                                },
-                            },
-                        }
-                    );
-                }
-
-                // Get metadata for ETag generation
-                var metadata = await _worldMapService.GetTileMetadataAsync(
-                    serverid,
-                    chunkX,
-                    chunkZ
-                );
-                if (metadata != null)
-                {
-                    // Use chunk hash as ETag for cache validation
-                    Response.Headers.Append("ETag", $"\"{metadata.ChunkHash}\"");
-                    Response.Headers.Append("Cache-Control", "public, max-age=3600");
-                }
-
-                return File(imageBytes, "image/png");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Error retrieving tile image for (chunk {ChunkX}, {ChunkZ}) on server {ServerId}",
-                    chunkX,
-                    chunkZ,
-                    serverid
-                );
-                return StatusCode(
-                    StatusCodes.Status500InternalServerError,
-                    new JsonApiDocument<object>
-                    {
-                        Errors = new List<JsonApiError>
-                        {
-                            new JsonApiError
-                            {
-                                Code = "500",
-                                Message = "An error occurred while retrieving the tile image",
+                                Message = "An error occurred while retrieving world bounds",
                             },
                         },
                     }
@@ -167,20 +102,14 @@ namespace Granite.Server.Controllers
 
                 if (imageBytes == null)
                 {
-                    return NotFound(
-                        new JsonApiDocument<object>
-                        {
-                            Errors = new List<JsonApiError>
-                            {
-                                new JsonApiError
-                                {
-                                    Code = "404",
-                                    Message =
-                                        $"Grouped tile (group={groupX},{groupZ}) not found for server {serverid}",
-                                },
-                            },
-                        }
+                    imageBytes = await _worldMapService.GetNotFoundTileImageAsync(
+                        serverid,
+                        groupX,
+                        groupZ
                     );
+
+                    Response.Headers.Append("Cache-Control", "public, max-age=300"); // 5 minutes for not found tiles
+                    return File(imageBytes, "image/png");
                 }
 
                 Response.Headers.Append("Cache-Control", "public, max-age=86400"); // 24 hours for grouped tiles

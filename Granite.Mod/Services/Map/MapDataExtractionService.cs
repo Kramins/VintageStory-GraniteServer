@@ -5,6 +5,7 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
+using Vintagestory.Server;
 
 namespace Granite.Mod.Services.Map;
 
@@ -45,7 +46,7 @@ public class MapDataExtractionService : IMapDataExtractionService
     public int SpawnZ => (int)(_api.World?.DefaultSpawnPosition?.Z ?? MapSizeZ / 2);
 
     /// <inheritdoc/>
-    public bool IsAvailable => true;//_api.World != null && _isInitialized;
+    public bool IsAvailable => true; //_api.World != null && _isInitialized;
 
     /// <summary>
     /// Initializes the service. Should be called after world is loaded.
@@ -222,7 +223,8 @@ public class MapDataExtractionService : IMapDataExtractionService
     public MapChunkExtractedData? ExtractChunkData(int chunkX, int chunkZ)
     {
         var blockAccessor = _api.World.BlockAccessor;
-        var mapChunk = blockAccessor.GetMapChunk(chunkX, chunkZ);
+        var mapChunk = (ServerMapChunk)blockAccessor.GetMapChunk(chunkX, chunkZ);
+        // var climate = mapChunk.MapRegion.ClimateMap;
 
         if (mapChunk?.RainHeightMap == null)
         {
@@ -239,6 +241,8 @@ public class MapDataExtractionService : IMapDataExtractionService
         // Copy height map
         Array.Copy(mapChunk.RainHeightMap, heightMap, heightMap.Length);
 
+        var chunkAverageTemperature = 0f;
+        var chunkAverageRainfall = 0f;
         // Extract surface block IDs
         for (var localZ = 0; localZ < chunkSize; localZ++)
         {
@@ -255,13 +259,24 @@ public class MapDataExtractionService : IMapDataExtractionService
                 var block = blockAccessor.GetBlock(blockPos, BlockLayersAccess.FluidOrSolid);
 
                 surfaceBlockIds[heightMapIndex] = block?.Id ?? 0;
+
+                
+
+                var climate = blockAccessor.GetClimateAt(blockPos);
+                var temperature = climate.WorldGenTemperature;
+                var rainfall = climate.WorldgenRainfall;
+
+                chunkAverageTemperature += temperature;
+                chunkAverageRainfall += rainfall;
             }
         }
+
+        chunkAverageTemperature /= (chunkSize * chunkSize);
+        chunkAverageRainfall /= (chunkSize * chunkSize);
 
         // Calculate content hash
         var contentHash = CalculateContentHash(heightMap, surfaceBlockIds);
         mapChunk.SetModdata<string>("granite-hash", contentHash);
-
 
         return new MapChunkExtractedData(
             chunkX,
@@ -269,6 +284,8 @@ public class MapDataExtractionService : IMapDataExtractionService
             contentHash,
             heightMap,
             surfaceBlockIds,
+            chunkAverageTemperature,
+            chunkAverageRainfall,
             DateTime.UtcNow
         );
     }
@@ -317,7 +334,10 @@ public class MapDataExtractionService : IMapDataExtractionService
                         var worldZ = chunkZ * chunkSize + localZ;
 
                         var blockPos = new BlockPos(worldX, height, worldZ, 0);
-                        var block = blockAccessor.GetBlock(blockPos, BlockLayersAccess.FluidOrSolid);
+                        var block = blockAccessor.GetBlock(
+                            blockPos,
+                            BlockLayersAccess.FluidOrSolid
+                        );
                         surfaceBlockIds[heightMapIndex] = block?.Id ?? 0;
                     }
                 }
@@ -377,7 +397,10 @@ public class MapDataExtractionService : IMapDataExtractionService
                         var worldZ = chunkZ * chunkSize + localZ;
 
                         var blockPos = new BlockPos(worldX, height, worldZ, 0);
-                        var block = blockAccessor.GetBlock(blockPos, BlockLayersAccess.FluidOrSolid);
+                        var block = blockAccessor.GetBlock(
+                            blockPos,
+                            BlockLayersAccess.FluidOrSolid
+                        );
                         surfaceBlockIds[heightMapIndex] = block?.Id ?? 0;
                     }
                 }
@@ -387,9 +410,7 @@ public class MapDataExtractionService : IMapDataExtractionService
             }
         }
 
-        _logger.Debug(
-            $"[MapDataExtraction] Extracted {results.Count} total chunks for sync"
-        );
+        _logger.Debug($"[MapDataExtraction] Extracted {results.Count} total chunks for sync");
 
         return results;
     }

@@ -18,4 +18,7 @@ public class CollectibleEventData
     public string Type { get; set; } = string.Empty;
     public int MaxStackSize { get; set; }
     public string? Class { get; set; }
+    public string Domain { get; set; } = string.Empty;
+    public string Path { get; set; } = string.Empty;
+    public string BlockMaterial { get; set; } = string.Empty;
 }

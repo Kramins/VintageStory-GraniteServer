@@ -23,12 +23,20 @@ namespace Granite.Data.Migrations.Sqlite
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("BlockMaterial")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Class")
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("CollectibleId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("LastSynced")
                         .HasColumnType("TEXT");
@@ -39,6 +47,10 @@ namespace Granite.Data.Migrations.Sqlite
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("ServerId")

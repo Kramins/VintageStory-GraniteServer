@@ -9,6 +9,8 @@ using GraniteServer.Server.HostedServices;
 using GraniteServer.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -49,9 +51,12 @@ builder.Services.AddScoped<IPlayersService, PlayersService>();
 builder.Services.AddScoped<IMapDataStorageService, MapDataStorageService>();
 builder.Services.AddScoped<IMapRenderingService, MapRenderingService>();
 
+// TODO: need a better caching strategy here
+builder.Services.AddSingleton<IMemoryCache, MemoryCache>();
 
 // Add player name resolver for Vintage Story auth server integration
-builder.Services.AddHttpClient<IPlayerNameResolver, VintageStoryPlayerNameResolver>()
+builder
+    .Services.AddHttpClient<IPlayerNameResolver, VintageStoryPlayerNameResolver>()
     .ConfigureHttpClient(client =>
     {
         client.Timeout = TimeSpan.FromSeconds(10);
@@ -131,8 +136,10 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins(
-                "http://localhost:3000", "https://localhost:3000",  // Vite dev server (React)
-                "http://localhost:5148", "https://localhost:7171",   // Blazor WebAssembly dev server
+                "http://localhost:3000",
+                "https://localhost:3000", // Vite dev server (React)
+                "http://localhost:5148",
+                "https://localhost:7171", // Blazor WebAssembly dev server
                 "http://localhost:5500" // Live Server extension
             )
             .AllowAnyMethod()
@@ -153,7 +160,6 @@ builder.Services.AddSignalR(options =>
 
 // Add OpenAPI/Swagger
 // builder.Services.AddOpenApi();
-
 
 var app = builder.Build();
 
@@ -187,18 +193,13 @@ app.MapHub<ClientHub>("/hub/client");
 app.MapFallbackToFile("index.html");
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-
-}
+if (app.Environment.IsDevelopment()) { }
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-
-
 
 // Apply database migrations
 using (var scope = app.Services.CreateScope())
