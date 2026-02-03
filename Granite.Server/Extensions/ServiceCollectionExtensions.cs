@@ -55,6 +55,15 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<CollectiblesLoadedEventHandler>()
         );
 
+        // Register WorldMapEventHandler and its event handler implementation
+        services.AddScoped<WorldMapEventHandler>();
+        services.AddScoped<IEventHandler<MapChunkDataEvent>>(sp =>
+            sp.GetRequiredService<WorldMapEventHandler>()
+        );
+        services.AddScoped<IEventHandler<MapChunkHashesEvent>>(sp =>
+            sp.GetRequiredService<WorldMapEventHandler>()
+        );
+
         return services;
     }
 }

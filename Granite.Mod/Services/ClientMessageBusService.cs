@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using GraniteServer.Messaging;
 using GraniteServer.Messaging.Commands;
+using GraniteServer.Messaging.Events;
+using GraniteServer.Mod;
 using Vintagestory.API.Common;
 
 namespace GraniteServer.Services;
@@ -13,14 +15,16 @@ namespace GraniteServer.Services;
 public class ClientMessageBusService : MessageBusService
 {
     private readonly ILogger _logger;
+    private readonly GraniteModConfig _config;
     private readonly int _maxHistorySize;
     private readonly Queue<Guid> _commandQueue;
     private readonly HashSet<Guid> _processedCommands;
     private readonly object _lock = new();
 
-    public ClientMessageBusService(ILogger logger, int maxHistorySize = 1000)
+    public ClientMessageBusService(ILogger logger, GraniteModConfig config, int maxHistorySize = 1000)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _config = config ?? throw new ArgumentNullException(nameof(config));
 
         if (maxHistorySize <= 0)
             throw new ArgumentException(
@@ -35,6 +39,7 @@ public class ClientMessageBusService : MessageBusService
 
     /// <summary>
     /// Publishes a message. Commands are deduplicated to prevent duplicate execution.
+    /// Publishing happens on the ThreadPool to avoid blocking the game thread.
     /// </summary>
     public new void Publish(MessageBusMessage message)
     {
@@ -55,9 +60,14 @@ public class ClientMessageBusService : MessageBusService
                 MarkCommandProcessed(commandMessage.Id);
             }
         }
+        //// TOODO: Refactor class to use Channels over Task.Run
+        _ = Task.Run(() => base.Publish(message));
+    }
 
-        // Publish to subscribers
-        base.Publish(message);
+    public T CreateEvent<T>(Action<T> value)
+        where T : EventMessage
+    {
+        return base.CreateEvent<T>(_config.ServerId, value);
     }
 
     /// <summary>

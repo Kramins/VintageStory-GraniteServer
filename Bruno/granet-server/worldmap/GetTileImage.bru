@@ -1,0 +1,25 @@
+meta {
+  name: GetTileImage
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://{{HOST}}/api/worldmap/{{serverId}}/tiles/grouped/{{chunkX}}/{{chunkZ}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+vars:pre-request {
+  chunkX: 2000
+  chunkZ: 2000
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

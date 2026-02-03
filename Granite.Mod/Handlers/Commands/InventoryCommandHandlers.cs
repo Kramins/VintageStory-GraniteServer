@@ -45,7 +45,7 @@ public class QueryPlayerInventoryCommandHandler : ICommandHandler<QueryPlayerInv
         }
 
         var inventories = new Dictionary<string, List<InventorySlotEventData>>();
-
+        
         // TODO: Access player inventories correctly via Vintage Story API
         // This is a placeholder - need to investigate correct API usage
         

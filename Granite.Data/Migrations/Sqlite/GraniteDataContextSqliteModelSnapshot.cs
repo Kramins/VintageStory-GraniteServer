@@ -23,12 +23,20 @@ namespace Granite.Data.Migrations.Sqlite
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("BlockMaterial")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Class")
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("CollectibleId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("LastSynced")
                         .HasColumnType("TEXT");
@@ -39,6 +47,10 @@ namespace Granite.Data.Migrations.Sqlite
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("ServerId")
@@ -94,6 +106,55 @@ namespace Granite.Data.Migrations.Sqlite
                     b.HasIndex("ServerId", "Status", "CreatedAt");
 
                     b.ToTable("BufferedCommands");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.MapChunkEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ChunkX")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ChunkZ")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExtractedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastAccessedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RainHeightMapData")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SurfaceBlockIdsData")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastAccessedAt");
+
+                    b.HasIndex("ServerId", "ContentHash");
+
+                    b.HasIndex("ServerId", "ChunkX", "ChunkZ")
+                        .IsUnique();
+
+                    b.ToTable("MapChunks");
                 });
 
             modelBuilder.Entity("GraniteServer.Data.Entities.ModEntity", b =>
@@ -519,6 +580,17 @@ namespace Granite.Data.Migrations.Sqlite
                 });
 
             modelBuilder.Entity("GraniteServer.Data.Entities.CommandEntity", b =>
+                {
+                    b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
+                        .WithMany()
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Server");
+                });
+
+            modelBuilder.Entity("GraniteServer.Data.Entities.MapChunkEntity", b =>
                 {
                     b.HasOne("GraniteServer.Data.Entities.ServerEntity", "Server")
                         .WithMany()

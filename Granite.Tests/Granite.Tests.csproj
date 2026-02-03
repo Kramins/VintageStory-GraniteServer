@@ -27,8 +27,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Granite.Common\Granite.Common.csproj" />
-    <ProjectReference Include="..\Granite.Server\Granite.Server.csproj" />
     <ProjectReference Include="..\Granite.Data\Granite.Data.csproj" />
+    <ProjectReference Include="..\Granite.Server\Granite.Server.csproj" />
   </ItemGroup>
 
 </Project>

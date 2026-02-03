@@ -1,0 +1,26 @@
+/* OpenLayers map styling */
+#map {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.ol-control {
+    border-radius: 4px;
+}
+
+.ol-zoom {
+    top: 0.5em;
+    left: 0.5em;
+}
+
+.ol-attribution {
+    font-size: 11px;
+}
+
+/* Ensure map container has proper sizing */
+.map-container {
+    position: relative;
+    width: 100%;
+    height: 600px;
+    min-height: 400px;
+}

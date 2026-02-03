@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Vintage Story World Map</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@9.2.4/ol.css" />
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #111;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+  <script src="https://cdn.jsdelivr.net/npm/ol@9.2.4/dist/ol.js"></script>
+  <script>
+    const TILE_SIZE = 256;
+    const CHUNKS_PER_GROUP = 8;
+    const SERVER_ID = 'd3cd8403-ebd3-4cba-a88b-7cc63eb2c0c6';
+    const BASE_URL = 'http://localhost:5000';
+
+    const SPAWN_CHUNK_X = 15998;
+    const SPAWN_CHUNK_Z = 16000;
+    const SPAWN_GROUP_X = Math.floor(SPAWN_CHUNK_X / CHUNKS_PER_GROUP);
+    const SPAWN_GROUP_Z = Math.floor(SPAWN_CHUNK_Z / CHUNKS_PER_GROUP);
+
+    // Tile cache: track which tiles exist and which don't
+    const tileCache = {
+      loaded: new Set(),    // Successfully loaded tiles
+      failed: new Set(),    // Tiles that returned 404
+      pending: new Map(),   // Currently loading tiles
+    };
+
+    function getTileKey(groupX, groupZ) {
+      return `${groupX},${groupZ}`;
+    }
+
+    console.log('=== Vintage Story Map Initializing ===');
+    console.log(`Spawn: Chunk(${SPAWN_CHUNK_X}, ${SPAWN_CHUNK_Z}) = Group(${SPAWN_GROUP_X}, ${SPAWN_GROUP_Z})`);
+
+    const extent = [-1000000, -1000000, 1000000, 1000000];
+
+    const projection = new ol.proj.Projection({
+      code: 'VS-PIXEL',
+      units: 'pixels',
+      extent: extent
+    });
+
+    const tileGrid = new ol.tilegrid.TileGrid({
+      origin: [extent[0], extent[3]],
+      tileSize: TILE_SIZE,
+      resolutions: [1]
+    });
+
+    const tileSource = new ol.source.TileImage({
+      projection: projection,
+      tileGrid: tileGrid,
+      wrapX: false,
+      crossOrigin: 'anonymous',
+      tileUrlFunction: function (tileCoord) {
+        if (!tileCoord) return null;
+
+        const tileX = tileCoord[1];
+        const tileY = tileCoord[2];
+
+        const groupX = tileX + Math.floor(extent[0] / TILE_SIZE);
+        const groupZ = tileY - Math.floor(extent[3] / TILE_SIZE);
+
+        const key = getTileKey(groupX, groupZ);
+
+        // If we know this tile failed before, return a data URL for empty tile
+        if (tileCache.failed.has(key)) {
+          // Return a 1x1 transparent PNG to avoid the request
+          return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        }
+
+        const url = `${BASE_URL}/api/worldmap/${SERVER_ID}/tiles/grouped/${groupX}/${groupZ}`;
+
+        // Mark as pending
+        if (!tileCache.loaded.has(key) && !tileCache.pending.has(key)) {
+          tileCache.pending.set(key, Date.now());
+        }
+
+        return url;
+      },
+      tileLoadFunction: function (imageTile, src) {
+        // Skip if it's a data URL (known failed tile)
+        if (src.startsWith('data:')) {
+          imageTile.getImage().src = src;
+          return;
+        }
+
+        const img = imageTile.getImage();
+        img.crossOrigin = 'anonymous';
+
+        const match = src.match(/grouped\/(-?\d+)\/(-?\d+)/);
+        if (!match) {
+          img.src = src;
+          return;
+        }
+
+        const groupX = parseInt(match[1]);
+        const groupZ = parseInt(match[2]);
+        const key = getTileKey(groupX, groupZ);
+
+        img.onload = () => {
+          tileCache.loaded.add(key);
+          tileCache.pending.delete(key);
+          console.log(`✓ Tile loaded: (${groupX}, ${groupZ})`);
+        };
+
+        img.onerror = () => {
+          tileCache.failed.add(key);
+          tileCache.pending.delete(key);
+          console.log(`✗ Tile failed: (${groupX}, ${groupZ}) - won't retry`);
+
+          // Set to transparent tile so it doesn't show a broken image
+          img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        };
+
+        img.src = src;
+      }
+    });
+
+    const map = new ol.Map({
+      target: 'map',
+      layers: [new ol.layer.Tile({ source: tileSource })],
+      view: new ol.View({
+        projection: projection,
+        center: [
+          SPAWN_GROUP_X * TILE_SIZE,
+          -SPAWN_GROUP_Z * TILE_SIZE
+        ],
+        resolution: 1,
+        minResolution: 0.25,
+        maxResolution: 4,
+        constrainResolution: false,
+        enableRotation: false
+      })
+    });
+
+    map.on('moveend', () => {
+      const view = map.getView();
+      const center = view.getCenter();
+      const resolution = view.getResolution();
+      const zoom = Math.log2(1 / resolution);
+      const gx = Math.round(center[0] / TILE_SIZE);
+      const gz = Math.round(-center[1] / TILE_SIZE);
+      const cx = gx * CHUNKS_PER_GROUP;
+      const cz = gz * CHUNKS_PER_GROUP;
+      console.log(`View: Group(${gx}, ${gz}) = Chunk(${cx}, ${cz}), Zoom: ${zoom.toFixed(2)}x`);
+    });
+
+    map.on('click', (evt) => {
+      const [px, py] = evt.coordinate;
+      const gx = Math.floor(px / TILE_SIZE);
+      const gz = Math.floor(-py / TILE_SIZE);
+      const cx = gx * CHUNKS_PER_GROUP;
+      const cz = gz * CHUNKS_PER_GROUP;
+      console.log(`Clicked: Group(${gx}, ${gz}) = Chunk(${cx}, ${cz})`);
+    });
+
+    // Utility functions
+    window.vsMap = {
+      map: map,
+      cache: tileCache,
+      goToGroup: (groupX, groupZ, zoomLevel = null) => {
+        const view = map.getView();
+        view.setCenter([groupX * TILE_SIZE, -groupZ * TILE_SIZE]);
+        if (zoomLevel !== null) {
+          view.setResolution(1 / zoomLevel);
+        }
+        console.log(`Navigated to Group(${groupX}, ${groupZ})`);
+      },
+      goToChunk: (chunkX, chunkZ, zoomLevel = null) => {
+        const groupX = Math.floor(chunkX / CHUNKS_PER_GROUP);
+        const groupZ = Math.floor(chunkZ / CHUNKS_PER_GROUP);
+        const view = map.getView();
+        view.setCenter([groupX * TILE_SIZE, -groupZ * TILE_SIZE]);
+        if (zoomLevel !== null) {
+          view.setResolution(1 / zoomLevel);
+        }
+        console.log(`Navigated to Chunk(${chunkX}, ${chunkZ}) = Group(${groupX}, ${groupZ})`);
+      },
+      setZoom: (zoomLevel) => {
+        map.getView().setResolution(1 / zoomLevel);
+        console.log(`Set zoom to ${zoomLevel}x`);
+      },
+      getStats: () => {
+        console.log('=== Tile Cache Stats ===');
+        console.log(`Loaded: ${tileCache.loaded.size} tiles`);
+        console.log(`Failed: ${tileCache.failed.size} tiles (won't retry)`);
+        console.log(`Pending: ${tileCache.pending.size} tiles`);
+        return {
+          loaded: tileCache.loaded.size,
+          failed: tileCache.failed.size,
+          pending: tileCache.pending.size
+        };
+      },
+      clearFailedCache: () => {
+        const count = tileCache.failed.size;
+        tileCache.failed.clear();
+        console.log(`Cleared ${count} failed tiles from cache - will retry on next view`);
+        // Force tile refresh
+        tileSource.refresh();
+      }
+    };
+
+    console.log('=== Map Ready ===');
+    console.log('Use mouse wheel to zoom (0.25x to 4x)');
+    console.log('window.vsMap.getStats() - View tile cache statistics');
+    console.log('window.vsMap.clearFailedCache() - Clear failed tiles and retry');
+    console.log('window.vsMap.goToGroup(x, z, zoom?) - Navigate to group');
+    console.log('window.vsMap.goToChunk(x, z, zoom?) - Navigate to chunk');
+  </script>
+</body>
+
+</html>
