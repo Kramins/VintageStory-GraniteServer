@@ -1,0 +1,41 @@
+@page "/"
+@page "/{serverId}"
+@attribute [Authorize]
+
+<PageTitle>Dashboard - Granite Server Manager</PageTitle>
+
+
+<MudText Typo="Typo.h3" GutterBottom="true">Dashboard</MudText>
+<MudText Typo="Typo.body1">Welcome to Granite Server Manager</MudText>
+
+<MudGrid Class="mt-4">
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6">Server Status</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Success">Online</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6">Players</MudText>
+            <MudText Typo="Typo.body2">0 / 10</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6">Mods</MudText>
+            <MudText Typo="Typo.body2">0 installed</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6">Uptime</MudText>
+            <MudText Typo="Typo.body2">0h 0m</MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+}

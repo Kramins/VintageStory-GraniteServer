@@ -190,7 +190,7 @@ public class PlayerEventsHandler
                     PlayerId = playerEntity.Id,
                     ServerId = command.OriginServerId,
                     JoinDate = DateTime.UtcNow,
-                    IpAddress = playerEventData.IpAddress,
+                    IpAddress = playerEventData.IpAddress ?? string.Empty,
                     PlayerName = playerEventData.PlayerName,
                 };
 

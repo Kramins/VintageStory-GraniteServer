@@ -2,27 +2,23 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-# Install Node.js for frontend build
-RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm && rm -rf /var/lib/apt/lists/*
-
 # Copy solution and project files for restore layer caching
 COPY GraniteServer.sln ./
 COPY Granite.Common/Granite.Common.csproj Granite.Common/
 COPY Granite.Data/Granite.Data.csproj Granite.Data/
 COPY Granite.Mod/Granite.Mod.csproj Granite.Mod/
 COPY Granite.Server/Granite.Server.csproj Granite.Server/
+COPY Granite.Web.Client/Granite.Web.Client.csproj Granite.Web.Client/
 
 RUN dotnet restore GraniteServer.sln
 
 # Copy the rest of the source
 COPY . .
 
-# Build the frontend
-WORKDIR /src/Granite.Server/ClientApp
-RUN npm ci --silent
-RUN npm run build
+# Publish the Blazor WebAssembly client
+RUN dotnet publish -c Release Granite.Web.Client/Granite.Web.Client.csproj -o /app/client
 
-# Publish the server with SPA assets
+# Publish the server with Blazor assets
 WORKDIR /src/Granite.Server
 RUN dotnet publish -c Release -o /app/publish /p:BuildWebApp=true
 

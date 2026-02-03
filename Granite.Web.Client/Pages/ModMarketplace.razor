@@ -1,0 +1,13 @@
+@page "/mod-marketplace"
+@page "/{serverId}/mod-marketplace"
+@attribute [Authorize]
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+}
+
+<PageTitle>Mod Marketplace - Granite Server Manager</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Mod Marketplace</MudText>
+<MudText Typo="Typo.body1">Browse and install mods</MudText>

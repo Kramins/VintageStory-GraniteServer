@@ -74,12 +74,7 @@ public class ServerPlayersController : ControllerBase
         string playerId
     )
     {
-        if (!Guid.TryParse(playerId, out var playerGuid))
-        {
-            return BadRequest("Invalid playerId format");
-        }
-
-        var playerDetails = await _playerService.GetPlayerDetailsAsync(serverId, playerGuid);
+        var playerDetails = await _playerService.GetPlayerDetailsAsync(serverId, playerId);
 
         if (playerDetails == null)
         {
@@ -89,14 +84,7 @@ public class ServerPlayersController : ControllerBase
         return Ok(new JsonApiDocument<PlayerDetailsDTO> { Data = playerDetails });
     }
 
-    [HttpGet("find")]
-    public Task<ActionResult<PlayerNameIdDTO>> FindPlayerByName(
-        [FromRoute] Guid serverId,
-        [FromQuery] string name
-    )
-    {
-        throw new NotImplementedException("FindPlayerByName endpoint not yet implemented");
-    }
+   
 
     [HttpGet("sessions")]
     public Task<ActionResult<JsonApiDocument<IList<PlayerSessionDTO>>>> GetPlayerSessions(

@@ -1,0 +1,163 @@
+﻿@page "/login"
+@layout LoginLayout
+@inject IAuthApiClient AuthClient
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ILogger<Home> Logger
+@inject ISnackbar Snackbar
+
+<PageTitle>Login - Granite Server Manager</PageTitle>
+
+<MudPaper Elevation="8" Class="pa-8" Style="width: 100%; max-width: 450px;">
+    <MudText Typo="Typo.h4" Align="Align.Center" GutterBottom="true">
+        <MudIcon Icon="@Icons.Material.Filled.Castle" Size="Size.Large" Class="mr-2" />
+        Granite Server
+    </MudText>
+    <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary" Class="mb-6">
+        Sign in to continue
+    </MudText>
+
+    @if (_checkingAuth)
+    {
+        <div class="d-flex justify-center">
+            <MudProgressCircular Indeterminate="true" />
+        </div>
+    }
+    else
+    {
+        <EditForm Model="@_model" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+            
+            <MudTextField @bind-Value="_model.Username"
+                          Label="Username"
+                          Variant="Variant.Outlined"
+                          Required="true"
+                          Disabled="@_loading"
+                          Margin="Margin.Normal"
+                          FullWidth="true"
+                          AutoFocus="true" />
+            
+            <MudTextField @bind-Value="_model.Password"
+                          Label="Password"
+                          Variant="Variant.Outlined"
+                          InputType="InputType.Password"
+                          Required="true"
+                          Disabled="@_loading"
+                          Margin="Margin.Normal"
+                          FullWidth="true" />
+            
+            <MudButton ButtonType="ButtonType.Submit"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Size="Size.Large"
+                       FullWidth="true"
+                       Disabled="@_loading"
+                       Class="mt-6">
+                @if (_loading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Signing in...</span>
+                }
+                else
+                {
+                    <span>Sign In</span>
+                }
+            </MudButton>
+        </EditForm>
+
+        @if (!string.IsNullOrEmpty(_authType))
+        {
+            <MudText Typo="Typo.caption" Align="Align.Center" Color="Color.Secondary" Class="mt-4">
+                Authentication: @_authType
+            </MudText>
+        }
+    }
+</MudPaper>
+
+@code {
+    private LoginModel _model = new();
+    private bool _loading = false;
+    private bool _checkingAuth = true;
+    private string? _authType;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Check auth settings
+            var response = await AuthClient.GetAuthSettingsAsync();
+            
+            if (response.Data != null)
+            {
+                _authType = response.Data.AuthenticationType;
+                
+                // If auth is disabled, redirect to main app
+                if (string.IsNullOrEmpty(_authType) || _authType == "None")
+                {
+                    Navigation.NavigateTo("/", replace: true);
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load authentication settings");
+            Snackbar.Add("Failed to load authentication settings", Severity.Error);
+        }
+        finally
+        {
+            _checkingAuth = false;
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        _loading = true;
+        
+        try
+        {
+            Logger.LogInformation("Attempting login for user: {Username}", _model.Username);
+            var response = await AuthClient.LoginAsync(_model.Username, _model.Password);
+            
+            Logger.LogInformation("Login response received. Data is null: {IsNull}", response.Data == null);
+            if (response.Data != null)
+            {
+                Logger.LogInformation("AccessToken is null or empty: {IsNullOrEmpty}", string.IsNullOrEmpty(response.Data.AccessToken));
+            }
+
+            if (response.Data != null && !string.IsNullOrEmpty(response.Data.AccessToken))
+            {
+                // Store token
+                Logger.LogInformation("Storing token and redirecting...");
+                await ((CustomAuthenticationStateProvider)AuthStateProvider).SetTokenAsync(response.Data.AccessToken);
+                
+                Snackbar.Add("Login successful", Severity.Success);
+                
+                // Redirect to home
+                Navigation.NavigateTo("/", replace: true);
+            }
+            else
+            {
+                Logger.LogWarning("Invalid response from server - Data: {HasData}, Token: {HasToken}", 
+                    response.Data != null, 
+                    response.Data?.AccessToken);
+                Snackbar.Add("Invalid response from server", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Login failed");
+            Snackbar.Add("Invalid username or password", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private class LoginModel
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+}

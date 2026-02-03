@@ -1,6 +1,6 @@
 namespace Granite.Common.Dto.JsonApi;
 
-public class JsonApiMeta
+public record JsonApiMeta
 {
-    public PaginationMeta? Pagination { get; set; }
+    public PaginationMeta? Pagination { get; init; }
 }

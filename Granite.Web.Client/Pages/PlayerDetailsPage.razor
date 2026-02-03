@@ -1,0 +1,496 @@
+@page "/{serverId}/players/{playerUid}"
+@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using Granite.Web.Client.Store.Features.Players
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inherits FluxorComponent
+
+@inject IState<PlayersState> PlayersState
+@inject IDispatcher Dispatcher
+@inject NavigationManager Navigation
+@inject IServerPlayersApiClient PlayersApiClient
+@inject ISnackbar Snackbar
+
+<PageTitle>Player Details - @(PlayersState.Value.SelectedPlayerDetails?.Name ?? "Loading...")</PageTitle>
+
+@if (string.IsNullOrEmpty(ServerId) || string.IsNullOrEmpty(PlayerUid))
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+        <MudPaper Class="pa-8 d-flex flex-column align-center justify-center" Style="min-height: 400px;" Elevation="0">
+            <MudText Typo="Typo.h5" Color="Color.Secondary" Class="mb-2">
+                Invalid player or server ID
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Navigation.NavigateTo($"/{ServerId}/players"))">
+                Back to Players
+            </MudButton>
+        </MudPaper>
+    </MudContainer>
+}
+else if (PlayersState.Value.IsLoading && PlayersState.Value.SelectedPlayerDetails == null)
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+        <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="mt-8">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Typo="Typo.h6">Loading player details...</MudText>
+        </MudStack>
+    </MudContainer>
+}
+else if (!string.IsNullOrEmpty(PlayersState.Value.ErrorMessage))
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @PlayersState.Value.ErrorMessage
+        </MudAlert>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Navigation.NavigateTo($"/{ServerId}/players"))">
+            Back to Players
+        </MudButton>
+    </MudContainer>
+}
+else if (PlayersState.Value.SelectedPlayerDetails != null)
+{
+    var player = PlayersState.Value.SelectedPlayerDetails;
+    
+    <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+        @* Player Header *@
+        <MudStack Spacing="1" Class="mb-4">
+            <MudText Typo="Typo.h4">@player.Name</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                ID: @player.PlayerUID
+            </MudText>
+        </MudStack>
+
+        @* Action Buttons *@
+        <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background-color: var(--mud-palette-background-grey); border: 1px solid var(--mud-palette-divider);">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
+                <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
+                           OnClick="@HandleRefresh" 
+                           Disabled="@PlayersState.Value.IsLoading"
+                           Variant="Variant.Text">
+                    Refresh
+                </MudButton>
+                <MudButton StartIcon="@Icons.Material.Filled.PowerSettingsNew" 
+                           OnClick="@HandleKick" 
+                           Disabled="@PlayersState.Value.IsLoading"
+                           Variant="Variant.Text">
+                    Kick
+                </MudButton>
+                <MudButton StartIcon="@(player.IsBanned ? Icons.Material.Filled.LockOpen : Icons.Material.Filled.Block)" 
+                           OnClick="@HandleToggleBan" 
+                           Disabled="@PlayersState.Value.IsLoading"
+                           Variant="Variant.Text">
+                    @(player.IsBanned ? "Unban" : "Ban")
+                </MudButton>
+                <MudButton StartIcon="@(player.IsWhitelisted ? Icons.Material.Filled.PlaylistRemove : Icons.Material.Filled.PlaylistAddCheck)" 
+                           OnClick="@HandleToggleWhitelist" 
+                           Disabled="@PlayersState.Value.IsLoading"
+                           Variant="Variant.Text">
+                    @(player.IsWhitelisted ? "Remove WL" : "Whitelist")
+                </MudButton>
+                <MudSpacer />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Actions</MudText>
+            </MudStack>
+        </MudPaper>
+
+        @* Tabs *@
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+            <MudTabPanel Text="Overview" Icon="@Icons.Material.Filled.Dashboard">
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Elevation="0">
+                            <MudCardContent>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Connection State</MudText>
+                                <MudText Typo="Typo.h6">@(player.ConnectionState ?? "Offline")</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Elevation="0">
+                            <MudCardContent>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Last Join Date</MudText>
+                                <MudText Typo="Typo.h6">@FormatDate(player.LastJoinDate)</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Elevation="0">
+                            <MudCardContent>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">IP Address</MudText>
+                                <MudText Typo="Typo.h6">@(player.IpAddress ?? "N/A")</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Elevation="0">
+                            <MudCardContent>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Ping</MudText>
+                                <MudText Typo="Typo.h6">@player.Ping.ToString("F3")ms</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Elevation="0">
+                            <MudCardContent>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">First Join Date</MudText>
+                                <MudText Typo="Typo.h6">@FormatDate(player.FirstJoinDate)</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Elevation="0">
+                            <MudCardContent>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Language</MudText>
+                                <MudText Typo="Typo.h6">@(player.LanguageCode ?? "N/A")</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Elevation="0">
+                            <MudCardContent>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Role</MudText>
+                                <MudText Typo="Typo.body1" Color="@(player.IsAdmin ? Color.Error : Color.Default)">
+                                    @(player.IsAdmin ? "Admin" : "Player")
+                                </MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Elevation="0">
+                            <MudCardContent>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Status</MudText>
+                                <MudStack Row="true" Spacing="1">
+                                    @if (player.IsBanned)
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Error">Banned</MudText>
+                                    }
+                                    @if (player.IsWhitelisted)
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Success">Whitelisted</MudText>
+                                    }
+                                    @if (!player.IsBanned && !player.IsWhitelisted)
+                                    {
+                                        <MudText Typo="Typo.body2">Normal</MudText>
+                                    }
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    @if (player.Privileges != null && player.Privileges.Any())
+                    {
+                        <MudItem xs="12">
+                            <MudCard Elevation="0">
+                                <MudCardContent>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Privileges</MudText>
+                                    <MudText Typo="Typo.body2">@string.Join(", ", player.Privileges)</MudText>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    }
+
+                    @if (player.IsBanned && !string.IsNullOrEmpty(player.BanReason))
+                    {
+                        <MudItem xs="12">
+                            <MudAlert Severity="Severity.Error">
+                                <MudText Typo="Typo.body2"><strong>Ban Reason:</strong> @player.BanReason</MudText>
+                                @if (!string.IsNullOrEmpty(player.BanBy))
+                                {
+                                    <MudText Typo="Typo.caption">Banned by: @player.BanBy</MudText>
+                                }
+                            </MudAlert>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Inventory" Icon="@Icons.Material.Filled.Inventory">
+                @if (player.Inventories != null && player.Inventories.Any())
+                {
+                    @foreach (var inventory in player.Inventories)
+                    {
+                        <MudText Typo="Typo.h6" Class="mb-2">@inventory.Key</MudText>
+                        <MudPaper Elevation="0" Class="pa-2 mb-4" Style="background-color: var(--mud-palette-background-grey);">
+                            @if (inventory.Value.Slots != null && inventory.Value.Slots.Any())
+                            {
+                                <MudSimpleTable Dense="true" Hover="true">
+                                    <thead>
+                                        <tr>
+                                            <th>Slot</th>
+                                            <th>Item</th>
+                                            <th>Stack Size</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var slot in inventory.Value.Slots.Where(s => !string.IsNullOrEmpty(s.Name)))
+                                        {
+                                            <tr>
+                                                <td>@slot.SlotIndex</td>
+                                                <td>@slot.Name</td>
+                                                <td>@slot.StackSize</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </MudSimpleTable>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Empty</MudText>
+                            }
+                        </MudPaper>
+                    }
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">No inventories found.</MudAlert>
+                }
+            </MudTabPanel>
+
+            <MudTabPanel Text="Permissions" Icon="@Icons.Material.Filled.Security">
+                <MudText Typo="Typo.body1" Color="Color.Secondary">
+                    Permissions management coming soon...
+                </MudText>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Sessions" Icon="@Icons.Material.Filled.History">
+                <MudText Typo="Typo.body1" Color="Color.Secondary">
+                    Session history coming soon...
+                </MudText>
+            </MudTabPanel>
+        </MudTabs>
+    </MudContainer>
+
+    @* Kick Dialog *@
+    <MudDialog @bind-Visible="_kickDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+        <DialogContent>
+            <MudText Typo="Typo.h6" Class="mb-4">Kick Player</MudText>
+            <MudText Class="mb-4">Enter a reason for kicking this player:</MudText>
+            <MudTextField @bind-Value="_kickReason" 
+                          Label="Reason" 
+                          Variant="Variant.Outlined" 
+                          Lines="3" 
+                          FullWidth="true" />
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@(() => _kickDialogOpen = false)">Cancel</MudButton>
+            <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="@HandleKickConfirm">Kick</MudButton>
+        </DialogActions>
+    </MudDialog>
+
+    @* Ban Dialog *@
+    <MudDialog @bind-Visible="_banDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+        <DialogContent>
+            <MudText Typo="Typo.h6" Class="mb-4">Ban Player</MudText>
+            <MudText Class="mb-4">Enter a reason for banning this player:</MudText>
+            <MudTextField @bind-Value="_banReason" 
+                          Label="Reason" 
+                          Variant="Variant.Outlined" 
+                          Lines="3" 
+                          FullWidth="true" />
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@(() => _banDialogOpen = false)">Cancel</MudButton>
+            <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="@HandleBanConfirm">Ban</MudButton>
+        </DialogActions>
+    </MudDialog>
+
+    @* Unban Dialog *@
+    <MudDialog @bind-Visible="_unbanDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+        <DialogContent>
+            <MudText Typo="Typo.h6" Class="mb-4">Unban Player</MudText>
+            <MudText>Are you sure you want to unban @(PlayersState.Value.SelectedPlayerDetails?.Name)?</MudText>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@(() => _unbanDialogOpen = false)">Cancel</MudButton>
+            <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="@HandleUnbanConfirm">Unban</MudButton>
+        </DialogActions>
+    </MudDialog>
+
+    @* Whitelist Dialog *@
+    <MudDialog @bind-Visible="_whitelistDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+        <DialogContent>
+            <MudText Typo="Typo.h6" Class="mb-4">Whitelist Player</MudText>
+            <MudText>Are you sure you want to add @(PlayersState.Value.SelectedPlayerDetails?.Name) to the whitelist?</MudText>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@(() => _whitelistDialogOpen = false)">Cancel</MudButton>
+            <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="@HandleWhitelistConfirm">Whitelist</MudButton>
+        </DialogActions>
+    </MudDialog>
+
+    @* Remove Whitelist Dialog *@
+    <MudDialog @bind-Visible="_removeWhitelistDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+        <DialogContent>
+            <MudText Typo="Typo.h6" Class="mb-4">Remove from Whitelist</MudText>
+            <MudText>Are you sure you want to remove @(PlayersState.Value.SelectedPlayerDetails?.Name) from the whitelist?</MudText>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@(() => _removeWhitelistDialogOpen = false)">Cancel</MudButton>
+            <MudButton Color="Color.Warning" Variant="Variant.Filled" OnClick="@HandleRemoveWhitelistConfirm">Remove</MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+
+    [Parameter]
+    public string? PlayerUid { get; set; }
+
+    private bool _kickDialogOpen = false;
+    private string _kickReason = string.Empty;
+    private bool _banDialogOpen = false;
+    private string _banReason = string.Empty;
+    private bool _unbanDialogOpen = false;
+    private bool _whitelistDialogOpen = false;
+    private bool _removeWhitelistDialogOpen = false;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadPlayerDetails();
+    }
+
+    protected override void OnParametersSet()
+    {
+        LoadPlayerDetails();
+    }
+
+    private void LoadPlayerDetails()
+    {
+        if (!string.IsNullOrEmpty(ServerId) && !string.IsNullOrEmpty(PlayerUid))
+        {
+            Dispatcher.Dispatch(new FetchPlayerDetailsAction(ServerId, PlayerUid));
+        }
+    }
+
+    private void HandleRefresh()
+    {
+        LoadPlayerDetails();
+    }
+
+    private void HandleKick()
+    {
+        _kickReason = string.Empty;
+        _kickDialogOpen = true;
+    }
+
+    private async Task HandleKickConfirm()
+    {
+        try
+        {
+            await PlayersApiClient.KickPlayerAsync(ServerId!, PlayerUid!, _kickReason);
+            Snackbar.Add("Player kicked successfully", Severity.Success);
+            _kickDialogOpen = false;
+            _kickReason = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to kick player: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void HandleToggleBan()
+    {
+        var player = PlayersState.Value.SelectedPlayerDetails;
+        if (player == null) return;
+
+        if (player.IsBanned)
+        {
+            _unbanDialogOpen = true;
+        }
+        else
+        {
+            _banReason = string.Empty;
+            _banDialogOpen = true;
+        }
+    }
+
+    private async Task HandleBanConfirm()
+    {
+        try
+        {
+            await PlayersApiClient.BanPlayerAsync(ServerId!, PlayerUid!, _banReason);
+            Snackbar.Add("Player banned successfully", Severity.Success);
+            _banDialogOpen = false;
+            _banReason = string.Empty;
+            LoadPlayerDetails();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to ban player: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task HandleUnbanConfirm()
+    {
+        Snackbar.Add("Unban functionality not yet implemented", Severity.Info);
+        _unbanDialogOpen = false;
+        await Task.CompletedTask;
+    }
+
+    private void HandleToggleWhitelist()
+    {
+        var player = PlayersState.Value.SelectedPlayerDetails;
+        if (player == null) return;
+
+        if (player.IsWhitelisted)
+        {
+            _removeWhitelistDialogOpen = true;
+        }
+        else
+        {
+            _whitelistDialogOpen = true;
+        }
+    }
+
+    private async Task HandleWhitelistConfirm()
+    {
+        try
+        {
+            await PlayersApiClient.WhitelistPlayerAsync(ServerId!, PlayerUid!);
+            Snackbar.Add("Player whitelisted successfully", Severity.Success);
+            _whitelistDialogOpen = false;
+            LoadPlayerDetails();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to whitelist player: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task HandleRemoveWhitelistConfirm()
+    {
+        try
+        {
+            await PlayersApiClient.RemoveFromWhitelistAsync(ServerId!, PlayerUid!);
+            Snackbar.Add("Player removed from whitelist", Severity.Success);
+            _removeWhitelistDialogOpen = false;
+            LoadPlayerDetails();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to remove from whitelist: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private string FormatDate(string? dateString)
+    {
+        if (string.IsNullOrEmpty(dateString))
+            return "N/A";
+
+        if (DateTime.TryParse(dateString, out var date))
+        {
+            return date.ToString("yyyy-MM-dd, hh:mm:ss tt");
+        }
+
+        return dateString;
+    }
+}

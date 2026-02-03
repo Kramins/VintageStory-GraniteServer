@@ -1,0 +1,13 @@
+@page "/collectibles"
+@page "/{serverId}/collectibles"
+@attribute [Authorize]
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+}
+
+<PageTitle>Collectibles - Granite Server Manager</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Collectibles</MudText>
+<MudText Typo="Typo.body1">Collectibles page</MudText>

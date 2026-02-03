@@ -3,68 +3,68 @@ using Sieve.Attributes;
 
 namespace Granite.Common.Dto;
 
-public class PlayerDTO
+public record PlayerDTO
 {
     [Sieve(CanFilter = true, CanSort = true)]
-    public Guid Id { get; set; }
+    public Guid Id { get; init; }
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string PlayerUID { get; set; } = string.Empty;
+    public string PlayerUID { get; init; } = string.Empty;
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public Guid ServerId { get; set; }
+    public Guid ServerId { get; init; }
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public bool IsAdmin { get; set; }
+    public bool IsAdmin { get; init; }
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string IpAddress { get; set; } = string.Empty;
+    public string IpAddress { get; init; } = string.Empty;
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string LanguageCode { get; set; } = string.Empty;
+    public string LanguageCode { get; init; } = string.Empty;
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public float Ping { get; set; } = 0;
+    public float Ping { get; init; } = 0;
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string RolesCode { get; set; } = string.Empty;
+    public string RolesCode { get; init; } = string.Empty;
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string FirstJoinDate { get; set; } = string.Empty;
+    public string FirstJoinDate { get; init; } = string.Empty;
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string LastJoinDate { get; set; } = string.Empty;
+    public string LastJoinDate { get; init; } = string.Empty;
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string[] Privileges { get; set; } = Array.Empty<string>();
+    public string[] Privileges { get; init; } = Array.Empty<string>();
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string ConnectionState { get; set; } = string.Empty;
+    public string ConnectionState { get; init; } = string.Empty;
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public bool IsBanned { get; set; }
+    public bool IsBanned { get; init; }
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public bool IsWhitelisted { get; set; }
+    public bool IsWhitelisted { get; init; }
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string? BanReason { get; set; }
+    public string? BanReason { get; init; }
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string? BanBy { get; set; }
+    public string? BanBy { get; init; }
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public DateTime? BanUntil { get; set; }
+    public DateTime? BanUntil { get; init; }
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string? WhitelistedReason { get; set; }
+    public string? WhitelistedReason { get; init; }
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public string? WhitelistedBy { get; set; }
+    public string? WhitelistedBy { get; init; }
 
     [Sieve(CanFilter = true, CanSort = true)]
-    public DateTime? WhitelistedUntil { get; set; }
+    public DateTime? WhitelistedUntil { get; init; }
 }

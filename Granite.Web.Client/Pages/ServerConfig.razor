@@ -1,0 +1,13 @@
+@page "/server-config"
+@page "/{serverId}/config"
+@attribute [Authorize]
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+}
+
+<PageTitle>Configuration - Granite Server Manager</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Server Configuration</MudText>
+<MudText Typo="Typo.body1">Server configuration page</MudText>

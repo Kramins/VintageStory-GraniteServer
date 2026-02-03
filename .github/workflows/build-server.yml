@@ -30,15 +30,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Cache npm dependencies
-        uses: actions/cache@v4
-        with:
-          path: Granite.Server/ClientApp/node_modules
-          key: ${{ runner.os }}-npm-${{ hashFiles('Granite.Server/ClientApp/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
-
-
       - name: Restore .NET dependencies
         run: dotnet restore GraniteServer.sln
 
@@ -60,7 +51,7 @@ jobs:
 
       - name: Build Server (Debug)
         if: steps.version.outputs.is_release == 'false'
-        run: dotnet build -c Debug Granite.Server/Granite.Server.csproj /p:BuildWebApp=true
+        run: dotnet build -c Debug Granite.Server/Granite.Server.csproj
 
       - name: Build Server (Release)
         if: steps.version.outputs.is_release == 'true'
@@ -70,7 +61,7 @@ jobs:
         run: dotnet test GraniteServer.sln --configuration ${{ steps.version.outputs.is_release == 'true' && 'Release' || 'Debug' }} --verbosity normal
 
       - name: Publish Server
-        run: dotnet publish Granite.Server/Granite.Server.csproj -c ${{ steps.version.outputs.is_release == 'true' && 'Release' || 'Debug' }} -o ./publish/server
+        run: dotnet publish Granite.Server/Granite.Server.csproj -c ${{ steps.version.outputs.is_release == 'true' && 'Release' || 'Debug' }} -o ./publish/server /p:BuildWebApp=${{ steps.version.outputs.is_release == 'true' && 'true' || 'false' }}
 
       - name: Create server artifact archive
         shell: bash

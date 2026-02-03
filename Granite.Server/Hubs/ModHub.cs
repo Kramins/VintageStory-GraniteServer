@@ -52,14 +52,14 @@ public class ModHub : Hub
                 payload.GetProperty("messageType").GetString()
                 ?? throw new InvalidOperationException("messageType is required");
 
-            var type = FindMessageTypeByName(messageType);
+            var type = MessageDeserializer.FindMessageTypeByName(messageType);
             if (type == null)
             {
                 _logger.LogError($"[SignalR] Could not find message type: {messageType}");
                 throw new InvalidOperationException($"Unknown messageType: {messageType}");
             }
 
-            var message = DeserializeEvent(payload, type);
+            var message = MessageDeserializer.DeserializeMessage(payload, type);
 
             var isValid = ValidateMessage(message);
             if (!isValid)
@@ -126,45 +126,7 @@ public class ModHub : Hub
         return true;
     }
 
-    public MessageBusMessage DeserializeEvent(JsonElement payload, Type messageType)
-    {
-        // Configure JSON options to handle property name case-insensitivity and nested types
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        };
 
-        var message =
-            (MessageBusMessage?)
-                JsonSerializer.Deserialize(payload.GetRawText(), messageType, options)
-            ?? throw new InvalidOperationException("Failed to deserialize message");
-
-        return message;
-    }
-
-    private static Type? FindMessageTypeByName(string messageType)
-    {
-        return AppDomain
-            .CurrentDomain.GetAssemblies()
-            .SelectMany(assembly =>
-            {
-                try
-                {
-                    return assembly.GetTypes();
-                }
-                catch (ReflectionTypeLoadException ex)
-                {
-                    return ex.Types.Where(t => t != null)!;
-                }
-            })
-            .FirstOrDefault(t =>
-                t != null
-                && !t.IsAbstract
-                && typeof(MessageBusMessage).IsAssignableFrom(t)
-                && t.Name.Equals(messageType, StringComparison.OrdinalIgnoreCase)
-            );
-    }
 
     public async Task AcknowledgeCommand(Guid commandId)
     {

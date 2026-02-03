@@ -1,0 +1,220 @@
+@page "/players"
+@page "/{serverId}/players"
+@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using Granite.Web.Client.Store.Features.Players
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inherits FluxorComponent
+
+@inject IState<PlayersState> PlayersState
+@inject IDispatcher Dispatcher
+@inject NavigationManager Navigation
+
+<PageTitle>Players</PageTitle>
+
+@if (string.IsNullOrEmpty(ServerId))
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+        <MudPaper Class="pa-8 d-flex flex-column align-center justify-center" Style="min-height: 400px;" Elevation="0">
+            <MudText Typo="Typo.h5" Color="Color.Secondary" Class="mb-2">
+                Select a server to view and manage players
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Use the server dropdown in the navigation to select a server.
+            </MudText>
+        </MudPaper>
+    </MudContainer>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
+            <MudText Typo="Typo.h4">Players</MudText>
+            <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
+                       OnClick="@HandleRefresh" 
+                       Disabled="@PlayersState.Value.IsLoading">
+                Refresh
+            </MudButton>
+        </MudStack>
+
+        <MudPaper Elevation="0" Style="height: 600px;">
+            <MudDataGrid T="PlayerDTO" 
+                         Items="@PlayersState.Value.Players" 
+                         Dense="true"
+                         Hover="true"
+                         Loading="@PlayersState.Value.IsLoading"
+                         Height="560px">
+                <Columns>
+                    <TemplateColumn Title="Player" Sortable="false">
+                        <CellTemplate>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudAvatar Size="Size.Small" Color="Color.Primary">
+                                    @(context.Item.Name?.FirstOrDefault().ToString().ToUpper() ?? "?")
+                                </MudAvatar>
+                                <MudLink Href="@GetPlayerDetailsLink(context.Item.PlayerUID)" Underline="Underline.None">
+                                    @(context.Item.Name?.Length > 15 ? context.Item.Name.Substring(0, 15) : context.Item.Name)
+                                </MudLink>
+                            </MudStack>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    <TemplateColumn Title="Role" Sortable="false">
+                        <CellTemplate>
+                            <MudChip Size="Size.Small" 
+                                     Color="@(context.Item.IsAdmin ? Color.Error : Color.Default)">
+                                @(context.Item.IsAdmin ? "Admin" : "Player")
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    <TemplateColumn Title="Status" Sortable="false">
+                        <CellTemplate>
+                            <MudChip Size="Size.Small" 
+                                     Variant="Variant.Outlined"
+                                     Color="@(context.Item.ConnectionState == "Connected" ? Color.Success : Color.Default)">
+                                @(context.Item.ConnectionState ?? "Offline")
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    <PropertyColumn Property="p => p.Ping" Title="Ping" />
+                    <PropertyColumn Property="p => p.LanguageCode" Title="Lang" />
+                    
+                    <TemplateColumn Title="Actions" Sortable="false">
+                        <CellTemplate>
+                            <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true">
+                                <MudMenuItem OnClick="@(() => HandleKick(context.Item.PlayerUID))">Kick</MudMenuItem>
+                                <MudMenuItem OnClick="@(() => HandleToggleWhitelist(context.Item.Id))">
+                                    @(IsWhitelisted(context.Item.Id) ? "Remove from Whitelist" : "Add to Whitelist")
+                                </MudMenuItem>
+                                <MudMenuItem OnClick="@(() => HandleToggleBan(context.Item.Id))">
+                                    @(IsBanned(context.Item.Id) ? "Unban" : "Ban")
+                                </MudMenuItem>
+                            </MudMenu>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="PlayerDTO" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudPaper>
+    </MudContainer>
+
+    @* Kick Dialog *@
+    <MudDialog @bind-Visible="_kickDialogOpen">
+        <DialogContent>
+            <MudText Typo="Typo.h6" Class="mb-4">Kick Player</MudText>
+            <MudText Class="mb-4">Enter a reason for kicking this player:</MudText>
+            <MudTextField @bind-Value="_kickReason" 
+                          Label="Reason" 
+                          Variant="Variant.Outlined" 
+                          Lines="3" 
+                          FullWidth="true" />
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@(() => _kickDialogOpen = false)">Cancel</MudButton>
+            <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="@HandleKickConfirm">Kick</MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+
+    private bool _kickDialogOpen = false;
+    private string _kickReason = string.Empty;
+    private string? _kickPlayerUid;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Dispatcher.Dispatch(new LoadPlayersIfNeededAction(ServerId));
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Dispatcher.Dispatch(new LoadPlayersIfNeededAction(ServerId));
+        }
+    }
+
+    private void HandleRefresh()
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Dispatcher.Dispatch(new RefreshPlayersAction(ServerId));
+        }
+    }
+
+    private string GetPlayerDetailsLink(string? playerUid)
+    {
+        return !string.IsNullOrEmpty(playerUid) && !string.IsNullOrEmpty(ServerId)
+            ? $"/{ServerId}/players/{playerUid}"
+            : "#";
+    }
+
+    private void HandleKick(string? playerUid)
+    {
+        _kickPlayerUid = playerUid;
+        _kickReason = string.Empty;
+        _kickDialogOpen = true;
+    }
+
+    private async Task HandleKickConfirm()
+    {
+        if (!string.IsNullOrEmpty(_kickPlayerUid) && !string.IsNullOrEmpty(ServerId))
+        {
+            // TODO: Call API to kick player
+            // await _playersApiClient.KickPlayerAsync(ServerId, _kickPlayerUid, _kickReason);
+            _kickDialogOpen = false;
+            _kickPlayerUid = null;
+            _kickReason = string.Empty;
+        }
+        await Task.CompletedTask;
+    }
+
+    private void HandleToggleWhitelist(Guid playerId)
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            // TODO: Call API to toggle whitelist
+            // var player = PlayersState.Value.Players.FirstOrDefault(p => p.Id == playerId);
+            // if (player?.IsWhitelisted == true)
+            //     await _playersApiClient.RemoveFromWhitelistAsync(ServerId, player.PlayerUID);
+            // else
+            //     await _playersApiClient.WhitelistPlayerAsync(ServerId, player.PlayerUID);
+        }
+    }
+
+    private void HandleToggleBan(Guid playerId)
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            // TODO: Call API to toggle ban
+            // var player = PlayersState.Value.Players.FirstOrDefault(p => p.Id == playerId);
+            // if (player?.IsBanned == true)
+            //     await _playersApiClient.UnbanPlayer(ServerId, player.PlayerUID);
+            // else
+            //     await _playersApiClient.BanPlayerAsync(ServerId, player.PlayerUID);
+        }
+    }
+
+    private bool IsWhitelisted(Guid playerId)
+    {
+        var player = PlayersState.Value.Players.FirstOrDefault(p => p.Id == playerId);
+        return player?.IsWhitelisted ?? false;
+    }
+
+    private bool IsBanned(Guid playerId)
+    {
+        var player = PlayersState.Value.Players.FirstOrDefault(p => p.Id == playerId);
+        return player?.IsBanned ?? false;
+    }
+}

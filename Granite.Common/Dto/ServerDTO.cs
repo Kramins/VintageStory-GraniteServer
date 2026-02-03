@@ -2,12 +2,12 @@ using System;
 
 namespace Granite.Common.Dto;
 
-public class ServerDTO
+public record ServerDTO
 {
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public bool IsOnline { get; set; }
-    public DateTime? LastSeenAt { get; set; }
+    public Guid Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string? Description { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public bool IsOnline { get; init; }
+    public DateTime? LastSeenAt { get; init; }
 }

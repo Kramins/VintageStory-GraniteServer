@@ -265,7 +265,7 @@ public class JwtTokenServiceTests
     public void Constructor_WithMissingJwtSecret_ThrowsInvalidOperationException()
     {
         // Arrange
-        var options = new GraniteServerOptions { JwtSecret = null };
+        var options = new GraniteServerOptions { JwtSecret = null! };
         _mockOptions.Value.Returns(options);
 
         // Act

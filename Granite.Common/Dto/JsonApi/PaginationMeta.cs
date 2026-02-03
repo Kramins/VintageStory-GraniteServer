@@ -1,9 +1,9 @@
 namespace Granite.Common.Dto.JsonApi;
 
-public class PaginationMeta
+public record PaginationMeta
 {
-    public int Page { get; set; }
-    public int PageSize { get; set; }
-    public bool HasMore { get; set; }
-    public int TotalCount { get; set; }
+    public int Page { get; init; }
+    public int PageSize { get; init; }
+    public bool HasMore { get; init; }
+    public int TotalCount { get; init; }
 }

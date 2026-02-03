@@ -1,6 +1,6 @@
 namespace Granite.Common.Dto;
 
-public class InstallModRequest
+public record InstallModRequest
 {
-    public string ModId { get; set; } = string.Empty;
+    public string ModId { get; init; } = string.Empty;
 }

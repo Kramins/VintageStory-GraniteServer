@@ -10,7 +10,10 @@
     },
     "code-butler.cleanupOnSave": true,
     "cSpell.words": [
+      "Blazor",
+      "Fluxor",
       "Itemstack",
-      "Unban"
+      "Unban",
+      "Unwhitelisted"
     ]
 }

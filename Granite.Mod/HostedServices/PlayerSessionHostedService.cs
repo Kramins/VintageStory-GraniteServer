@@ -67,7 +67,7 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
         _messageBus.Publish(joinEvent);
     }
 
-    public async Task StopAsync(CancellationToken cancellationToken)
+    public Task StopAsync(CancellationToken cancellationToken)
     {
         _isShuttingDown = true;
         _api.Event.PlayerJoin -= OnPlayerJoin;
@@ -108,6 +108,8 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
         {
             _logger.Error($"Error awaiting pending tasks during shutdown: {ex}");
         }
+
+        return Task.CompletedTask;
     }
 
     private void PublishLeaveFromPlayer(IServerPlayer player)

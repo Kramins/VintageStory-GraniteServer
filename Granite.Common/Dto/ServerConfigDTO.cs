@@ -1,15 +1,15 @@
 namespace Granite.Common.Dto;
 
-public class ServerConfigDTO
+public record ServerConfigDTO
 {
-    public int? Port { get; set; }
-    public string? ServerName { get; set; }
-    public string? WelcomeMessage { get; set; }
-    public int? MaxClients { get; set; }
-    public string? Password { get; set; }
-    public int? MaxChunkRadius { get; set; }
-    public string? WhitelistMode { get; set; }
-    public bool? AllowPvP { get; set; }
-    public bool? AllowFireSpread { get; set; }
-    public bool? AllowFallingBlocks { get; set; }
+    public int? Port { get; init; }
+    public string? ServerName { get; init; }
+    public string? WelcomeMessage { get; init; }
+    public int? MaxClients { get; init; }
+    public string? Password { get; init; }
+    public int? MaxChunkRadius { get; init; }
+    public string? WhitelistMode { get; init; }
+    public bool? AllowPvP { get; init; }
+    public bool? AllowFireSpread { get; init; }
+    public bool? AllowFallingBlocks { get; init; }
 }

@@ -1,4 +1,5 @@
 using System.Text;
+using Granite.Common.Services;
 using Granite.Server.Configuration;
 using Granite.Server.Extensions;
 using Granite.Server.Hubs;
@@ -30,6 +31,9 @@ var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder.AddCon
 var logger = loggerFactory.CreateLogger<Program>();
 builder.Services.AddGraniteDatabase(builder.Configuration, logger);
 
+// Add memory cache for player name resolution caching
+builder.Services.AddMemoryCache();
+
 // Add authentication services
 builder.Services.AddScoped<BasicAuthService>();
 builder.Services.AddScoped<JwtTokenService>();
@@ -39,6 +43,14 @@ builder.Services.AddScoped<ServersService>();
 builder.Services.AddScoped<ServerPlayersService>();
 builder.Services.AddScoped<ServerConfigService>();
 builder.Services.AddScoped<ServerService>();
+builder.Services.AddScoped<IPlayersService, PlayersService>();
+
+// Add player name resolver for Vintage Story auth server integration
+builder.Services.AddHttpClient<IPlayerNameResolver, VintageStoryPlayerNameResolver>()
+    .ConfigureHttpClient(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(10);
+    });
 
 // Add PersistentMessageBusService as singleton (also registers as MessageBusService)
 builder.Services.AddSingleton<PersistentMessageBusService>();
@@ -113,7 +125,10 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
     {
         policy
-            .WithOrigins("http://localhost:3000", "https://localhost:3000") // Vite dev server
+            .WithOrigins(
+                "http://localhost:3000", "https://localhost:3000",  // Vite dev server (React)
+                "http://localhost:5148", "https://localhost:7171"   // Blazor WebAssembly dev server
+            )
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials(); // Required for SignalR
@@ -131,18 +146,13 @@ builder.Services.AddSignalR(options =>
 });
 
 // Add OpenAPI/Swagger
-builder.Services.AddOpenApi();
+// builder.Services.AddOpenApi();
+
 
 var app = builder.Build();
 
 // Handle exceptions and wrap in JsonApiDocument (must be first to catch all exceptions)
 app.UseMiddleware<Granite.Server.Middleware.ExceptionHandlingMiddleware>();
-
-// Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
 
 // Enable routing to access route values in middleware
 app.UseRouting();
@@ -150,7 +160,7 @@ app.UseRouting();
 // Apply CORS before authentication
 app.UseCors();
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -158,20 +168,31 @@ app.UseAuthorization();
 // Validate serverid when present (non-blocking for now)
 app.UseMiddleware<Granite.Server.Middleware.ServerIdValidationMiddleware>();
 
-// Serve static files from ClientApp/dist
+// Serve static files from wwwroot (Blazor WebAssembly client)
 app.UseStaticFiles();
 app.UseDefaultFiles();
 
 // Map endpoints
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapControllers();
-    endpoints.MapHub<ModHub>("/hub/mod");
-    endpoints.MapHub<ClientHub>("/hub/client");
-});
+app.MapControllers();
+app.MapHub<ModHub>("/hub/mod");
+app.MapHub<ClientHub>("/hub/client");
 
-// Fallback to index.html for SPA routing (must be after MapControllers)
+// Fallback to index.html for SPA client-side routing
 app.MapFallbackToFile("index.html");
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+
+}
+else
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
+}
+
+
 
 // Apply database migrations
 using (var scope = app.Services.CreateScope())

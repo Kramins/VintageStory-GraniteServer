@@ -1,18 +1,27 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <SpaRoot>ClientApp/</SpaRoot>
-    <ClientDist>$(SpaRoot)dist/</ClientDist>
-    <BuildWebApp Condition="'$(BuildWebApp)'=='' and '$(Configuration)'=='Release'">true</BuildWebApp>
-    <BuildWebApp Condition="'$(BuildWebApp)'==''">false</BuildWebApp>
-    <IncludeClientAppInPublish Condition="'$(IncludeClientAppInPublish)'==''">true</IncludeClientAppInPublish>
-    <PackageOutputRoot Condition="'$(PackageOutputRoot)'==''">$(MSBuildThisFileDirectory)..\artifacts\</PackageOutputRoot>
-    <PackageVersion Condition="'$(PackageVersion)'=='' and '$(Version)'!=''">$(Version)</PackageVersion>
+    <BlazorWebAssemblyRoot>../Granite.Web.Client/</BlazorWebAssemblyRoot>
+    <BlazorPublishOutput>$(BlazorWebAssemblyRoot)bin/Release/net9.0/publish/wwwroot/</BlazorPublishOutput>
+    <BuildWebApp Condition="'$(BuildWebApp)'=='' and '$(Configuration)'=='Release'"
+      >true</BuildWebApp
+    >
+    <BuildWebApp Condition="'$(BuildWebApp)'==''">true</BuildWebApp>
+    <IncludeClientAppInPublish Condition="'$(IncludeClientAppInPublish)'==''"
+      >true</IncludeClientAppInPublish
+    >
+    <PackageOutputRoot Condition="'$(PackageOutputRoot)'==''"
+      >$(MSBuildThisFileDirectory)..\artifacts\</PackageOutputRoot
+    >
+    <PackageVersion Condition="'$(PackageVersion)'=='' and '$(Version)'!=''"
+      >$(Version)</PackageVersion
+    >
     <PackageVersion Condition="'$(PackageVersion)'=='' and '$(Version)'==''">1.0.0</PackageVersion>
-    <PackageName Condition="'$(PackageName)'==''">Granite.Server-$(PackageVersion)-$(Configuration)</PackageName>
+    <PackageName Condition="'$(PackageName)'==''"
+      >Granite.Server-$(PackageVersion)-$(Configuration)</PackageName
+    >
     <PackageFormats Condition="'$(PackageFormats)'==''">zip</PackageFormats>
   </PropertyGroup>
 
@@ -27,23 +36,49 @@
   <ItemGroup>
     <ProjectReference Include="..\Granite.Data\Granite.Data.csproj" />
     <ProjectReference Include="..\Granite.Common\Granite.Common.csproj" />
+    <ProjectReference Include="..\Granite.Web.Client\Granite.Web.Client.csproj" />
   </ItemGroup>
 
-  <!-- Build ClientApp before build/publish when enabled -->
-  <Target Name="BuildClientApp" BeforeTargets="PrepareForPublish;Build" Condition="'$(BuildWebApp)' == 'true'">
-    <Exec WorkingDirectory="$(SpaRoot)" Command="npm --version" />
-    <Exec WorkingDirectory="$(SpaRoot)" Command="npm ci" />
-    <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
+  <!-- Build Blazor WebAssembly client before build/publish when enabled -->
+  <Target
+    Name="BuildClientApp"
+    BeforeTargets="PrepareForPublish;Build"
+    Condition="'$(BuildWebApp)' == 'true'"
+  >
+    <Exec Command="dotnet publish -c Release $(BlazorWebAssemblyRoot)Granite.Web.Client.csproj -o $(BlazorWebAssemblyRoot)bin/Release/net9.0/publish" />
   </Target>
 
-  <!-- Include built client files in output directory -->
+  <!-- Include built Blazor client static web assets (excluding config files) -->
   <ItemGroup>
-    <Content Include="$(SpaRoot)dist/**">
+    <Content Include="$(BlazorPublishOutput)_framework/**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Update="$(SpaRoot)dist/**" Condition="'$(IncludeClientAppInPublish)'=='true'">
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    <Content Include="$(BlazorPublishOutput)_content/**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="$(BlazorPublishOutput)css/**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(BlazorPublishOutput)lib/**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(BlazorPublishOutput)*.html;$(BlazorPublishOutput)*.js;$(BlazorPublishOutput)*.png;$(BlazorPublishOutput)*.webmanifest">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Include built Blazor client static web assets for publish (excluding config files) -->
+  <ItemGroup Condition="'$(IncludeClientAppInPublish)'=='true'">
+    <Content Update="$(BlazorPublishOutput)_framework/**" 
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="$(BlazorPublishOutput)_content/**" 
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="$(BlazorPublishOutput)css/**" 
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="$(BlazorPublishOutput)lib/**" 
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="$(BlazorPublishOutput)*.html;$(BlazorPublishOutput)*.js;$(BlazorPublishOutput)*.png;$(BlazorPublishOutput)*.webmanifest" 
+             CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Package publish output into artifacts -->
@@ -59,18 +94,33 @@
 
     <ItemGroup>
       <_PublishedFiles Include="$(_PublishOutput)**\*" />
-      <_ZipFormat Include="zip" Condition="'$(PackageFormats)'=='' OR $(PackageFormats.Contains('zip'))" />
+      <_ZipFormat
+        Include="zip"
+        Condition="'$(PackageFormats)'=='' OR $(PackageFormats.Contains('zip'))"
+      />
       <_TarFormat Include="tar" Condition="$(PackageFormats.Contains('tar'))" />
     </ItemGroup>
 
-    <Copy SourceFiles="@(_PublishedFiles)" DestinationFiles="@(_PublishedFiles->'$(_PackagePublishDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="@(_PublishedFiles)"
+      DestinationFiles="@(_PublishedFiles->'$(_PackagePublishDir)%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true"
+    />
 
     <Delete Files="$(PackageOutputRoot)server\$(PackageName).zip" />
-    <ZipDirectory SourceDirectory="$(_PackagePublishDir)" DestinationFile="$(PackageOutputRoot)server\$(PackageName).zip" Condition="'@(_ZipFormat)'!=''" />
+    <ZipDirectory
+      SourceDirectory="$(_PackagePublishDir)"
+      DestinationFile="$(PackageOutputRoot)server\$(PackageName).zip"
+      Condition="'@(_ZipFormat)'!=''"
+    />
 
-    <Tar SourceDirectory="$(_PackagePublishDir)" DestinationFile="$(PackageOutputRoot)server\$(PackageName).tar.gz" CompressionType="GZip" Condition="'@(_TarFormat)'!=''" />
+    <Tar
+      SourceDirectory="$(_PackagePublishDir)"
+      DestinationFile="$(PackageOutputRoot)server\$(PackageName).tar.gz"
+      CompressionType="GZip"
+      Condition="'@(_TarFormat)'!=''"
+    />
   </Target>
 
   <Target Name="Package" DependsOnTargets="PackageServer" />
-
 </Project>

@@ -2,9 +2,9 @@ using System;
 
 namespace Granite.Common.Dto;
 
-public class BanRequestDTO
+public record BanRequestDTO
 {
-    public string? IssuedBy { get; set; }
-    public string? Reason { get; set; }
-    public DateTime? UntilDate { get; set; }
+    public string? IssuedBy { get; init; }
+    public string? Reason { get; init; }
+    public DateTime? UntilDate { get; init; }
 }

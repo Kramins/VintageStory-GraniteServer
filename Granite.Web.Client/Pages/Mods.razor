@@ -1,0 +1,13 @@
+@page "/mods"
+@page "/{serverId}/mods"
+@attribute [Authorize]
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+}
+
+<PageTitle>Mods - Granite Server Manager</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Installed Mods</MudText>
+<MudText Typo="Typo.body1">Mod management page</MudText>

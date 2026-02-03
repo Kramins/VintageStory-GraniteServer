@@ -1,0 +1,61 @@
+﻿@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using Granite.Web.Client.Store.Features.Server
+@inherits FluxorComponent
+
+@inject IState<ServerState> ServerState
+
+<MudNavMenu>
+    <ServerSelector />
+    <MudDivider Class="my-2" />
+    
+    <MudNavLink Href="@OverviewPath" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">
+        Dashboard
+    </MudNavLink>
+
+    <MudNavGroup Title="Server Management" Icon="@Icons.Material.Filled.Storage" Expanded="true">
+        <MudNavLink Href="@ServersPath" Icon="@Icons.Material.Filled.Dns">Servers</MudNavLink>
+        <MudNavLink Href="@ServerConfigPath" Icon="@Icons.Material.Filled.Settings">Configuration</MudNavLink>
+        <MudNavLink Href="@ServerStatusPath" Icon="@Icons.Material.Filled.Info">Status</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Players" Icon="@Icons.Material.Filled.People" Expanded="true">
+        <MudNavLink Href="@PlayersPath" Icon="@Icons.Material.Filled.PersonSearch">Manage Players</MudNavLink>
+        <MudNavLink Href="@WhitelistPath" Icon="@Icons.Material.Filled.CheckCircle">Whitelist</MudNavLink>
+        <MudNavLink Href="@BansPath" Icon="@Icons.Material.Filled.NotInterested">Bans</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Mods" Icon="@Icons.Material.Filled.Extension" Expanded="true">
+        <MudNavLink Href="@ModsPath" Icon="@Icons.Material.Filled.ListAlt">Installed Mods</MudNavLink>
+        <MudNavLink Href="@ModMarketplacePath" Icon="@Icons.Material.Filled.StoreMallDirectory">Mod Marketplace</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="World" Icon="@Icons.Material.Filled.Public" Expanded="true">
+        <MudNavLink Href="@WorldInfoPath" Icon="@Icons.Material.Filled.Map">World Info</MudNavLink>
+        <MudNavLink Href="@WorldMapPath" Icon="@Icons.Material.Filled.Terrain">Map</MudNavLink>
+        <MudNavLink Href="@CollectiblesPath" Icon="@Icons.Material.Filled.Inventory2">Collectibles</MudNavLink>
+    </MudNavGroup>
+
+    <MudDivider Class="my-3" />
+
+    <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
+    <MudNavLink Href="/help" Icon="@Icons.Material.Filled.Help">Help & Support</MudNavLink>
+</MudNavMenu>
+
+@code {
+    private string? SelectedServerId => ServerState.Value.SelectedServerId;
+
+    private string OverviewPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}" : "/";
+    private string ServersPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/servers" : "/servers";
+    private string ServerConfigPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/config" : "/server-config";
+    private string ServerStatusPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/status" : "/server-status";
+    private string PlayersPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/players" : "/players";
+    private string WhitelistPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/whitelist" : "/whitelist";
+    private string BansPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/bans" : "/bans";
+    private string ModsPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/mods" : "/mods";
+    private string ModMarketplacePath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/mod-marketplace" : "/mod-marketplace";
+    private string WorldInfoPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/world-info" : "/world-info";
+    private string WorldMapPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/world-map" : "/world-map";
+    private string CollectiblesPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/collectibles" : "/collectibles";
+}
+

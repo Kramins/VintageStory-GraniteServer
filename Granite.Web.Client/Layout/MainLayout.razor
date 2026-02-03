@@ -1,0 +1,137 @@
+﻿@using Fluxor
+@using Granite.Web.Client.HostedServices
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject ISignalRService SignalRService
+@inject ILogger<MainLayout> Logger
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IDispatcher Dispatcher
+@inject MessageBridgeService MessageBridgeService
+
+<MudThemeProvider @ref="_mudThemeProvider" IsDarkMode="_isDarkMode" />
+<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.ExtraSmall" />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="2" Color="Color.Primary" Dense="true">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@DrawerToggle" />
+        <MudText Typo="Typo.h6" Class="ml-3">Granite Server Manager</MudText>
+        <MudSpacer />
+        <MudBadge Overlap="true" Color="@(SignalRService.IsConnected ? Color.Success : Color.Error)" Dot="true">
+            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" />
+        </MudBadge>
+        <AuthorizeView>
+            <Authorized>
+                <MudMenu Icon="@Icons.Material.Filled.AccountCircle" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Color="Color.Inherit">
+                    <div class="px-4 py-2">
+                        <MudText Typo="Typo.body2" Color="Color.Dark">@context.User.Identity?.Name</MudText>
+                    </div>
+                    <MudDivider />
+                    <MudMenuItem OnClick="@ToggleDarkMode">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.DarkMode" Size="Size.Small" />
+                            <MudText>Toggle Dark Mode</MudText>
+                        </div>
+                    </MudMenuItem>
+                    <MudMenuItem>
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" />
+                            <MudText>Settings</MudText>
+                        </div>
+                    </MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem OnClick="@HandleLogout">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" />
+                            <MudText>Logout</MudText>
+                        </div>
+                    </MudMenuItem>
+                </MudMenu>
+            </Authorized>
+            <NotAuthorized>
+                <MudIconButton Icon="@Icons.Material.Filled.Login" Color="Color.Inherit" Href="/login" />
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
+        <MudDrawerHeader>
+            <div class="d-flex align-items-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.Castle" Size="Size.Large" />
+                <MudText Typo="Typo.h6">Granite</MudText>
+            </div>
+        </MudDrawerHeader>
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-8">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _isDarkMode = false;
+    private MudThemeProvider? _mudThemeProvider;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Start the message bridge service first
+            await MessageBridgeService.StartAsync();
+            
+            // Fetch servers
+            Dispatcher.Dispatch(new Granite.Web.Client.Store.Features.Server.FetchServersAction());
+            
+            // Then connect to SignalR
+            await SignalRService.ConnectAsync();
+            SignalRService.ConnectionStateChanged += OnConnectionStateChanged;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to initialize MainLayout");
+        }
+    }
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private void ToggleDarkMode()
+    {
+        _isDarkMode = !_isDarkMode;
+    }
+
+    private void OnConnectionStateChanged(object? sender, ConnectionStateChangedEventArgs e)
+    {
+        Logger.LogInformation("SignalR connection state changed: {IsConnected}", e.IsConnected);
+        StateHasChanged();
+    }
+
+    private async Task HandleLogout()
+    {
+        try
+        {
+            await AuthStateProvider.ClearTokenAsync();
+            Snackbar.Add("Logged out successfully", Severity.Success);
+            Navigation.NavigateTo("/login", replace: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to logout");
+            Snackbar.Add("Failed to logout", Severity.Error);
+        }
+    }
+
+    public void Dispose()
+    {
+        SignalRService.ConnectionStateChanged -= OnConnectionStateChanged;
+    }
+}

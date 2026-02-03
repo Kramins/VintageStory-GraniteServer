@@ -1,0 +1,211 @@
+@page "/whitelist"
+@page "/{serverId}/whitelist"
+@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using Granite.Web.Client.Store.Features.Players
+@using Granite.Web.Client.Services.Api
+@using MudBlazor
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inherits FluxorComponent
+
+@inject IState<PlayersState> PlayersState
+@inject IDispatcher Dispatcher
+@inject NavigationManager Navigation
+@inject IServerPlayersApiClient PlayersApiClient
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Whitelist</PageTitle>
+
+@if (string.IsNullOrEmpty(ServerId))
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+        <MudPaper Class="pa-8 d-flex flex-column align-center justify-center" Style="min-height: 400px;" Elevation="0">
+            <MudText Typo="Typo.h5" Color="Color.Secondary" Class="mb-2">
+                Select a server to manage the whitelist
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Use the server dropdown in the navigation to select a server.
+            </MudText>
+        </MudPaper>
+    </MudContainer>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2" Justify="Justify.SpaceBetween">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudText Typo="Typo.h4">Whitelist</MudText>
+                <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
+                           OnClick="@HandleRefresh" 
+                           Disabled="@PlayersState.Value.IsLoading">
+                    Refresh
+                </MudButton>
+            </MudStack>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="OpenAddPlayerDialogAsync">
+                Add Player
+            </MudButton>
+        </MudStack>
+
+        <MudPaper Elevation="0" Style="height: 600px;">
+            <MudDataGrid T="PlayerDTO" 
+                         Items="@GetWhitelistedPlayers()" 
+                         Dense="true"
+                         Hover="true"
+                         Loading="@PlayersState.Value.IsLoading"
+                         Height="560px">
+                <Columns>
+                    <TemplateColumn Title="Player" Sortable="false">
+                        <CellTemplate>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudAvatar Size="Size.Small" Color="Color.Primary">
+                                    @(context.Item.Name?.FirstOrDefault().ToString().ToUpper() ?? "?")
+                                </MudAvatar>
+                                <MudLink Href="@GetPlayerDetailsLink(context.Item.PlayerUID)" Underline="Underline.None">
+                                    @(context.Item.Name?.Length > 15 ? context.Item.Name.Substring(0, 15) : context.Item.Name)
+                                </MudLink>
+                            </MudStack>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    <TemplateColumn Title="Role" Sortable="false">
+                        <CellTemplate>
+                            <MudChip Size="Size.Small" 
+                                     Color="@(context.Item.IsAdmin ? Color.Error : Color.Default)">
+                                @(context.Item.IsAdmin ? "Admin" : "Player")
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    <TemplateColumn Title="Status" Sortable="false">
+                        <CellTemplate>
+                            <MudChip Size="Size.Small" 
+                                     Variant="Variant.Outlined"
+                                     Color="@(context.Item.ConnectionState == "Connected" ? Color.Success : Color.Default)">
+                                @(context.Item.ConnectionState ?? "Offline")
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    <PropertyColumn Property="p => p.WhitelistedBy" Title="Whitelisted By" />
+                    <PropertyColumn Property="p => p.WhitelistedReason" Title="Reason" />
+                    
+                    <TemplateColumn Title="Actions" Sortable="false">
+                        <CellTemplate>
+                            <MudIconButton Icon="@Icons.Material.Filled.RemoveCircle" 
+                                           Size="Size.Small" 
+                                           Color="Color.Error"
+                                           OnClick="@(() => HandleRemoveFromWhitelist(context.Item.Id))" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="PlayerDTO" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudPaper>
+    </MudContainer>
+}
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Dispatcher.Dispatch(new LoadPlayersIfNeededAction(ServerId));
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+        }
+    }
+
+    private IEnumerable<PlayerDTO> GetWhitelistedPlayers()
+    {
+        return PlayersState.Value.Players.Where(p => p.IsWhitelisted);
+    }
+
+    private async Task OpenAddPlayerDialogAsync()
+    {
+        if (string.IsNullOrEmpty(ServerId))
+            return;
+
+        var parameters = new DialogParameters<Components.FindPlayerDialog>
+        {
+            { x => x.SelectButtonText, "Add to Whitelist" },
+            { x => x.SearchPlaceholder, "Search by player name or UID..." },
+            { x => x.InitialPlayers, PlayersState.Value.Players },
+            { x => x.OnFilterPlayer, (Func<PlayerDTO, bool>)(p => !p.IsWhitelisted) },
+            
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true };
+        var result = await DialogService.ShowAsync<Components.FindPlayerDialog>("Add Player to Whitelist", parameters, options);
+        var dialogResult = await result.Result;
+
+        if (dialogResult is not null && !dialogResult.Canceled && dialogResult.Data is string selectedPlayerUid)
+        {
+            try
+            {
+                await PlayersApiClient.WhitelistPlayerAsync(ServerId, selectedPlayerUid);
+                Snackbar.Add("Player whitelisted successfully", Severity.Success);
+                // Refresh players list to reflect the change
+                Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Failed to whitelist player: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void HandleRefresh()
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+        }
+    }
+
+    private string GetPlayerDetailsLink(string? playerUid)
+    {
+        return !string.IsNullOrEmpty(playerUid) && !string.IsNullOrEmpty(ServerId)
+            ? $"/{ServerId}/players/{playerUid}"
+            : "#";
+    }
+
+    private async Task HandleRemoveFromWhitelist(Guid playerId)
+    {
+        if (string.IsNullOrEmpty(ServerId))
+            return;
+
+        try
+        {
+            var player = PlayersState.Value.Players.FirstOrDefault(p => p.Id == playerId);
+            if (player == null)
+            {
+                Snackbar.Add("Player not found", Severity.Warning);
+                return;
+            }
+
+            await PlayersApiClient.RemoveFromWhitelistAsync(ServerId, player.PlayerUID!);
+            Snackbar.Add("Player removed from whitelist", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to remove from whitelist: {ex.Message}", Severity.Error);
+        }
+    }
+}

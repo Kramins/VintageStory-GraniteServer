@@ -1,0 +1,13 @@
+@page "/world-map"
+@page "/{serverId}/world-map"
+@attribute [Authorize]
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+}
+
+<PageTitle>Map - Granite Server Manager</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">World Map</MudText>
+<MudText Typo="Typo.body1">World map page</MudText>

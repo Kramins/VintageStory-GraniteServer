@@ -9,8 +9,7 @@
                 "build",
                 "-c",
                 "Debug",
-                "${workspaceFolder}/Granite.Mod/Granite.Mod.csproj",
-                "/p:BuildWebApp=true"
+                "${workspaceFolder}/Granite.Mod/Granite.Mod.csproj"
             ],
             "problemMatcher": "$msCompile"
         },
@@ -23,7 +22,6 @@
                 "-c",
                 "Release",
                 "${workspaceFolder}/Granite.Mod/Granite.Mod.csproj",
-                "/p:BuildWebApp=true",
                 "/p:modinfoVersion=${input:versionNumber}"
             ],
             "problemMatcher": "$msCompile"
@@ -41,34 +39,33 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "npm dev",
-            "type": "shell",
-            "command": "npm",
+            "label": "build-server-with-client",
+            "command": "dotnet",
+            "type": "process",
             "args": [
-                "run",
-                "dev"
+                "build",
+                "-c",
+                "Release",
+                "${workspaceFolder}/Granite.Server/Granite.Server.csproj",
+                "/p:BuildWebApp=true"
             ],
-            "options": {
-                "cwd": "${workspaceFolder}/Granite.Server/ClientApp"
-            },
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "new",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "isBackground": true,
-            "problemMatcher": {
-                "owner": "typescript",
-                "source": "ts",
-                "fileLocation": [
-                    "relative",
-                    "${cwd}"
-                ]
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": false
             }
+        },
+        {
+            "label": "build-blazor-client",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "-c",
+                "Debug",
+                "${workspaceFolder}/Granite.Web.Client/Granite.Web.Client.csproj"
+            ],
+            "problemMatcher": "$msCompile"
         },
         {
             "label" : "ef - create migration",
@@ -78,50 +75,7 @@
                 "create",
                 "${input:migrationVersion}"
             ]
-        },
-        {
-            "label": "package-server",
-            "type": "shell",
-            "command": "./scripts/package-server.sh",
-            "args": [],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "group": "build",
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "package-server-release",
-            "type": "shell",
-            "command": "./scripts/package-server.sh",
-            "args": [
-                "Release",
-                "${input:packageVersion}"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "group": "build",
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "package-server-with-tar",
-            "type": "shell",
-            "command": "dotnet",
-            "args": [
-                "msbuild",
-                "Granite.Server/Granite.Server.csproj",
-                "/t:PackageServer",
-                "/p:Configuration=Release",
-                "/p:BuildWebApp=true",
-                "/p:PackageFormats=zip;tar"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "group": "build",
-            "problemMatcher": "$msCompile"
-        },
+        },      
         {
             "label": "docker-build-server",
             "type": "shell",

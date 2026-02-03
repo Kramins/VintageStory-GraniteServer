@@ -1,9 +1,9 @@
 namespace Granite.Common.Dto;
 
-public class UpdateInventorySlotRequestDTO
+public record UpdateInventorySlotRequestDTO
 {
-    public string EntityClass { get; set; } = string.Empty;
-    public int EntityId { get; set; }
-    public int SlotIndex { get; set; }
-    public int? StackSize { get; set; }
+    public string EntityClass { get; init; } = string.Empty;
+    public int EntityId { get; init; }
+    public int SlotIndex { get; init; }
+    public int? StackSize { get; init; }
 }

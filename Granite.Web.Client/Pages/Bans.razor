@@ -1,0 +1,233 @@
+@page "/bans"
+@page "/{serverId}/bans"
+@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using Granite.Web.Client.Store.Features.Players
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inherits FluxorComponent
+
+@inject IState<PlayersState> PlayersState
+@inject IDispatcher Dispatcher
+@inject NavigationManager Navigation
+
+<PageTitle>Bans</PageTitle>
+
+@if (string.IsNullOrEmpty(ServerId))
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+        <MudPaper Class="pa-8 d-flex flex-column align-center justify-center" Style="min-height: 400px;" Elevation="0">
+            <MudText Typo="Typo.h5" Color="Color.Secondary" Class="mb-2">
+                Select a server to manage bans
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Use the server dropdown in the navigation to select a server.
+            </MudText>
+        </MudPaper>
+    </MudContainer>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2" Justify="Justify.SpaceBetween">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudText Typo="Typo.h4">Banned Players</MudText>
+                <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
+                           OnClick="@HandleRefresh" 
+                           Disabled="@PlayersState.Value.IsLoading">
+                    Refresh
+                </MudButton>
+            </MudStack>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="@(() => _addDialogOpen = true)">
+                Ban Player
+            </MudButton>
+        </MudStack>
+
+        <MudPaper Elevation="0" Style="height: 600px;">
+            <MudDataGrid T="PlayerDTO" 
+                         Items="@GetBannedPlayers()" 
+                         Dense="true"
+                         Hover="true"
+                         Loading="@PlayersState.Value.IsLoading"
+                         Height="560px">
+                <Columns>
+                    <TemplateColumn Title="Player" Sortable="false">
+                        <CellTemplate>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudAvatar Size="Size.Small" Color="Color.Error">
+                                    @(context.Item.Name?.FirstOrDefault().ToString().ToUpper() ?? "?")
+                                </MudAvatar>
+                                <MudLink Href="@GetPlayerDetailsLink(context.Item.PlayerUID)" Underline="Underline.None">
+                                    @(context.Item.Name?.Length > 15 ? context.Item.Name.Substring(0, 15) : context.Item.Name)
+                                </MudLink>
+                            </MudStack>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    <TemplateColumn Title="Role" Sortable="false">
+                        <CellTemplate>
+                            <MudChip Size="Size.Small" 
+                                     Color="@(context.Item.IsAdmin ? Color.Error : Color.Default)">
+                                @(context.Item.IsAdmin ? "Admin" : "Player")
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    <PropertyColumn Property="p => p.BanReason" Title="Ban Reason" />
+                    <PropertyColumn Property="p => p.BanBy" Title="Banned By" />
+                    
+                    <TemplateColumn Title="Ban Until" Sortable="false">
+                        <CellTemplate>
+                            @if (context.Item.BanUntil.HasValue)
+                            {
+                                <MudText>@context.Item.BanUntil.Value.ToString("g")</MudText>
+                            }
+                            else
+                            {
+                                <MudChip Size="Size.Small" Color="Color.Error">Permanent</MudChip>
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                    
+                    <TemplateColumn Title="Actions" Sortable="false">
+                        <CellTemplate>
+                            <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" 
+                                           Size="Size.Small" 
+                                           Color="Color.Success"
+                                           OnClick="@(() => HandleUnban(context.Item.Id))" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="PlayerDTO" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudPaper>
+    </MudContainer>
+
+    @* Ban Player Dialog *@
+    <MudDialog @bind-Visible="_addDialogOpen" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+        <DialogContent>
+            <MudText Typo="Typo.h6" Class="mb-4">Ban Player</MudText>
+            <MudTextField @bind-Value="_searchQuery" 
+                          Placeholder="Search by player name or UID..." 
+                          Variant="Variant.Outlined" 
+                          FullWidth="true"
+                          Immediate="true"
+                          Class="mb-3" />
+            <MudTextField @bind-Value="_banReason" 
+                          Placeholder="Reason for ban..." 
+                          Variant="Variant.Outlined" 
+                          FullWidth="true"
+                          Lines="3" />
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@(() => _addDialogOpen = false)">Cancel</MudButton>
+            <MudButton Color="Color.Error" 
+                       Variant="Variant.Filled" 
+                       OnClick="@HandleBanConfirm"
+                       Disabled="@_isSubmitting">
+                @if (_isSubmitting)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                }
+                else
+                {
+                    <span>Ban</span>
+                }
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    [Parameter]
+    public string? ServerId { get; set; }
+
+    private bool _addDialogOpen = false;
+    private string _searchQuery = string.Empty;
+    private string _banReason = string.Empty;
+    private bool _isSubmitting = false;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+        }
+    }
+
+    private IEnumerable<PlayerDTO> GetBannedPlayers()
+    {
+        return PlayersState.Value.Players.Where(p => p.IsBanned);
+    }
+
+    private void HandleRefresh()
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+        }
+    }
+
+    private string GetPlayerDetailsLink(string? playerUid)
+    {
+        return !string.IsNullOrEmpty(playerUid) && !string.IsNullOrEmpty(ServerId)
+            ? $"/{ServerId}/players/{playerUid}"
+            : "#";
+    }
+
+    private async Task HandleBanConfirm()
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery) || string.IsNullOrEmpty(ServerId))
+            return;
+
+        _isSubmitting = true;
+        try
+        {
+            // TODO: Search for player and ban them
+            // var player = await _playersApiClient.FindPlayerByName(ServerId, _searchQuery);
+            // if (player != null)
+            // {
+            //     await _playersApiClient.BanPlayerAsync(ServerId, player.PlayerUID, _banReason);
+            //     Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+            // }
+            
+            await Task.Delay(600); // Simulate API call
+            _addDialogOpen = false;
+            _searchQuery = string.Empty;
+            _banReason = string.Empty;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private async Task HandleUnban(Guid playerId)
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            // TODO: Call API to unban player
+            // var player = PlayersState.Value.Players.FirstOrDefault(p => p.Id == playerId);
+            // if (player != null)
+            // {
+            //     await _playersApiClient.UnbanPlayerAsync(ServerId, player.PlayerUID);
+            //     Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
+            // }
+        }
+        await Task.CompletedTask;
+    }
+}

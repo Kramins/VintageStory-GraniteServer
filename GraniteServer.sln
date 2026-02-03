@@ -13,6 +13,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Granite.Server", "Granite.S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Granite.Tests", "Granite.Tests\Granite.Tests.csproj", "{1E4B5E09-77F3-4044-AA6C-53E981E1D176}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Granite.Web.Client", "Granite.Web.Client\Granite.Web.Client.csproj", "{4F037296-B34D-4F0C-9740-A1176ED083E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Granite.Web.Tests", "Granite.Web.Tests\Granite.Web.Tests.csproj", "{3F5AF7D6-6DE9-418F-A9A2-03DCD33A65D1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Granite.Integration.Tests", "Granite.Integration.Tests\Granite.Integration.Tests.csproj", "{ECD3D562-B266-4C4B-8CA5-78648D556341}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +45,18 @@ Global
 		{1E4B5E09-77F3-4044-AA6C-53E981E1D176}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1E4B5E09-77F3-4044-AA6C-53E981E1D176}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1E4B5E09-77F3-4044-AA6C-53E981E1D176}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F037296-B34D-4F0C-9740-A1176ED083E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F037296-B34D-4F0C-9740-A1176ED083E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F037296-B34D-4F0C-9740-A1176ED083E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F037296-B34D-4F0C-9740-A1176ED083E8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3F5AF7D6-6DE9-418F-A9A2-03DCD33A65D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3F5AF7D6-6DE9-418F-A9A2-03DCD33A65D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3F5AF7D6-6DE9-418F-A9A2-03DCD33A65D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3F5AF7D6-6DE9-418F-A9A2-03DCD33A65D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ECD3D562-B266-4C4B-8CA5-78648D556341}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ECD3D562-B266-4C4B-8CA5-78648D556341}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ECD3D562-B266-4C4B-8CA5-78648D556341}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECD3D562-B266-4C4B-8CA5-78648D556341}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
