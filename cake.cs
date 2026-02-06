@@ -154,7 +154,7 @@ Task("Package-Granite.Mod")
 Task("UploadArtifacts-Granite.Mod")
     .WithCriteria(GitHubActions.IsRunningOnGitHubActions)
     .IsDependentOn("Package-Granite.Mod")
-    .Does(() =>
+    .Does(async () =>
     {
         Information("========================================");
         Information("GitHub Actions: Uploading Granite.Mod artifact");
@@ -168,7 +168,7 @@ Task("UploadArtifacts-Granite.Mod")
         Information($"Uploading: {zipPath}");
         Information($"Artifact name: {artifactName}");
 
-        GitHubActions.Commands.UploadArtifact(FilePath.FromString(zipPath), artifactName);
+        await GitHubActions.Commands.UploadArtifact(FilePath.FromString(zipPath), artifactName);
     });
 
 #endregion
@@ -470,7 +470,7 @@ Task("Build-Docker-Image")
 Task("UploadArtifacts-Granite.Server")
     .WithCriteria(GitHubActions.IsRunningOnGitHubActions)
     .IsDependentOn("Package-Granite.Server")
-    .Does(() =>
+    .Does(async () =>
     {
         Information("========================================");
         Information("GitHub Actions: Uploading Granite.Server artifact");
@@ -484,7 +484,8 @@ Task("UploadArtifacts-Granite.Server")
         Information($"Uploading: {zipPath}");
         Information($"Artifact name: {artifactName}");
 
-        GitHubActions.Commands.UploadArtifact(FilePath.FromString(zipPath), artifactName);
+        await GitHubActions.Commands.UploadArtifact(FilePath.FromString(zipPath), artifactName);
+
     });
 
 Task("CI-Granite.Mod")
