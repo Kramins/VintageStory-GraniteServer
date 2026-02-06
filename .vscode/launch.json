@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch and Debug Standalone Blazor WebAssembly App",
+            "name": "Launch and Debug Client App (Doesn't work in Dev Container)",
             "type": "blazorwasm",
             "request": "launch",
             "cwd": "${workspaceFolder}/Granite.Web.Client"
@@ -19,9 +19,9 @@
             "args": [
                 "--tracelog",
                 "--dataPath",
-                "/data",
+                "/app/data/vs",
                 "--addModPath",
-                "${workspaceFolder}/Granite.Mod/bin/mods"
+                "${workspaceFolder}/artifacts/mod"
             ],
             "console": "internalConsole",
             "stopAtEntry": false
@@ -56,8 +56,8 @@
             "cwd": "${workspaceFolder}/Granite.Server",
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "GS_DATABASETYPE": "SQLite"
-                // "GS_SQLITEFILEPATH": "${workspaceFolder}/Granite.Server/Granite.db"
+                "GS_DATABASETYPE": "SQLite",
+                "GS_SQLITEFILEPATH": "${workspaceFolder}/data/Granite.db"
             },
             "console": "integratedTerminal",
             "stopAtEntry": false

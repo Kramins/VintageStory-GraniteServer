@@ -42,4 +42,6 @@ public class MapChunkDataEventData
     /// Timestamp when chunk data was extracted.
     /// </summary>
     public DateTime ExtractedAt { get; set; }
+    public float AverageTemperature { get; set; }
+    public float AverageRainfall { get; set; }
 }

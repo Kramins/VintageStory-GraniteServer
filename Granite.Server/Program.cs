@@ -129,6 +129,11 @@ builder
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
+
 // Configure CORS for ClientApp
 builder.Services.AddCors(options =>
 {
@@ -177,19 +182,21 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseResponseCompression();
+
 // Validate serverid when present (non-blocking for now)
 app.UseMiddleware<Granite.Server.Middleware.ServerIdValidationMiddleware>();
 
-// Serve static files from wwwroot (Blazor WebAssembly client)
+// Serve static files - CRITICAL ORDER
+app.UseBlazorFrameworkFiles(); // Add this line
 app.UseStaticFiles();
-app.UseDefaultFiles();
 
 // Map endpoints
 app.MapControllers();
 app.MapHub<ModHub>("/hub/mod");
 app.MapHub<ClientHub>("/hub/client");
 
-// Fallback to index.html for SPA client-side routing
+// Fallback to index.html for SPA client-side routing - MUST be last
 app.MapFallbackToFile("index.html");
 
 // Configure the HTTP request pipeline.

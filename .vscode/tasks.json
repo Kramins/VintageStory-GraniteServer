@@ -6,10 +6,12 @@
             "command": "dotnet",
             "type": "process",
             "args": [
-                "build",
-                "-c",
-                "Debug",
-                "${workspaceFolder}/Granite.Mod/Granite.Mod.csproj"
+                "cake.cs",
+                "--",
+                "--target",
+                "Build-Granite.Mod",
+                "--configuration",
+                "Debug"
             ],
             "problemMatcher": "$msCompile"
         },
@@ -31,10 +33,12 @@
             "command": "dotnet",
             "type": "process",
             "args": [
-                "build",
-                "-c",
-                "Debug",
-                "${workspaceFolder}/Granite.Server/Granite.Server.csproj"
+                "cake.cs",
+                "--",
+                "--target",
+                "Build-Granite.Server",
+                "--configuration",
+                "Debug"
             ],
             "problemMatcher": "$msCompile"
         },
