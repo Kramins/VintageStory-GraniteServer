@@ -45,10 +45,10 @@ jobs:
           echo "sha=$SHA_SHORT" >> $GITHUB_OUTPUT
 
       - name: Build project
-        uses: cake-build/cake-action@v1
+        uses: cake-build/cake-action@v3
         with:
           file-path: cake.cs
-          target: GithubActions-Granite.Server
+          target: CI-Granite.Server
           verbosity: Normal
           arguments: |
             configuration: Release

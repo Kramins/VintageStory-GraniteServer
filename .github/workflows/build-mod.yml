@@ -45,7 +45,7 @@ jobs:
           echo "sha=$SHA_SHORT" >> $GITHUB_OUTPUT
 
       - name: Build project
-        uses: cake-build/cake-action@v1
+        uses: cake-build/cake-action@v3
         with:
           file-path: cake.cs
           target: CI-Granite.Mod
