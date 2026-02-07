@@ -45,9 +45,13 @@ builder
         "GraniteApi",
         client =>
         {
-            client.BaseAddress = new Uri(
-                builder.Configuration["ApiBaseUrl"] ?? builder.HostEnvironment.BaseAddress
-            );
+            var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
+            if (string.IsNullOrWhiteSpace(apiBaseUrl))
+            {
+                apiBaseUrl = builder.HostEnvironment.BaseAddress;
+            }
+
+            client.BaseAddress = new Uri(apiBaseUrl);
         }
     )
     .AddHttpMessageHandler<AuthenticationDelegatingHandler>();

@@ -10,6 +10,8 @@
 	// "features": {},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	"forwardPorts": [
+		5000,
+		5148,
 		42425
 	],
 	// Use 'postCreateCommand' to run commands after the container is created.

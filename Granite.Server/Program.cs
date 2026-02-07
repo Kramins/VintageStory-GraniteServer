@@ -174,6 +174,9 @@ app.UseMiddleware<Granite.Server.Middleware.ExceptionHandlingMiddleware>();
 // Enable routing to access route values in middleware
 app.UseRouting();
 
+// Enable WebSockets for SignalR connections
+app.UseWebSockets();
+
 // Apply CORS before authentication
 app.UseCors();
 
@@ -181,8 +184,6 @@ app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.UseResponseCompression();
 
 // Validate serverid when present (non-blocking for now)
 app.UseMiddleware<Granite.Server.Middleware.ServerIdValidationMiddleware>();
@@ -194,7 +195,9 @@ app.UseStaticFiles();
 // Map endpoints
 app.MapControllers();
 app.MapHub<ModHub>("/hub/mod");
-app.MapHub<ClientHub>("/hub/client");
+app.MapHub<ClientHub>("/hub/client").RequireAuthorization();
+
+app.UseResponseCompression();
 
 // Fallback to index.html for SPA client-side routing - MUST be last
 app.MapFallbackToFile("index.html");

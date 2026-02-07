@@ -35,6 +35,7 @@
             "args": [],
             "cwd": "${workspaceFolder}/Granite.Server",
             "env": {
+                "ASPNETCORE_URLS": "http://localhost:5000",
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "GS_DATABASETYPE": "PostgreSQL",
                 "GS_DATABASEHOST": "postgres",

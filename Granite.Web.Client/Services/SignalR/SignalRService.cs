@@ -49,7 +49,11 @@ public class SignalRService : ISignalRService, IAsyncDisposable
         _logger = logger;
         _authStateProvider = authStateProvider;
         _messageBus = messageBus;
-        var apiBaseUrl = configuration["ApiBaseUrl"] ?? "http://localhost:5000";
+        var apiBaseUrl = configuration["ApiBaseUrl"];
+        if (string.IsNullOrWhiteSpace(apiBaseUrl))
+        {
+            apiBaseUrl = "http://localhost:5000";
+        }
         _hubUrl = $"{apiBaseUrl}/hub/client";
     }
 
