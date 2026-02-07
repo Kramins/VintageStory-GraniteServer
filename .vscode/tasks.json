@@ -43,21 +43,18 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "build-server-with-client",
+            "label": "build-all",
             "command": "dotnet",
             "type": "process",
             "args": [
-                "build",
-                "-c",
-                "Release",
-                "${workspaceFolder}/Granite.Server/Granite.Server.csproj",
-                "/p:BuildWebApp=true"
+                "cake.cs",
+                "--",
+                "--target",
+                "Build",
+                "--configuration",
+                "Debug"
             ],
-            "problemMatcher": "$msCompile",
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            }
+            "problemMatcher": "$msCompile"
         },
         {
             "label": "build-blazor-client",
@@ -72,27 +69,14 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label" : "ef - create migration",
-            "type" : "shell",
-            "command" : "./scripts/ef-migration.sh",
-            "args" :[
+            "label": "ef - create migration",
+            "type": "shell",
+            "command": "./scripts/ef-migration.sh",
+            "args": [
                 "create",
                 "${input:migrationVersion}"
             ]
-        },      
-        {
-            "label": "docker-build-server",
-            "type": "shell",
-            "command": "./scripts/build-server-docker.sh",
-            "args": [
-                "granite-server:${input:imageTag}"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "group": "build",
-            "problemMatcher": []
-        }
+        },
     ],
     "inputs": [
         {
