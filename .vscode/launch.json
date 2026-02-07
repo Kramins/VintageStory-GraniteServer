@@ -31,7 +31,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build-server",
-            "program": "${workspaceFolder}/Granite.Server/bin/Debug/net9.0/Granite.Server.dll",
+            "program": "${workspaceFolder}/Granite.Server/bin/Debug/net10.0/Granite.Server.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Granite.Server",
             "env": {
@@ -51,7 +51,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build-server",
-            "program": "${workspaceFolder}/Granite.Server/bin/Debug/net9.0/Granite.Server.dll",
+            "program": "${workspaceFolder}/Granite.Server/bin/Debug/net10.0/Granite.Server.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Granite.Server",
             "env": {
