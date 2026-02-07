@@ -418,6 +418,12 @@ namespace Granite.Data.Migrations.Postgres
                 name: "IX_ServerMetrics_ServerId_RecordedAt",
                 table: "ServerMetrics",
                 columns: new[] { "ServerId", "RecordedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Servers_Name",
+                table: "Servers",
+                column: "Name",
+                unique: true);
         }
 
         /// <inheritdoc />

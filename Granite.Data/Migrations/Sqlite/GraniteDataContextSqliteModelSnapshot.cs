@@ -534,6 +534,9 @@ namespace Granite.Data.Migrations.Sqlite
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Name")
+                        .IsUnique();
+
                     b.ToTable("Servers");
                 });
 

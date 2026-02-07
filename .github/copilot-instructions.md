@@ -2,6 +2,7 @@ Global Instructions
 ---
 - Linter will reformat code on save. don't worry about formatting or if the file looks different.
 - Use dotnet build to build the project.
+- Don't use the tasks in the .vscode/tasks.json file
 
 Granite Server Instructions
 ---
@@ -10,7 +11,7 @@ Granite Server Instructions
 - Database operations should only be done in a service class, not in controllers.
 - EF Core helper script, this will work against both sqlite and postgresql databases:
   - ./scripts/ef-migration.sh list
-  - ./scripts/ef-migration.sh remove
+  - ./scripts/ef-migration.sh remove v100
   - ./scripts/ef-migration.sh create v100
   - Database version format is single letter followed by three digits, e.g., v100, v101, v102, etc.
   - Database migration creation will be done by the User and not the AI.

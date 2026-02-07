@@ -37,6 +37,7 @@ public class GraniteDataContext : DbContext
         modelBuilder.Entity<ServerEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Name).IsUnique();
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
             entity.Property(e => e.AccessToken).IsRequired().HasMaxLength(500);
             entity.Property(e => e.IsOnline).IsRequired();
@@ -50,7 +51,7 @@ public class GraniteDataContext : DbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
             entity.Property(e => e.FirstJoinDate).IsRequired();
             entity.Property(e => e.LastJoinDate).IsRequired();
-            
+
             entity
                 .HasOne(e => e.Server)
                 .WithMany(s => s.Players)
@@ -77,7 +78,15 @@ public class GraniteDataContext : DbContext
         modelBuilder.Entity<PlayerInventorySlotEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => new { e.PlayerId, e.ServerId, e.InventoryName, e.SlotIndex }).IsUnique();
+            entity
+                .HasIndex(e => new
+                {
+                    e.PlayerId,
+                    e.ServerId,
+                    e.InventoryName,
+                    e.SlotIndex,
+                })
+                .IsUnique();
             entity.Property(e => e.PlayerId).IsRequired();
             entity.Property(e => e.ServerId).IsRequired();
             entity.Property(e => e.InventoryName).IsRequired().HasMaxLength(255);
@@ -120,7 +129,7 @@ public class GraniteDataContext : DbContext
             entity.Property(e => e.CpuUsagePercent).IsRequired();
             entity.Property(e => e.MemoryUsageMB).IsRequired();
             entity.Property(e => e.ActivePlayerCount).IsRequired();
-            
+
             entity
                 .HasOne(e => e.Server)
                 .WithMany(s => s.ServerMetrics)
@@ -220,13 +229,18 @@ public class GraniteDataContext : DbContext
         modelBuilder.Entity<CommandEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => new { e.ServerId, e.Status, e.CreatedAt });
+            entity.HasIndex(e => new
+            {
+                e.ServerId,
+                e.Status,
+                e.CreatedAt,
+            });
             entity.Property(e => e.ServerId).IsRequired();
             entity.Property(e => e.MessageType).IsRequired().HasMaxLength(255);
             entity.Property(e => e.Payload).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.Status).IsRequired();
-            
+
             entity
                 .HasOne(e => e.Server)
                 .WithMany()
@@ -237,7 +251,14 @@ public class GraniteDataContext : DbContext
         modelBuilder.Entity<MapChunkEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => new { e.ServerId, e.ChunkX, e.ChunkZ }).IsUnique();
+            entity
+                .HasIndex(e => new
+                {
+                    e.ServerId,
+                    e.ChunkX,
+                    e.ChunkZ,
+                })
+                .IsUnique();
             entity.HasIndex(e => new { e.ServerId, e.ContentHash });
             entity.HasIndex(e => e.LastAccessedAt);
             entity.Property(e => e.ServerId).IsRequired();
@@ -248,7 +269,7 @@ public class GraniteDataContext : DbContext
             entity.Property(e => e.SurfaceBlockIdsData).IsRequired();
             entity.Property(e => e.ExtractedAt).IsRequired();
             entity.Property(e => e.ReceivedAt).IsRequired();
-            
+
             entity
                 .HasOne(e => e.Server)
                 .WithMany()

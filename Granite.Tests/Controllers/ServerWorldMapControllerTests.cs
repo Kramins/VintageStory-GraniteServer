@@ -41,7 +41,7 @@ public class ServerWorldMapControllerTests
             MaxChunkX = 20,
             MinChunkZ = -5,
             MaxChunkZ = 15,
-            TotalChunks = 100
+            TotalChunks = 100,
         };
 
         _mockService.GetWorldBoundsAsync(_testServerId).Returns(expectedBounds);
@@ -52,7 +52,10 @@ public class ServerWorldMapControllerTests
         // Assert
         result.Should().NotBeNull();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var jsonApiDoc = okResult.Value.Should().BeOfType<JsonApiDocument<WorldMapBoundsDTO>>().Subject;
+        var jsonApiDoc = okResult
+            .Value.Should()
+            .BeOfType<JsonApiDocument<WorldMapBoundsDTO>>()
+            .Subject;
         jsonApiDoc.Data.Should().BeEquivalentTo(expectedBounds);
     }
 
@@ -68,7 +71,10 @@ public class ServerWorldMapControllerTests
         // Assert
         result.Should().NotBeNull();
         var notFoundResult = result.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
-        var jsonApiDoc = notFoundResult.Value.Should().BeOfType<JsonApiDocument<WorldMapBoundsDTO>>().Subject;
+        var jsonApiDoc = notFoundResult
+            .Value.Should()
+            .BeOfType<JsonApiDocument<WorldMapBoundsDTO>>()
+            .Subject;
         jsonApiDoc.Errors.Should().ContainSingle();
         jsonApiDoc.Errors[0].Code.Should().Be("404");
         jsonApiDoc.Errors[0].Message.Should().Contain("No map data found");
@@ -78,7 +84,8 @@ public class ServerWorldMapControllerTests
     public async Task GetWorldBounds_ServiceThrowsException_ReturnsInternalServerError()
     {
         // Arrange
-        _mockService.GetWorldBoundsAsync(_testServerId)
+        _mockService
+            .GetWorldBoundsAsync(_testServerId)
             .Returns<WorldMapBoundsDTO?>(_ => throw new Exception("Database error"));
 
         // Act
@@ -88,30 +95,38 @@ public class ServerWorldMapControllerTests
         result.Should().NotBeNull();
         var errorResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
         errorResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
-        var jsonApiDoc = errorResult.Value.Should().BeOfType<JsonApiDocument<WorldMapBoundsDTO>>().Subject;
+        var jsonApiDoc = errorResult
+            .Value.Should()
+            .BeOfType<JsonApiDocument<WorldMapBoundsDTO>>()
+            .Subject;
         jsonApiDoc.Errors.Should().ContainSingle();
         jsonApiDoc.Errors[0].Code.Should().Be("500");
     }
 
     #endregion
 
-    #region GetTileImage Tests - Coordinate Transformation
+    #region GetGroupedTileImage Tests - Coordinate Transformation
 
     [Theory]
     [InlineData(0, 0, 0, 0)] // Origin
     [InlineData(5, -10, 5, 10)] // Positive X, negative Y -> positive Z
     [InlineData(-3, 7, -3, -7)] // Negative X, positive Y -> negative Z
     [InlineData(100, -200, 100, 200)] // Large values
-    public async Task GetTileImage_CoordinateTransformation_ConvertsCorrectly(
-        int x, int y, int expectedChunkX, int expectedChunkZ)
+    public async Task GetGroupedTileImage_CoordinateTransformation_ConvertsCorrectly(
+        int x,
+        int y,
+        int expectedChunkX,
+        int expectedChunkZ
+    )
     {
         // Arrange
         var mockImageData = new byte[] { 0x89, 0x50, 0x4E, 0x47 }; // PNG header
-        _mockService.GetTileImageAsync(_testServerId, expectedChunkX, expectedChunkZ)
+        _mockService
+            .GetGroupedTileImageAsync(_testServerId, expectedChunkX, expectedChunkZ)
             .Returns(mockImageData);
 
         // Act
-        var result = await _controller.GetTileImage(_testServerId, x, y);
+        var result = await _controller.GetGroupedTileImage(_testServerId, x, y);
 
         // Assert
         result.Should().BeOfType<FileContentResult>();
@@ -120,15 +135,17 @@ public class ServerWorldMapControllerTests
         fileResult.ContentType.Should().Be("image/png");
 
         // Verify the service was called with correct converted coordinates
-        await _mockService.Received(1).GetTileImageAsync(
-            _testServerId,
-            Arg.Is<int>(cx => cx == expectedChunkX),
-            Arg.Is<int>(cz => cz == expectedChunkZ)
-        );
+        await _mockService
+            .Received(1)
+            .GetGroupedTileImageAsync(
+                _testServerId,
+                Arg.Is<int>(cx => cx == expectedChunkX),
+                Arg.Is<int>(cz => cz == expectedChunkZ)
+            );
     }
 
     [Fact]
-    public async Task GetTileImage_ValidTile_ReturnsFileWithCacheHeaders()
+    public async Task GetGroupedTileImage_ValidTile_ReturnsFileWithCacheHeaders()
     {
         // Arrange
         var x = 5;
@@ -141,14 +158,14 @@ public class ServerWorldMapControllerTests
             ChunkHash = "abc123hash",
             Width = 32,
             Height = 32,
-            ExtractedAt = DateTime.UtcNow
+            ExtractedAt = DateTime.UtcNow,
         };
 
-        _mockService.GetTileImageAsync(_testServerId, 5, 10).Returns(mockImageData);
+        _mockService.GetGroupedTileImageAsync(_testServerId, 5, 10).Returns(mockImageData);
         _mockService.GetTileMetadataAsync(_testServerId, 5, 10).Returns(mockMetadata);
 
         // Act
-        var result = await _controller.GetTileImage(_testServerId, x, y);
+        var result = await _controller.GetGroupedTileImage(_testServerId, x, y);
 
         // Assert
         result.Should().BeOfType<FileContentResult>();
@@ -163,15 +180,15 @@ public class ServerWorldMapControllerTests
     }
 
     [Fact]
-    public async Task GetTileImage_TileNotFound_ReturnsNotFound()
+    public async Task GetGroupedTileImage_TileNotFound_ReturnsNotFound()
     {
         // Arrange
         var x = 999;
         var y = -999;
-        _mockService.GetTileImageAsync(_testServerId, 999, 999).Returns((byte[]?)null);
+        _mockService.GetGroupedTileImageAsync(_testServerId, 999, 999).Returns((byte[]?)null);
 
         // Act
-        var result = await _controller.GetTileImage(_testServerId, x, y);
+        var result = await _controller.GetGroupedTileImage(_testServerId, x, y);
 
         // Assert
         result.Should().BeOfType<NotFoundObjectResult>();
@@ -184,16 +201,17 @@ public class ServerWorldMapControllerTests
     }
 
     [Fact]
-    public async Task GetTileImage_ServiceThrowsException_ReturnsInternalServerError()
+    public async Task GetGroupedTileImage_ServiceThrowsException_ReturnsInternalServerError()
     {
         // Arrange
         var x = 1;
         var y = -1;
-        _mockService.GetTileImageAsync(_testServerId, Arg.Any<int>(), Arg.Any<int>())
+        _mockService
+            .GetGroupedTileImageAsync(_testServerId, Arg.Any<int>(), Arg.Any<int>())
             .Returns<byte[]?>(_ => throw new Exception("Rendering error"));
 
         // Act
-        var result = await _controller.GetTileImage(_testServerId, x, y);
+        var result = await _controller.GetGroupedTileImage(_testServerId, x, y);
 
         // Assert
         result.Should().BeOfType<ObjectResult>();
@@ -210,7 +228,11 @@ public class ServerWorldMapControllerTests
     [InlineData(10, -20, 10, 20)] // Positive X, negative Y -> positive Z
     [InlineData(-5, 15, -5, -15)] // Negative X, positive Y -> negative Z
     public async Task GetTileMetadata_CoordinateTransformation_ConvertsCorrectly(
-        int x, int y, int expectedChunkX, int expectedChunkZ)
+        int x,
+        int y,
+        int expectedChunkX,
+        int expectedChunkZ
+    )
     {
         // Arrange
         var mockMetadata = new MapTileMetadataDTO
@@ -220,10 +242,11 @@ public class ServerWorldMapControllerTests
             ChunkHash = "test-hash",
             Width = 32,
             Height = 32,
-            ExtractedAt = DateTime.UtcNow
+            ExtractedAt = DateTime.UtcNow,
         };
 
-        _mockService.GetTileMetadataAsync(_testServerId, expectedChunkX, expectedChunkZ)
+        _mockService
+            .GetTileMetadataAsync(_testServerId, expectedChunkX, expectedChunkZ)
             .Returns(mockMetadata);
 
         // Act
@@ -232,15 +255,20 @@ public class ServerWorldMapControllerTests
         // Assert
         result.Should().NotBeNull();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var jsonApiDoc = okResult.Value.Should().BeOfType<JsonApiDocument<MapTileMetadataDTO>>().Subject;
+        var jsonApiDoc = okResult
+            .Value.Should()
+            .BeOfType<JsonApiDocument<MapTileMetadataDTO>>()
+            .Subject;
         jsonApiDoc.Data.Should().BeEquivalentTo(mockMetadata);
 
         // Verify the service was called with correct converted coordinates
-        await _mockService.Received(1).GetTileMetadataAsync(
-            _testServerId,
-            Arg.Is<int>(cx => cx == expectedChunkX),
-            Arg.Is<int>(cz => cz == expectedChunkZ)
-        );
+        await _mockService
+            .Received(1)
+            .GetTileMetadataAsync(
+                _testServerId,
+                Arg.Is<int>(cx => cx == expectedChunkX),
+                Arg.Is<int>(cz => cz == expectedChunkZ)
+            );
     }
 
     [Fact]
@@ -256,7 +284,7 @@ public class ServerWorldMapControllerTests
             ChunkHash = "xyz789",
             Width = 32,
             Height = 32,
-            ExtractedAt = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc)
+            ExtractedAt = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
         };
 
         _mockService.GetTileMetadataAsync(_testServerId, 7, 3).Returns(expectedMetadata);
@@ -267,7 +295,10 @@ public class ServerWorldMapControllerTests
         // Assert
         result.Should().NotBeNull();
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var jsonApiDoc = okResult.Value.Should().BeOfType<JsonApiDocument<MapTileMetadataDTO>>().Subject;
+        var jsonApiDoc = okResult
+            .Value.Should()
+            .BeOfType<JsonApiDocument<MapTileMetadataDTO>>()
+            .Subject;
         jsonApiDoc.Data.Should().NotBeNull();
         jsonApiDoc.Data!.ChunkX.Should().Be(7);
         jsonApiDoc.Data.ChunkZ.Should().Be(3);
@@ -282,7 +313,9 @@ public class ServerWorldMapControllerTests
         // Arrange
         var x = 404;
         var y = -404;
-        _mockService.GetTileMetadataAsync(_testServerId, 404, 404).Returns((MapTileMetadataDTO?)null);
+        _mockService
+            .GetTileMetadataAsync(_testServerId, 404, 404)
+            .Returns((MapTileMetadataDTO?)null);
 
         // Act
         var result = await _controller.GetTileMetadata(_testServerId, x, y);
@@ -290,7 +323,10 @@ public class ServerWorldMapControllerTests
         // Assert
         result.Should().NotBeNull();
         var notFoundResult = result.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
-        var jsonApiDoc = notFoundResult.Value.Should().BeOfType<JsonApiDocument<MapTileMetadataDTO>>().Subject;
+        var jsonApiDoc = notFoundResult
+            .Value.Should()
+            .BeOfType<JsonApiDocument<MapTileMetadataDTO>>()
+            .Subject;
         jsonApiDoc.Errors.Should().ContainSingle();
         jsonApiDoc.Errors[0].Code.Should().Be("404");
         jsonApiDoc.Errors[0].Message.Should().Contain($"x={x}");
@@ -303,7 +339,8 @@ public class ServerWorldMapControllerTests
         // Arrange
         var x = 1;
         var y = -1;
-        _mockService.GetTileMetadataAsync(_testServerId, Arg.Any<int>(), Arg.Any<int>())
+        _mockService
+            .GetTileMetadataAsync(_testServerId, Arg.Any<int>(), Arg.Any<int>())
             .Returns<MapTileMetadataDTO?>(_ => throw new Exception("Database error"));
 
         // Act
@@ -313,7 +350,10 @@ public class ServerWorldMapControllerTests
         result.Should().NotBeNull();
         var errorResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
         errorResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
-        var jsonApiDoc = errorResult.Value.Should().BeOfType<JsonApiDocument<MapTileMetadataDTO>>().Subject;
+        var jsonApiDoc = errorResult
+            .Value.Should()
+            .BeOfType<JsonApiDocument<MapTileMetadataDTO>>()
+            .Subject;
         jsonApiDoc.Errors.Should().ContainSingle();
         jsonApiDoc.Errors[0].Code.Should().Be("500");
     }
@@ -325,34 +365,20 @@ public class ServerWorldMapControllerTests
     [Theory]
     [InlineData(int.MaxValue, int.MinValue)] // Extreme values
     [InlineData(-1000000, 1000000)] // Very large negative/positive
-    public async Task GetTileImage_ExtremeCoordinates_HandlesGracefully(int x, int y)
+    public async Task GetGroupedTileImage_ExtremeCoordinates_HandlesGracefully(int x, int y)
     {
         // Arrange
         var expectedChunkZ = -y;
-        _mockService.GetTileImageAsync(_testServerId, x, expectedChunkZ).Returns((byte[]?)null);
+        _mockService
+            .GetGroupedTileImageAsync(_testServerId, x, expectedChunkZ)
+            .Returns((byte[]?)null);
 
         // Act
-        var result = await _controller.GetTileImage(_testServerId, x, y);
+        var result = await _controller.GetGroupedTileImage(_testServerId, x, y);
 
         // Assert
         result.Should().BeOfType<NotFoundObjectResult>();
-        await _mockService.Received(1).GetTileImageAsync(_testServerId, x, expectedChunkZ);
-    }
-
-    [Fact]
-    public async Task GetTileImage_ZeroCoordinates_WorksCorrectly()
-    {
-        // Arrange
-        var mockImageData = new byte[] { 1, 2, 3, 4 };
-        _mockService.GetTileImageAsync(_testServerId, 0, 0).Returns(mockImageData);
-
-        // Act
-        var result = await _controller.GetTileImage(_testServerId, 0, 0);
-
-        // Assert
-        result.Should().BeOfType<FileContentResult>();
-        var fileResult = (FileContentResult)result;
-        fileResult.FileContents.Should().BeEquivalentTo(mockImageData);
+        await _mockService.Received(1).GetGroupedTileImageAsync(_testServerId, x, expectedChunkZ);
     }
 
     #endregion
