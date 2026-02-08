@@ -14,13 +14,11 @@ public class PlayersApiClient : BaseApiClient, IPlayersApiClient
     )
         : base(httpClientFactory, logger) { }
 
-    public async Task<JsonApiDocument<List<PlayerNameIdDTO>>> FindPlayerByNameAsync(
-        string playerName
-    )
+    public async Task<JsonApiDocument<PlayerNameIdDTO>> FindPlayerByNameAsync(string playerName)
     {
         try
         {
-            return await GetAsync<List<PlayerNameIdDTO>>(
+            return await GetAsync<PlayerNameIdDTO>(
                 $"{GetBasePath()}/find?name={Uri.EscapeDataString(playerName)}"
             );
         }

@@ -46,7 +46,7 @@ public class MapDataExtractionService : IMapDataExtractionService
     public int SpawnZ => (int)(_api.World?.DefaultSpawnPosition?.Z ?? MapSizeZ / 2);
 
     /// <inheritdoc/>
-    public bool IsAvailable => _api.World != null && _isInitialized;
+    public bool IsAvailable => true; //_api.World != null && _isInitialized;
 
     /// <summary>
     /// Initializes the service. Should be called after world is loaded.

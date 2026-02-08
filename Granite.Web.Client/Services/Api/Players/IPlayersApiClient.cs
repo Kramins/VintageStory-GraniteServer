@@ -6,7 +6,7 @@ namespace Granite.Web.Client.Services.Api.Players;
 
 public interface IPlayersApiClient
 {
-    Task<JsonApiDocument<List<PlayerNameIdDTO>>> FindPlayerByNameAsync(
+    Task<JsonApiDocument<PlayerNameIdDTO>> FindPlayerByNameAsync(
         string playerName
     );
 }

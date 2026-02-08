@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Granite.Common.Services;
 using Granite.Server.Configuration;
 using Microsoft.Extensions.Logging;
@@ -7,6 +8,7 @@ namespace Granite.Server.Services;
 
 /// <summary>
 /// Implementation of IPlayerNameResolver that queries the Vintage Story authentication server.
+/// Based on reverse engineering of VintageStory's AuthServerComm class.
 /// The auth server URL can be configured via environment variable GS_AUTH_SERVER_URL or in configuration.
 /// </summary>
 public class VintageStoryPlayerNameResolver : IPlayerNameResolver
@@ -23,14 +25,17 @@ public class VintageStoryPlayerNameResolver : IPlayerNameResolver
     {
         _logger = logger;
         _httpClient = httpClient;
-        _authServerUrl = options.Value.AuthServerUrl ?? "https://auth.vintagestory.at";
+        _authServerUrl = options.Value.AuthServerUrl ?? "https://auth3.vintagestory.at";
     }
 
     /// <summary>
     /// Resolves a player name to their unique player UID by contacting the Vintage Story auth server.
     /// Note: This should be used sparingly as it contacts an external server.
     /// </summary>
-    public async Task<string?> ResolvePlayerNameAsync(string playerName, CancellationToken cancellationToken = default)
+    public async Task<string?> ResolvePlayerNameAsync(
+        string playerName,
+        CancellationToken cancellationToken = default
+    )
     {
         if (string.IsNullOrWhiteSpace(playerName))
         {
@@ -39,27 +44,46 @@ public class VintageStoryPlayerNameResolver : IPlayerNameResolver
 
         try
         {
-            var url = $"{_authServerUrl.TrimEnd('/')}/api/v1/player/name/{Uri.EscapeDataString(playerName)}";
+            var url = $"{_authServerUrl.TrimEnd('/')}/resolveplayername";
             _logger.LogDebug("Resolving player name '{PlayerName}' via {Url}", playerName, url);
 
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            // VintageStory uses POST with form data, not GET with path parameters
+            var formData = new Dictionary<string, string> { { "playername", playerName } };
+            var content = new FormUrlEncodedContent(formData);
+
+            var response = await _httpClient.PostAsync(url, content, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
-            var uid = ExtractUidFromJson(json);
+            _logger.LogDebug("Response from auth server: {Response}", json);
 
-            if (!string.IsNullOrEmpty(uid))
+            var resolveResponse = System.Text.Json.JsonSerializer.Deserialize<ResolveResponse>(
+                json
+            );
+
+            if (resolveResponse?.PlayerUid != null && resolveResponse.Valid == 1)
             {
-                _logger.LogDebug("Resolved player name '{PlayerName}' to UID '{PlayerUid}'", playerName, uid);
-                return uid;
+                _logger.LogDebug(
+                    "Resolved player name '{PlayerName}' to UID '{PlayerUid}'",
+                    playerName,
+                    resolveResponse.PlayerUid
+                );
+                return resolveResponse.PlayerUid;
             }
 
-            _logger.LogWarning("Failed to resolve player name '{PlayerName}': No UID in response", playerName);
+            _logger.LogWarning(
+                "Failed to resolve player name '{PlayerName}': No UID in response or invalid",
+                playerName
+            );
             return null;
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Failed to resolve player name '{PlayerName}': HTTP error", playerName);
+            _logger.LogError(
+                ex,
+                "Failed to resolve player name '{PlayerName}': HTTP error",
+                playerName
+            );
             return null;
         }
         catch (Exception ex)
@@ -73,7 +97,10 @@ public class VintageStoryPlayerNameResolver : IPlayerNameResolver
     /// Resolves a player UID to their current player name by contacting the Vintage Story auth server.
     /// Note: This should be used sparingly as it contacts an external server.
     /// </summary>
-    public async Task<string?> ResolvePlayerUidAsync(string playerUid, CancellationToken cancellationToken = default)
+    public async Task<string?> ResolvePlayerUidAsync(
+        string playerUid,
+        CancellationToken cancellationToken = default
+    )
     {
         if (string.IsNullOrWhiteSpace(playerUid))
         {
@@ -82,27 +109,46 @@ public class VintageStoryPlayerNameResolver : IPlayerNameResolver
 
         try
         {
-            var url = $"{_authServerUrl.TrimEnd('/')}/api/v1/player/uid/{Uri.EscapeDataString(playerUid)}";
+            var url = $"{_authServerUrl.TrimEnd('/')}/resolveplayeruid";
             _logger.LogDebug("Resolving player UID '{PlayerUid}' via {Url}", playerUid, url);
 
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            // VintageStory uses POST with form data, not GET with path parameters
+            var formData = new Dictionary<string, string> { { "uid", playerUid } };
+            var content = new FormUrlEncodedContent(formData);
+
+            var response = await _httpClient.PostAsync(url, content, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
-            var name = ExtractNameFromJson(json);
+            _logger.LogDebug("Response from auth server: {Response}", json);
 
-            if (!string.IsNullOrEmpty(name))
+            var resolveResponse = System.Text.Json.JsonSerializer.Deserialize<ResolveResponseUid>(
+                json
+            );
+
+            if (resolveResponse?.PlayerName != null && resolveResponse.Valid == 1)
             {
-                _logger.LogDebug("Resolved player UID '{PlayerUid}' to name '{PlayerName}'", playerUid, name);
-                return name;
+                _logger.LogDebug(
+                    "Resolved player UID '{PlayerUid}' to name '{PlayerName}'",
+                    playerUid,
+                    resolveResponse.PlayerName
+                );
+                return resolveResponse.PlayerName;
             }
 
-            _logger.LogWarning("Failed to resolve player UID '{PlayerUid}': No name in response", playerUid);
+            _logger.LogWarning(
+                "Failed to resolve player UID '{PlayerUid}': No name in response or invalid",
+                playerUid
+            );
             return null;
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Failed to resolve player UID '{PlayerUid}': HTTP error", playerUid);
+            _logger.LogError(
+                ex,
+                "Failed to resolve player UID '{PlayerUid}': HTTP error",
+                playerUid
+            );
             return null;
         }
         catch (Exception ex)
@@ -113,56 +159,28 @@ public class VintageStoryPlayerNameResolver : IPlayerNameResolver
     }
 
     /// <summary>
-    /// Extracts the player UID from the auth server JSON response.
-    /// Adjust this based on the actual response format from the auth server.
+    /// Response from auth server when resolving player name to UID.
+    /// Matches the format from VintageStory's ResolveResponse class.
     /// </summary>
-    private static string? ExtractUidFromJson(string json)
+    private class ResolveResponse
     {
-        try
-        {
-            using var doc = System.Text.Json.JsonDocument.Parse(json);
-            var root = doc.RootElement;
+        [JsonPropertyName("playeruid")]
+        public string? PlayerUid { get; set; }
 
-            // Try common JSON property names for UID
-            if (root.TryGetProperty("uid", out var uidElement) ||
-                root.TryGetProperty("playerId", out uidElement) ||
-                root.TryGetProperty("id", out uidElement))
-            {
-                return uidElement.GetString();
-            }
-
-            return null;
-        }
-        catch
-        {
-            return null;
-        }
+        [JsonPropertyName("valid")]
+        public int Valid { get; set; }
     }
 
     /// <summary>
-    /// Extracts the player name from the auth server JSON response.
-    /// Adjust this based on the actual response format from the auth server.
+    /// Response from auth server when resolving player UID to name.
+    /// Matches the format from VintageStory's ResolveResponseUid class.
     /// </summary>
-    private static string? ExtractNameFromJson(string json)
+    private class ResolveResponseUid
     {
-        try
-        {
-            using var doc = System.Text.Json.JsonDocument.Parse(json);
-            var root = doc.RootElement;
+        [JsonPropertyName("playername")]
+        public string? PlayerName { get; set; }
 
-            // Try common JSON property names for name
-            if (root.TryGetProperty("name", out var nameElement) ||
-                root.TryGetProperty("playerName", out nameElement) ||
-                root.TryGetProperty("username", out nameElement))
-            {
-                return nameElement.GetString();
-            }
-
-            return null;
-        }
-        catch
-        {
-            return null;
-        }
+        [JsonPropertyName("valid")]
+        public int Valid { get; set; }
     }
 }

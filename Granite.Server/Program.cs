@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using Granite.Common.Services;
 using Granite.Server.Configuration;
 using Granite.Server.Extensions;
@@ -8,6 +9,7 @@ using Granite.Server.Services.Map;
 using GraniteServer.Server.HostedServices;
 using GraniteServer.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
@@ -169,6 +171,25 @@ builder
 
 builder.Services.AddAuthorization();
 
+// Add rate limiting for player search endpoint
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter(
+        "PlayerSearchLimit",
+        limiterOptions =>
+        {
+            limiterOptions.PermitLimit = 10; // 10 requests
+            limiterOptions.Window = TimeSpan.FromMinutes(1); // per minute
+            limiterOptions.QueueProcessingOrder = System
+                .Threading
+                .RateLimiting
+                .QueueProcessingOrder
+                .OldestFirst;
+            limiterOptions.QueueLimit = 2; // Allow 2 requests to queue
+        }
+    );
+});
+
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
@@ -221,6 +242,9 @@ app.UseWebSockets();
 app.UseCors();
 
 //app.UseHttpsRedirection();
+
+// Enable rate limiting
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
