@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -122,6 +123,45 @@ builder
                     context.Token = accessToken;
                 }
 
+                return Task.CompletedTask;
+            },
+            OnAuthenticationFailed = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<
+                    ILogger<Program>
+                >();
+                logger.LogWarning(
+                    context.Exception,
+                    "JWT authentication failed for {Path} from {RemoteIp}",
+                    context.Request.Path,
+                    context.HttpContext.Connection.RemoteIpAddress
+                );
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<
+                    ILogger<Program>
+                >();
+                logger.LogWarning(
+                    "JWT challenge for {Path} from {RemoteIp}. Error={Error} Description={Description}",
+                    context.Request.Path,
+                    context.HttpContext.Connection.RemoteIpAddress,
+                    context.Error,
+                    context.ErrorDescription
+                );
+                return Task.CompletedTask;
+            },
+            OnForbidden = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<
+                    ILogger<Program>
+                >();
+                logger.LogWarning(
+                    "JWT forbidden for {Path} from {RemoteIp}",
+                    context.Request.Path,
+                    context.HttpContext.Connection.RemoteIpAddress
+                );
                 return Task.CompletedTask;
             },
         };

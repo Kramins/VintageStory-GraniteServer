@@ -19,6 +19,26 @@ public interface IServerApiClient
     Task<JsonApiDocument<ServerDTO>> GetServerAsync(string serverId);
 
     /// <summary>
+    /// Creates a new server.
+    /// </summary>
+    Task<JsonApiDocument<ServerDTO>> CreateServerAsync(CreateServerRequestDTO request);
+
+    /// <summary>
+    /// Updates an existing server.
+    /// </summary>
+    Task<JsonApiDocument<ServerDTO>> UpdateServerAsync(string serverId, UpdateServerRequestDTO request);
+
+    /// <summary>
+    /// Deletes a server.
+    /// </summary>
+    Task<JsonApiDocument<object>> DeleteServerAsync(string serverId);
+
+    /// <summary>
+    /// Regenerates the access token for a server.
+    /// </summary>
+    Task<JsonApiDocument<TokenRegeneratedResponseDTO>> RegenerateAccessTokenAsync(string serverId);
+
+    /// <summary>
     /// Gets the server status.
     /// </summary>
     Task<JsonApiDocument<ServerStatusDTO>> GetServerStatusAsync(string serverId);

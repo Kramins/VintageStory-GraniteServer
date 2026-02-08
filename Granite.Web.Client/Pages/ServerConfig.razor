@@ -1,13 +1,407 @@
 @page "/server-config"
 @page "/{serverId}/config"
+@using Granite.Common.Dto
+@using Granite.Web.Client.Services.Api
+@using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
+
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IServerApiClient ServerApiClient
+
+<PageTitle>Configuration - Granite Server Manager</PageTitle>
 
 @code {
     [Parameter]
     public string? ServerId { get; set; }
 }
 
-<PageTitle>Configuration - Granite Server Manager</PageTitle>
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    @if (string.IsNullOrEmpty(ServerId))
+    {
+        <MudPaper Class="pa-8 d-flex flex-column align-center justify-center" Style="min-height: 400px;" Elevation="0">
+            <MudText Typo="Typo.h5" Color="Color.Secondary" Class="mb-2">
+                Select a server to configure
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Use the server dropdown in the navigation to select a server.
+            </MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
+            <MudText Typo="Typo.h4">Server Configuration</MudText>
+            <MudButton StartIcon="@Icons.Material.Filled.Info" 
+                       Variant="Variant.Outlined"
+                       OnClick="@HandleViewStatus">
+                View Status
+            </MudButton>
+        </MudStack>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Server Configuration</MudText>
-<MudText Typo="Typo.body1">Server configuration page</MudText>
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+        }
+
+        @if (_isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Class="mb-4" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Loading server configuration...</MudText>
+        }
+        else if (_configModel != null)
+        {
+            <MudPaper Class="pa-6" Elevation="1">
+                <EditForm Model="@_configModel" OnValidSubmit="@HandleConfigSubmit" Class="d-flex flex-column gap-4">
+                    <DataAnnotationsValidator />
+                    
+                    <MudText Typo="Typo.h6">Basic Settings</MudText>
+                    
+                    <MudTextField @bind-Value="_configModel.ServerName" 
+                                  Label="Server Name" 
+                                  Variant="Variant.Outlined" 
+                                  HelperText="The name of the server" />
+                    
+                    <MudTextField @bind-Value="_configModel.WelcomeMessage" 
+                                  Label="Welcome Message" 
+                                  Variant="Variant.Outlined" 
+                                  Lines="3"
+                                  HelperText="Message displayed when players join" />
+
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.h6">Network Settings</MudText>
+                    
+                    <MudNumericField @bind-Value="_configModel.Port" 
+                                     Label="Port" 
+                                     Variant="Variant.Outlined" 
+                                     Min="1024"
+                                     Max="65535"
+                                     HelperText="Server listening port (1024-65535)" />
+                    
+                    <MudTextField @bind-Value="_configModel.Password" 
+                                  Label="Server Password" 
+                                  Variant="Variant.Outlined" 
+                                  InputType="InputType.Password"
+                                  HelperText="Leave empty for no password" />
+
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.h6">Player Settings</MudText>
+                    
+                    <MudNumericField @bind-Value="_configModel.MaxClients" 
+                                     Label="Max Clients" 
+                                     Variant="Variant.Outlined" 
+                                     Min="1"
+                                     HelperText="Maximum number of players" />
+
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.h6">World Settings</MudText>
+                    
+                    <MudNumericField @bind-Value="_configModel.MaxChunkRadius" 
+                                     Label="Max Chunk Radius" 
+                                     Variant="Variant.Outlined" 
+                                     Min="1"
+                                     HelperText="Server chunk render distance" />
+                    
+                    <MudTextField @bind-Value="_configModel.WhitelistMode" 
+                                  Label="Whitelist Mode" 
+                                  Variant="Variant.Outlined" 
+                                  HelperText="true/false to enable or disable whitelist" />
+
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.h6">Game Rules</MudText>
+                    
+            <MudCheckBox T="bool?" @bind-Checked="_configModel.AllowPvP" 
+                         Label="Allow PvP (Player vs Player combat)" />
+                    
+                    <MudCheckBox T="bool?" @bind-Checked="_configModel.AllowFireSpread" 
+                         Label="Allow Fire Spread" />
+                    
+                    <MudCheckBox T="bool?" @bind-Checked="_configModel.AllowFallingBlocks" 
+                         Label="Allow Falling Blocks" />
+
+                    <div class="d-flex gap-2 mt-6">
+                        <MudButton ButtonType="ButtonType.Submit" 
+                                   Variant="Variant.Filled" 
+                                   Color="Color.Primary"
+                                   Disabled="@_formSubmitting">
+                            @if (_formSubmitting)
+                            {
+                                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                <MudText Class="ms-2">Saving...</MudText>
+                            }
+                            else
+                            {
+                                <span>Save Configuration</span>
+                            }
+                        </MudButton>
+                        <MudButton OnClick="@HandleCancel">Cancel</MudButton>
+                    </div>
+                </EditForm>
+            </MudPaper>
+
+            <MudPaper Class="pa-6 mt-4" Elevation="1">
+                <MudText Typo="Typo.h6" Class="mb-3">Vintage Story Server Startup Configuration</MudText>
+                <MudText Typo="Typo.body2" Class="mb-4">
+                    Copy and paste the Docker and Docker Compose examples below to run a Vintage Story server with the Granite mod connected.
+                </MudText>
+
+                <MudTextField @bind-Value="_modAccessToken"
+                              @bind-Value:after="OnAccessTokenChanged"
+                              Label="Granite Mod Access Token"
+                              Variant="Variant.Outlined"
+                              HelperText="Paste an access token here, or generate a new one for this server"
+                              HelperTextOnFocus="true" />
+
+                <MudStack Row="true" Spacing="2" Class="mt-3">
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.Key"
+                               OnClick="@HandleGenerateAccessToken"
+                               Disabled="@_tokenGenerating">
+                        @if (_tokenGenerating)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ms-2">Generating...</MudText>
+                        }
+                        else
+                        {
+                            <span>Generate Access Token</span>
+                        }
+                    </MudButton>
+                </MudStack>
+
+                <MudTextField Value="@_dockerSnippet"
+                              Label="Docker (single container)"
+                              Variant="Variant.Outlined"
+                              ReadOnly="true"
+                              Lines="10"
+                              Class="mt-4"
+                              HelperText="Update image names and volume paths as needed"
+                              HelperTextOnFocus="true" />
+
+                <MudTextField Value="@_dockerComposeSnippet"
+                              Label="Docker Compose"
+                              Variant="Variant.Outlined"
+                              ReadOnly="true"
+                              Lines="14"
+                              Class="mt-4"
+                              HelperText="Update image names and volume paths as needed"
+                              HelperTextOnFocus="true" />
+            </MudPaper>
+        }
+    }
+</MudContainer>
+
+@code {
+    private ServerConfigModel? _configModel;
+    private bool _isLoading = true;
+    private bool _formSubmitting = false;
+    private string? _error;
+    private string _modAccessToken = string.Empty;
+    private bool _tokenGenerating = false;
+    private string _dockerSnippet = string.Empty;
+    private string _dockerComposeSnippet = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(ServerId) && Guid.TryParse(ServerId, out var serverIdGuid))
+        {
+            await LoadServerConfigAsync(serverIdGuid);
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(ServerId) && Guid.TryParse(ServerId, out var serverIdGuid))
+        {
+            await LoadServerConfigAsync(serverIdGuid);
+        }
+    }
+
+    private async Task LoadServerConfigAsync(Guid serverId)
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            var response = await ServerApiClient.GetServerConfigAsync(serverId.ToString());
+            if (response?.Data != null)
+            {
+                _configModel = new ServerConfigModel
+                {
+                    Port = response.Data.Port,
+                    ServerName = response.Data.ServerName,
+                    WelcomeMessage = response.Data.WelcomeMessage,
+                    MaxClients = response.Data.MaxClients,
+                    Password = response.Data.Password,
+                    MaxChunkRadius = response.Data.MaxChunkRadius,
+                    WhitelistMode = response.Data.WhitelistMode,
+                    AllowPvP = response.Data.AllowPvP,
+                    AllowFireSpread = response.Data.AllowFireSpread,
+                    AllowFallingBlocks = response.Data.AllowFallingBlocks
+                };
+
+                await EnsureAccessTokenAsync(serverId);
+                UpdateConfigSnippet(serverId);
+            }
+            else
+            {
+                _error = "Failed to load server configuration.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleConfigSubmit()
+    {
+        if (_configModel == null || !Guid.TryParse(ServerId, out var serverIdGuid))
+            return;
+
+        _formSubmitting = true;
+        _error = null;
+
+        try
+        {
+            var configDto = new ServerConfigDTO
+            {
+                Port = _configModel.Port,
+                ServerName = _configModel.ServerName,
+                WelcomeMessage = _configModel.WelcomeMessage,
+                MaxClients = _configModel.MaxClients,
+                Password = _configModel.Password,
+                MaxChunkRadius = _configModel.MaxChunkRadius,
+                WhitelistMode = _configModel.WhitelistMode,
+                AllowPvP = _configModel.AllowPvP,
+                AllowFireSpread = _configModel.AllowFireSpread,
+                AllowFallingBlocks = _configModel.AllowFallingBlocks
+            };
+
+            await ServerApiClient.UpdateServerConfigAsync(serverIdGuid.ToString(), configDto);
+            Snackbar.Add("Server configuration updated successfully", Severity.Success);
+
+            UpdateConfigSnippet(serverIdGuid);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            Snackbar.Add($"Failed to update configuration: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _formSubmitting = false;
+        }
+    }
+
+    private async Task HandleGenerateAccessToken()
+    {
+        if (string.IsNullOrEmpty(ServerId) || !Guid.TryParse(ServerId, out var serverIdGuid))
+            return;
+
+        _tokenGenerating = true;
+        try
+        {
+            var response = await ServerApiClient.RegenerateAccessTokenAsync(serverIdGuid.ToString());
+            if (response?.Data?.AccessToken != null)
+            {
+                _modAccessToken = response.Data.AccessToken;
+                UpdateConfigSnippet(serverIdGuid);
+                Snackbar.Add("Access token generated", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Failed to generate access token", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to generate access token: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _tokenGenerating = false;
+        }
+    }
+
+    private async Task EnsureAccessTokenAsync(Guid serverId)
+    {
+        if (!string.IsNullOrWhiteSpace(_modAccessToken))
+            return;
+
+        _tokenGenerating = true;
+        try
+        {
+            var response = await ServerApiClient.RegenerateAccessTokenAsync(serverId.ToString());
+            if (response?.Data?.AccessToken != null)
+            {
+                _modAccessToken = response.Data.AccessToken;
+            }
+        }
+        finally
+        {
+            _tokenGenerating = false;
+        }
+    }
+
+    private void UpdateConfigSnippet(Guid serverId)
+    {
+        var graniteServerHost = "http://localhost:5148";
+        var tokenValue = _modAccessToken ?? string.Empty;
+
+        _dockerSnippet =
+            "docker run --rm \\\n" +
+            $"  -e GS_SERVERID={serverId} \\\n" +
+            $"  -e GS_GRANITESERVERHOST={graniteServerHost} \\\n" +
+            "  -e GS_HUBPATH=/hub/mod \\\n" +
+            $"  -e GS_ACCESSTOKEN=\"{tokenValue}\" \\\n" +
+            "  -v ./data:/app/data \\\n" +
+            "  -p 42420:42420/tcp \\\n" +
+            "  -p 42420:42420/udp \\\n" +
+            "  ghcr.io/kramins/vintagestory:latest";
+
+        _dockerComposeSnippet =
+            "services:\n" +
+            "  vintage-story:\n" +
+            "    image: ghcr.io/kramins/vintagestory:latest\n" +
+            "    environment:\n" +
+            $"      - GS_SERVERID={serverId}\n" +
+            $"      - GS_GRANITESERVERHOST={graniteServerHost}\n" +
+            "      - GS_HUBPATH=/hub/mod\n" +
+            $"      - GS_ACCESSTOKEN=\"{tokenValue}\"\n" +
+            "    volumes:\n" +
+            "      - ./data:/app/data\n" +
+            "    ports:\n" +
+            "      - \"42420:42420/tcp\"\n" +
+            "      - \"42420:42420/udp\"\n";
+    }
+
+    private void OnAccessTokenChanged()
+    {
+        if (!string.IsNullOrEmpty(ServerId) && Guid.TryParse(ServerId, out var serverIdGuid))
+        {
+            UpdateConfigSnippet(serverIdGuid);
+        }
+    }
+
+    private void HandleCancel()
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Navigation.NavigateTo($"/{ServerId}/status");
+        }
+    }
+
+    private void HandleViewStatus()
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Navigation.NavigateTo($"/{ServerId}/status");
+        }
+    }
+}

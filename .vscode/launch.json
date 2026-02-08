@@ -21,7 +21,7 @@
                 "--dataPath",
                 "/app/data/vs",
                 "--addModPath",
-                "${workspaceFolder}/artifacts/mod"
+                "${workspaceFolder}/Granite.Mod/bin/mods"
             ],
             "console": "internalConsole",
             "stopAtEntry": false
