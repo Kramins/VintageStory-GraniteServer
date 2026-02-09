@@ -109,16 +109,16 @@
                             <MudIconButton Icon="@Icons.Material.Filled.Edit" 
                                           Size="Size.Small" 
                                           OnClick="@(() => HandleEditServer(context.Item))"
-                                          Title="Edit Server" />
+                                          title="Edit Server" />
                             <MudIconButton Icon="@Icons.Material.Filled.VpnKey" 
                                           Size="Size.Small" 
                                           OnClick="@(() => HandleRegenerateToken(context.Item.Id))"
-                                          Title="Regenerate Token" />
+                                          title="Regenerate Token" />
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                           Size="Size.Small" 
                                           Color="Color.Error"
                                           OnClick="@(() => HandleDeleteConfirm(context.Item))"
-                                          Title="Delete Server" />
+                                          title="Delete Server" />
                         </MudStack>
                     </CellTemplate>
                 </TemplateColumn>
@@ -180,13 +180,13 @@
                              Variant="Variant.Outlined" 
                              Min="1" />
             
-            <MudCheckBox T="bool?" @bind-Checked="_serverFormModel.AllowPvP" 
+            <MudCheckBox T="bool?" @bind-checked="_serverFormModel.AllowPvP" 
                          Label="Allow PvP" />
             
-            <MudCheckBox T="bool?" @bind-Checked="_serverFormModel.AllowFireSpread" 
+            <MudCheckBox T="bool?" @bind-checked="_serverFormModel.AllowFireSpread" 
                          Label="Allow Fire Spread" />
             
-            <MudCheckBox T="bool?" @bind-Checked="_serverFormModel.AllowFallingBlocks" 
+            <MudCheckBox T="bool?" @bind-checked="_serverFormModel.AllowFallingBlocks" 
                          Label="Allow Falling Blocks" />
 
             <div class="d-flex gap-2 mt-4">
