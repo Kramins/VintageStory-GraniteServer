@@ -47,6 +47,7 @@ public interface IServerApiClient
     /// Gets the server configuration.
     /// </summary>
     Task<JsonApiDocument<ServerConfigDTO>> GetServerConfigAsync(string serverId);
+    Task<JsonApiDocument<ServerDetailsDTO>> GetServerDetailsAsync(string serverId);
 
     /// <summary>
     /// Updates the server configuration.

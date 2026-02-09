@@ -12,4 +12,5 @@ public record ServerConfigDTO
     public bool? AllowPvP { get; init; }
     public bool? AllowFireSpread { get; init; }
     public bool? AllowFallingBlocks { get; init; }
+    public string? AccessToken { get; init; }
 }

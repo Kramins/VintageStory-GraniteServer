@@ -221,24 +221,30 @@
 
         try
         {
-            var response = await ServerApiClient.GetServerConfigAsync(serverId.ToString());
-            if (response?.Data != null)
+            var configResponse = await ServerApiClient.GetServerConfigAsync(serverId.ToString());
+            
+            if (configResponse?.Data != null)
             {
                 _configModel = new ServerConfigModel
                 {
-                    Port = response.Data.Port,
-                    ServerName = response.Data.ServerName,
-                    WelcomeMessage = response.Data.WelcomeMessage,
-                    MaxClients = response.Data.MaxClients,
-                    Password = response.Data.Password,
-                    MaxChunkRadius = response.Data.MaxChunkRadius,
-                    WhitelistMode = response.Data.WhitelistMode,
-                    AllowPvP = response.Data.AllowPvP ?? false,
-                    AllowFireSpread = response.Data.AllowFireSpread ?? false,
-                    AllowFallingBlocks = response.Data.AllowFallingBlocks ?? false
+                    Port = configResponse.Data.Port,
+                    ServerName = configResponse.Data.ServerName,
+                    WelcomeMessage = configResponse.Data.WelcomeMessage,
+                    MaxClients = configResponse.Data.MaxClients,
+                    Password = configResponse.Data.Password,
+                    MaxChunkRadius = configResponse.Data.MaxChunkRadius,
+                    WhitelistMode = configResponse.Data.WhitelistMode,
+                    AllowPvP = configResponse.Data.AllowPvP ?? false,
+                    AllowFireSpread = configResponse.Data.AllowFireSpread ?? false,
+                    AllowFallingBlocks = configResponse.Data.AllowFallingBlocks ?? false
                 };
 
-                await EnsureAccessTokenAsync(serverId);
+                // Load access token from config response
+                if (configResponse.Data.AccessToken != null)
+                {
+                    _modAccessToken = configResponse.Data.AccessToken;
+                }
+
                 UpdateConfigSnippet(serverId);
             }
             else
@@ -309,7 +315,7 @@
             {
                 _modAccessToken = response.Data.AccessToken;
                 UpdateConfigSnippet(serverIdGuid);
-                Snackbar.Add("Access token generated", Severity.Success);
+                Snackbar.Add("Access token regenerated successfully", Severity.Success);
             }
             else
             {
@@ -319,26 +325,6 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Failed to generate access token: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _tokenGenerating = false;
-        }
-    }
-
-    private async Task EnsureAccessTokenAsync(Guid serverId)
-    {
-        if (!string.IsNullOrWhiteSpace(_modAccessToken))
-            return;
-
-        _tokenGenerating = true;
-        try
-        {
-            var response = await ServerApiClient.RegenerateAccessTokenAsync(serverId.ToString());
-            if (response?.Data?.AccessToken != null)
-            {
-                _modAccessToken = response.Data.AccessToken;
-            }
         }
         finally
         {

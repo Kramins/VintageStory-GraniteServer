@@ -16,16 +16,19 @@ public class ServerReadyEventHandler : IEventHandler<ServerReadyEvent>
 {
     private readonly PersistentMessageBusService _messageBus;
     private readonly IMapDataStorageService _mapStorageService;
+    private readonly ServerConfigService _configService;
     private readonly ILogger<ServerReadyEventHandler> _logger;
 
     public ServerReadyEventHandler(
         PersistentMessageBusService messageBus,
         IMapDataStorageService mapStorageService,
+        ServerConfigService configService,
         ILogger<ServerReadyEventHandler> logger
     )
     {
         _messageBus = messageBus;
         _mapStorageService = mapStorageService;
+        _configService = configService;
         _logger = logger;
     }
 
@@ -33,8 +36,8 @@ public class ServerReadyEventHandler : IEventHandler<ServerReadyEvent>
     {
         try
         {
-            // Issue sync server configuration command
-            await IssueSyncServerConfigCommandAsync(@event.OriginServerId);
+            // Push server configuration from database to game server on startup
+            await PushServerConfigToGameServerAsync(@event.OriginServerId);
 
             // Issue sync collectibles command to populate collectibles cache
             await IssueSyncCollectiblesCommandAsync(@event.OriginServerId);
@@ -57,21 +60,39 @@ public class ServerReadyEventHandler : IEventHandler<ServerReadyEvent>
         }
     }
 
-    private async Task IssueSyncServerConfigCommandAsync(Guid serverId)
+    private async Task PushServerConfigToGameServerAsync(Guid serverId)
     {
         try
         {
-            var syncCommand = _messageBus.CreateCommand<SyncServerConfigCommand>(
+            // Fetch config from database and push to game server
+            var config = await _configService.GetServerConfigAsync(serverId);
+            if (config == null)
+            {
+                _logger.LogWarning(
+                    "Cannot push config to server {ServerId} - config not found in database",
+                    serverId
+                );
+                return;
+            }
+
+            var updateCommand = _messageBus.CreateCommand<UpdateServerConfigCommand>(
                 serverId,
-                cmd => { }
+                cmd =>
+                {
+                    cmd.Data.Config = config;
+                }
             );
-            await _messageBus.PublishCommandAsync(syncCommand);
+            await _messageBus.PublishCommandAsync(updateCommand);
+            _logger.LogInformation(
+                "Pushed configuration from database to game server {ServerId} on startup",
+                serverId
+            );
         }
         catch (Exception ex)
         {
             _logger.LogError(
                 ex,
-                "Failed to issue SyncServerConfigCommand to server {ServerId}",
+                "Failed to push server config to server {ServerId} on startup",
                 serverId
             );
         }

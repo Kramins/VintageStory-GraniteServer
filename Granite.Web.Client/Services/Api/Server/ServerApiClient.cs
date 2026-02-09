@@ -119,12 +119,23 @@ public class ServerApiClient : BaseApiClient, IServerApiClient
             throw;
         }
     }
-
+    public async Task<JsonApiDocument<ServerDetailsDTO>> GetServerDetailsAsync(string serverId)
+    {
+        try
+        {
+            return await GetAsync<ServerDetailsDTO>($"{BasePath}/{serverId}/details");
+        }
+        catch (ApiException ex)
+        {
+            Logger.LogError(ex, "Failed to get server details {ServerId}", serverId);
+            throw;
+        }
+    }
     public async Task<JsonApiDocument<ServerConfigDTO>> UpdateServerConfigAsync(string serverId, ServerConfigDTO config)
     {
         try
         {
-            return await PatchAsync<ServerConfigDTO>($"/api/{serverId}/config", config);
+            return await PutAsync<ServerConfigDTO>($"/api/{serverId}/config", config);
         }
         catch (ApiException ex)
         {

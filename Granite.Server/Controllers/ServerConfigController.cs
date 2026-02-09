@@ -71,10 +71,10 @@ public class ServerConfigController : ControllerBase
 
     /// <summary>
     /// Update the server configuration.
-    /// This will send an UpdateServerConfigCommand to the game server mod.
-    /// Only non-null properties in the request body will be updated.
+    /// The configuration is persisted to the database first, then pushed to the game server.
+    /// All fields are required and will replace the existing configuration.
     /// </summary>
-    [HttpPatch]
+    [HttpPut]
     public async Task<ActionResult<JsonApiDocument<object>>> UpdateServerConfig(
         [FromRoute] Guid serverId,
         [FromBody] ServerConfigDTO config

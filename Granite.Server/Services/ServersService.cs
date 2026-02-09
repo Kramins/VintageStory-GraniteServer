@@ -152,16 +152,16 @@ public class ServersService
             IsOnline = false,
             LastSeenAt = null,
 
-            // Optional configuration
-            Port = request.Port,
-            WelcomeMessage = request.WelcomeMessage,
-            MaxClients = request.MaxClients,
-            Password = request.Password,
-            MaxChunkRadius = request.MaxChunkRadius,
-            WhitelistMode = request.WhitelistMode?.ToString(),
-            AllowPvP = request.AllowPvP,
-            AllowFireSpread = request.AllowFireSpread,
-            AllowFallingBlocks = request.AllowFallingBlocks,
+            // Initialize with default config values (can be customized before first startup)
+            Port = request.Port ?? 42420,
+            WelcomeMessage = request.WelcomeMessage ?? "Welcome to the server!",
+            MaxClients = request.MaxClients ?? 16,
+            Password = request.Password ?? string.Empty,
+            MaxChunkRadius = request.MaxChunkRadius ?? 8,
+            WhitelistMode = request.WhitelistMode?.ToString() ?? "None",
+            AllowPvP = request.AllowPvP ?? true,
+            AllowFireSpread = request.AllowFireSpread ?? true,
+            AllowFallingBlocks = request.AllowFallingBlocks ?? true,
         };
 
         _dbContext.Servers.Add(serverEntity);
