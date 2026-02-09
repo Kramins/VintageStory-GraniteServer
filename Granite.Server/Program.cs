@@ -50,11 +50,7 @@ builder.Services.AddScoped<ServerPlayersService>();
 builder.Services.AddScoped<ServerConfigService>();
 builder.Services.AddScoped<IServerWorldMapService, ServerWorldMapService>();
 builder.Services.AddScoped<IPlayersService, PlayersService>();
-builder.Services.AddScoped<IMapDataStorageService, MapDataStorageService>();
 builder.Services.AddScoped<IMapRenderingService, MapRenderingService>();
-
-// TODO: need a better caching strategy here
-builder.Services.AddSingleton<IMemoryCache, MemoryCache>();
 
 // Add player name resolver for Vintage Story auth server integration
 builder

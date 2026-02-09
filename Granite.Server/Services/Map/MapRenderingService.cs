@@ -1,84 +1,46 @@
 using System;
-using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using Granite.Common.Messaging.Common;
+using Granite.Server.Models;
 using GraniteServer.Map;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 
 namespace Granite.Server.Services.Map;
 
 /// <summary>
 /// Service for rendering map tiles from raw chunk data.
+/// Pure rendering layer with no database or storage dependencies.
 /// </summary>
 public interface IMapRenderingService
 {
     /// <summary>
-    /// Renders a single chunk tile from stored data.
+    /// Renders a grouped tile (256×256 pixels) from pre-loaded chunks with fog of war for missing chunks.
     /// </summary>
-    /// <param name="serverId">Server ID</param>
-    /// <param name="chunkX">Chunk X coordinate</param>
-    /// <param name="chunkZ">Chunk Z coordinate</param>
-    /// <param name="blockIdToColorCode">Mapping of block IDs to color codes</param>
-    /// <returns>PNG image bytes or null if chunk data not available</returns>
-    Task<byte[]?> RenderChunkTileAsync(
-        Guid serverId,
-        int chunkX,
-        int chunkZ,
-        IReadOnlyDictionary<int, string>? blockIdToColorCode = null
-    );
-
-    /// <summary>
-    /// Renders a grouped tile (256×256 pixels) from 8×8 chunks with fog of war for missing chunks.
-    /// </summary>
-    /// <param name="serverId">Server ID</param>
     /// <param name="groupX">Group X coordinate</param>
     /// <param name="groupZ">Group Z coordinate</param>
+    /// <param name="chunks">Pre-loaded chunk data to render</param>
     /// <param name="blockIdToColorCode">Mapping of block IDs to color codes</param>
-    /// <returns>PNG image bytes or null if no chunks found</returns>
+    /// <returns>PNG image bytes or null if no chunks provided</returns>
     Task<byte[]?> RenderGroupedTileAsync(
-        Guid serverId,
         int groupX,
         int groupZ,
+        StoredChunkData[] chunks,
         IReadOnlyDictionary<int, string>? blockIdToColorCode = null
     );
 
     /// <summary>
-    /// Renders a tile from pre-loaded chunk data (no database lookup).
+    /// Gets a fog of war tile image (for missing tiles).
     /// </summary>
-    byte[] RenderTileFromData(
-        StoredChunkData chunkData,
-        IReadOnlyDictionary<int, string>? blockIdToColorCode = null,
-        int mapHeightForShading = 256
-    );
-
-    /// <summary>
-    /// Clears the rendered tile cache for a specific chunk.
-    /// Also invalidates the grouped tile that contains this chunk.
-    /// </summary>
-    void InvalidateChunk(Guid serverId, int chunkX, int chunkZ);
-
-    /// <summary>
-    /// Converts chunk coordinates to tile (group) coordinates.
-    /// </summary>
-    MapTileCoords ChunkCoordsToTileCoords(int chunkX, int chunkZ);
-
-    /// <summary>
-    /// Gets a cached "not found" tile image (fog of war).
-    /// </summary>
-    Task<byte[]> GetNotFoundTileImageAsync();
+    Task<byte[]> GetFogOfWarTileAsync();
 }
 
 /// <summary>
 /// Implementation of IMapRenderingService.
+/// Pure rendering service with no database or storage dependencies.
 /// </summary>
 public class MapRenderingService : IMapRenderingService
 {
-    private readonly IMapDataStorageService _storageService;
-    private readonly IMemoryCache _cache;
     private readonly ILogger<MapRenderingService> _logger;
 
     /// <summary>
@@ -97,113 +59,42 @@ public class MapRenderingService : IMapRenderingService
     private const int GroupedTileSize = ChunkSize * ChunksPerGroup;
 
     /// <summary>
-    /// Fog of war color (RGBA: 64,64,64,153 ≈ 60% opacity).
-    /// </summary>
-    private const uint FogOfWarColor = 0x99404040;
-
-    /// <summary>
     /// Default map height for shading calculations.
     /// </summary>
     private const int DefaultMapHeight = 256;
 
-    public MapRenderingService(
-        IMapDataStorageService storageService,
-        IMemoryCache cache,
-        ILogger<MapRenderingService> logger
-    )
+    public MapRenderingService(ILogger<MapRenderingService> logger)
     {
-        _storageService = storageService;
-        _cache = cache;
         _logger = logger;
     }
 
     /// <inheritdoc/>
-    public async Task<byte[]?> RenderChunkTileAsync(
-        Guid serverId,
-        int chunkX,
-        int chunkZ,
-        IReadOnlyDictionary<int, string>? blockIdToColorCode = null
-    )
-    {
-        var cacheKey = GetChunkCacheKey(serverId, chunkX, chunkZ);
-
-        // Check cache first
-        if (_cache.TryGetValue<(string hash, byte[] data)>(cacheKey, out var cached))
-        {
-            // Verify the hash still matches
-            var currentHash = await _storageService.GetChunkHashAsync(serverId, chunkX, chunkZ);
-            if (currentHash == cached.hash)
-            {
-                _logger.LogDebug(
-                    "Returning cached tile for chunk ({ChunkX}, {ChunkZ})",
-                    chunkX,
-                    chunkZ
-                );
-                return cached.data;
-            }
-
-            // Hash changed, invalidate cache
-            _logger.LogDebug(
-                "Hash mismatch for chunk ({ChunkX}, {ChunkZ}), re-rendering",
-                chunkX,
-                chunkZ
-            );
-            _cache.Remove(cacheKey);
-        }
-
-        // Get chunk data
-        var chunkData = await _storageService.GetChunkDataAsync(serverId, chunkX, chunkZ);
-        if (chunkData == null)
-        {
-            _logger.LogDebug("No data available for chunk ({ChunkX}, {ChunkZ})", chunkX, chunkZ);
-            return null;
-        }
-
-        // Render the tile
-        var tileBytes = RenderTileFromData(chunkData, blockIdToColorCode);
-
-        // Cache the result with sliding expiration
-        var cacheOptions = new MemoryCacheEntryOptions
-        {
-            SlidingExpiration = TimeSpan.FromHours(1),
-            Size = 1, // For size-based eviction if configured
-        };
-
-        _cache.Set(cacheKey, (chunkData.ContentHash, tileBytes), cacheOptions);
-
-        _logger.LogDebug("Rendered and cached tile for chunk ({ChunkX}, {ChunkZ})", chunkX, chunkZ);
-
-        return tileBytes;
-    }
-
-    /// <inheritdoc/>
-    public async Task<byte[]?> RenderGroupedTileAsync(
-        Guid serverId,
+    public Task<byte[]?> RenderGroupedTileAsync(
         int groupX,
         int groupZ,
+        StoredChunkData[] chunks,
         IReadOnlyDictionary<int, string>? blockIdToColorCode = null
     )
     {
-        var cacheKey = GetGroupCacheKey(serverId, groupX, groupZ);
-
-        // Check cache first
-        if (_cache.TryGetValue<byte[]>(cacheKey, out var cachedTile))
+        if (chunks == null || chunks.Length == 0)
         {
-            _logger.LogDebug(
-                "Returning cached grouped tile for group ({GroupX}, {GroupZ})",
-                groupX,
-                groupZ
-            );
-            return cachedTile;
+            _logger.LogDebug("No chunks provided for grouped tile ({GroupX}, {GroupZ})", groupX, groupZ);
+            return Task.FromResult<byte[]?>(null);
         }
 
         // Create tile with fog of war background
         var pixels = CreateFogOfWarTile(GroupedTileSize);
 
-        bool anyChunkLoaded = false;
+        // Create a lookup for quick chunk access by coordinates
+        var chunkLookup = new Dictionary<(int, int), StoredChunkData>();
+        foreach (var chunk in chunks)
+        {
+            chunkLookup[(chunk.ChunkX, chunk.ChunkZ)] = chunk;
+        }
+
         var loadedChunks = 0;
 
-        // Load and render each chunk in the group
+        // Render each chunk in the group
         for (var chunkOffsetZ = 0; chunkOffsetZ < ChunksPerGroup; chunkOffsetZ++)
         {
             for (var chunkOffsetX = 0; chunkOffsetX < ChunksPerGroup; chunkOffsetX++)
@@ -212,12 +103,9 @@ public class MapRenderingService : IMapRenderingService
                 var chunkX = (groupX * ChunksPerGroup) + chunkOffsetX;
                 var chunkZ = (groupZ * ChunksPerGroup) + chunkOffsetZ;
 
-                var chunkData = await _storageService.GetChunkDataAsync(serverId, chunkX, chunkZ);
-
-                if (chunkData == null)
+                if (!chunkLookup.TryGetValue((chunkX, chunkZ), out var chunkData))
                     continue;
 
-                anyChunkLoaded = true;
                 loadedChunks++;
 
                 // Render chunk into the grouped tile
@@ -231,37 +119,28 @@ public class MapRenderingService : IMapRenderingService
             }
         }
 
-        if (!anyChunkLoaded)
+        if (loadedChunks == 0)
         {
             _logger.LogDebug(
                 "No chunk data available for grouped tile ({GroupX}, {GroupZ})",
                 groupX,
                 groupZ
             );
-            return null;
+            return Task.FromResult<byte[]?>(null);
         }
 
         // Encode to PNG
         var tileBytes = EncodeToPng(pixels, GroupedTileSize, GroupedTileSize);
 
-        // Cache with sliding expiration
-        var cacheOptions = new MemoryCacheEntryOptions
-        {
-            SlidingExpiration = TimeSpan.FromHours(1),
-            Size = 1,
-        };
-
-        _cache.Set(cacheKey, tileBytes, cacheOptions);
-
         _logger.LogDebug(
-            "Rendered and cached grouped tile for group ({GroupX}, {GroupZ}): {LoadedChunks}/{TotalChunks} chunks loaded",
+            "Rendered grouped tile for group ({GroupX}, {GroupZ}): {LoadedChunks}/{TotalChunks} chunks",
             groupX,
             groupZ,
             loadedChunks,
             ChunksPerGroup * ChunksPerGroup
         );
 
-        return tileBytes;
+        return Task.FromResult<byte[]?>(tileBytes);
     }
 
     /// <summary>
@@ -279,13 +158,16 @@ public class MapRenderingService : IMapRenderingService
         var pixelOffsetY = chunkOffsetZ * ChunkSize;
         var mapYHalf = DefaultMapHeight / 2f;
 
+        if (chunkData.RainHeightMap == null || chunkData.SurfaceBlockId == null)
+            return;
+
         for (var localZ = 0; localZ < ChunkSize; localZ++)
         {
             for (var localX = 0; localX < ChunkSize; localX++)
             {
                 var chunkIndex = localZ * ChunkSize + localX;
                 var height = chunkData.RainHeightMap[chunkIndex];
-                var blockId = chunkData.SurfaceBlockIds[chunkIndex];
+                var blockId = chunkData.SurfaceBlockId[chunkIndex];
 
                 // Get block color
                 var color = GetBlockColor(blockId, blockIdToColorCode);
@@ -302,38 +184,6 @@ public class MapRenderingService : IMapRenderingService
                 pixels[groupedIndex] = color;
             }
         }
-    }
-
-    /// <inheritdoc/>
-    public byte[] RenderTileFromData(
-        StoredChunkData chunkData,
-        IReadOnlyDictionary<int, string>? blockIdToColorCode = null,
-        int mapHeightForShading = DefaultMapHeight
-    )
-    {
-        var pixels = new uint[ChunkSize * ChunkSize];
-        var mapYHalf = mapHeightForShading / 2f;
-
-        for (var localZ = 0; localZ < ChunkSize; localZ++)
-        {
-            for (var localX = 0; localX < ChunkSize; localX++)
-            {
-                var index = localZ * ChunkSize + localX;
-                var height = chunkData.RainHeightMap[index];
-                var blockId = chunkData.SurfaceBlockIds[index];
-
-                // Get block color
-                var color = GetBlockColor(blockId, blockIdToColorCode);
-
-                // Apply height-based shading
-                var heightFactor = Math.Clamp(height / mapYHalf, 0.5f, 1.5f);
-                color = MapColors.ApplyBrightness(color, heightFactor);
-
-                pixels[index] = color;
-            }
-        }
-
-        return EncodeToPng(pixels, ChunkSize, ChunkSize);
     }
 
     /// <summary>
@@ -357,60 +207,15 @@ public class MapRenderingService : IMapRenderingService
     }
 
     /// <inheritdoc/>
-    public void InvalidateChunk(Guid serverId, int chunkX, int chunkZ)
+    public Task<byte[]> GetFogOfWarTileAsync()
     {
-        // Invalidate individual chunk cache
-        var chunkCacheKey = GetChunkCacheKey(serverId, chunkX, chunkZ);
-        _cache.Remove(chunkCacheKey);
-
-        // Invalidate the grouped tile that contains this chunk
-        var tileCoords = ChunkCoordsToTileCoords(chunkX, chunkZ);
-        var groupCacheKey = GetGroupCacheKey(serverId, tileCoords.TileX, tileCoords.TileZ);
-        _cache.Remove(groupCacheKey);
-
-        _logger.LogDebug(
-            "Invalidated chunk ({ChunkX}, {ChunkZ}) and group tile ({GroupX}, {GroupZ})",
-            chunkX,
-            chunkZ,
-            tileCoords.TileX,
-            tileCoords.TileZ
-        );
-    }
-
-    /// <inheritdoc/>
-    public MapTileCoords ChunkCoordsToTileCoords(int chunkX, int chunkZ)
-    {
-        // Use floor division to handle negative coordinates correctly
-        int tileX = (int)Math.Floor((double)chunkX / ChunksPerGroup);
-        int tileZ = (int)Math.Floor((double)chunkZ / ChunksPerGroup);
-        return new MapTileCoords(tileX, tileZ);
-    }
-
-    /// <inheritdoc/>
-    public Task<byte[]> GetNotFoundTileImageAsync()
-    {
-        const string cacheKey = "notfound:tile";
-
-        if (_cache.TryGetValue<byte[]>(cacheKey, out var cachedImage))
-        {
-            return Task.FromResult(cachedImage);
-        }
-
         // Create fog of war tile
         var pixels = CreateFogOfWarTile(GroupedTileSize);
         var tileBytes = EncodeToPng(pixels, GroupedTileSize, GroupedTileSize);
 
-        // Cache permanently (this never changes)
-        var cacheOptions = new MemoryCacheEntryOptions { Priority = CacheItemPriority.NeverRemove };
-
-        _cache.Set(cacheKey, tileBytes, cacheOptions);
-
         return Task.FromResult(tileBytes);
     }
 
-    /// <summary>
-    /// Creates a tile filled with fog of war color.
-    /// </summary>
     /// <summary>
     /// Creates an attractive fog of war tile with vignette edges and subtle texture.
     /// </summary>
@@ -480,16 +285,4 @@ public class MapRenderingService : IMapRenderingService
         image.SaveAsPng(ms);
         return ms.ToArray();
     }
-
-    /// <summary>
-    /// Generates cache key for individual chunk tiles.
-    /// </summary>
-    private static string GetChunkCacheKey(Guid serverId, int chunkX, int chunkZ) =>
-        $"{serverId}:chunk:{chunkX}:{chunkZ}";
-
-    /// <summary>
-    /// Generates cache key for grouped tiles.
-    /// </summary>
-    private static string GetGroupCacheKey(Guid serverId, int groupX, int groupZ) =>
-        $"{serverId}:group:{groupX}:{groupZ}";
 }

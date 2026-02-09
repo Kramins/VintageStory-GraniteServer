@@ -3,30 +3,138 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Granite.Common.Dto;
+using Granite.Server.Models;
 using Granite.Server.Services.Map;
 using GraniteServer.Data;
+using GraniteServer.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Granite.Server.Services;
 
 public class ServerWorldMapService : IServerWorldMapService
 {
-    private readonly IMapDataStorageService _mapDataStorage;
     private readonly IMapRenderingService _mapRendering;
     private readonly GraniteDataContext _dbContext;
     private readonly ILogger<ServerWorldMapService> _logger;
 
     public ServerWorldMapService(
-        IMapDataStorageService mapDataStorage,
         IMapRenderingService mapRendering,
         GraniteDataContext dbContext,
         ILogger<ServerWorldMapService> logger
     )
     {
-        _mapDataStorage = mapDataStorage;
         _mapRendering = mapRendering;
         _dbContext = dbContext;
         _logger = logger;
+    }
+
+    public async Task<bool> StoreChunkDataAsync(
+        Guid serverId,
+        int chunkX,
+        int chunkZ,
+        string contentHash,
+        int[] rainHeightMap,
+        int[] surfaceBlockIds,
+        DateTime extractedAt
+    )
+    {
+        var existing = await _dbContext.MapChunks.FirstOrDefaultAsync(c =>
+            c.ServerId == serverId && c.ChunkX == chunkX && c.ChunkZ == chunkZ
+        );
+
+        if (existing != null)
+        {
+            // Check if data has changed
+            if (existing.ContentHash == contentHash)
+            {
+                _logger.LogDebug(
+                    "Chunk ({ChunkX}, {ChunkZ}) for server {ServerId} unchanged (hash: {Hash})",
+                    chunkX,
+                    chunkZ,
+                    serverId,
+                    contentHash[..8]
+                );
+                return false;
+            }
+
+            // Update existing
+            existing.ContentHash = contentHash;
+            existing.RainHeightMapData = rainHeightMap;
+            existing.SurfaceBlockIdsData = surfaceBlockIds;
+            existing.ExtractedAt = extractedAt;
+            existing.ReceivedAt = DateTime.UtcNow;
+            existing.LastAccessedAt = DateTime.UtcNow;
+
+            _logger.LogDebug(
+                "Updated chunk ({ChunkX}, {ChunkZ}) for server {ServerId} (new hash: {Hash})",
+                chunkX,
+                chunkZ,
+                serverId,
+                contentHash[..8]
+            );
+        }
+        else
+        {
+            // Insert new
+            var entity = new MapChunkEntity
+            {
+                ServerId = serverId,
+                ChunkX = chunkX,
+                ChunkZ = chunkZ,
+                ContentHash = contentHash,
+                RainHeightMapData = rainHeightMap,
+                SurfaceBlockIdsData = surfaceBlockIds,
+                ExtractedAt = extractedAt,
+                ReceivedAt = DateTime.UtcNow,
+                LastAccessedAt = DateTime.UtcNow,
+            };
+
+            _dbContext.MapChunks.Add(entity);
+
+            _logger.LogDebug(
+                "Stored new chunk ({ChunkX}, {ChunkZ}) for server {ServerId} (hash: {Hash})",
+                chunkX,
+                chunkZ,
+                serverId,
+                contentHash[..8]
+            );
+        }
+
+        await _dbContext.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<List<StoredChunkHashDTO>> GetAllChunkHashesAsync(Guid serverId)
+    {
+        var hashes = await _dbContext
+            .MapChunks.Where(c => c.ServerId == serverId)
+            .Select(c => new StoredChunkHashDTO(c.ChunkX, c.ChunkZ, c.ContentHash))
+            .ToListAsync();
+
+        return hashes;
+    }
+
+    public async Task<StoredChunkData?> GetChunkDataAsync(Guid serverId, int chunkX, int chunkZ)
+    {
+        var entity = await _dbContext.MapChunks.FirstOrDefaultAsync(c =>
+            c.ServerId == serverId && c.ChunkX == chunkX && c.ChunkZ == chunkZ
+        );
+
+        if (entity == null)
+            return null;
+
+        // Update last accessed time, I don't think we need todo this
+        // entity.LastAccessedAt = DateTime.UtcNow;
+        // await _dbContext.SaveChangesAsync();
+
+        return new StoredChunkData
+        {
+            ChunkX = entity.ChunkX,
+            ChunkZ = entity.ChunkZ,
+            ContentHash = entity.ContentHash,
+            RainHeightMap = entity.RainHeightMapData,
+            SurfaceBlockId = entity.SurfaceBlockIdsData,
+        };
     }
 
     public async Task<WorldMapBoundsDTO?> GetWorldBoundsAsync(Guid serverId)
@@ -80,8 +188,18 @@ public class ServerWorldMapService : IServerWorldMapService
                 return null;
             }
 
-            // Use the rendering service which includes caching
-            var imageBytes = await _mapRendering.RenderChunkTileAsync(serverId, chunkX, chunkZ);
+            // Convert entity to StoredChunkData and render
+            var chunkData = new StoredChunkData
+            {
+                ChunkX = chunk.ChunkX,
+                ChunkZ = chunk.ChunkZ,
+                ContentHash = chunk.ContentHash,
+                RainHeightMap = chunk.RainHeightMapData,
+                SurfaceBlockId = chunk.SurfaceBlockIdsData,
+            };
+
+            var chunkArray = new[] { chunkData };
+            var imageBytes = await _mapRendering.RenderGroupedTileAsync(0, 0, chunkArray);
 
             return imageBytes;
         }
@@ -98,14 +216,46 @@ public class ServerWorldMapService : IServerWorldMapService
         }
     }
 
-    
-
     public async Task<byte[]?> GetGroupedTileImageAsync(Guid serverId, int groupX, int groupZ)
     {
         try
         {
-            // Use the rendering service which includes caching
-            var imageBytes = await _mapRendering.RenderGroupedTileAsync(serverId, groupX, groupZ);
+            // Fetch all chunks for this group from the database
+            var chunkList = new List<StoredChunkData>();
+
+            for (var chunkOffsetZ = 0; chunkOffsetZ < 8; chunkOffsetZ++)
+            {
+                for (var chunkOffsetX = 0; chunkOffsetX < 8; chunkOffsetX++)
+                {
+                    var chunkX = (groupX * 8) + chunkOffsetX;
+                    var chunkZ = (groupZ * 8) + chunkOffsetZ;
+
+                    var entity = await _dbContext.MapChunks.FirstOrDefaultAsync(c =>
+                        c.ServerId == serverId && c.ChunkX == chunkX && c.ChunkZ == chunkZ
+                    );
+
+                    if (entity != null)
+                    {
+                        chunkList.Add(
+                            new StoredChunkData
+                            {
+                                ChunkX = entity.ChunkX,
+                                ChunkZ = entity.ChunkZ,
+                                ContentHash = entity.ContentHash,
+                                RainHeightMap = entity.RainHeightMapData,
+                                SurfaceBlockId = entity.SurfaceBlockIdsData,
+                            }
+                        );
+                    }
+                }
+            }
+
+            // Render with the loaded chunks
+            var imageBytes = await _mapRendering.RenderGroupedTileAsync(
+                groupX,
+                groupZ,
+                chunkList.ToArray()
+            );
 
             return imageBytes;
         }
@@ -173,7 +323,7 @@ public class ServerWorldMapService : IServerWorldMapService
 
     public async Task<byte[]?> GetNotFoundTileImageAsync(Guid serverid, int chunkX, int chunkZ)
     {
-        var mapTile = await _mapRendering.GetNotFoundTileImageAsync();
+        var mapTile = await _mapRendering.GetFogOfWarTileAsync();
 
         return mapTile;
     }

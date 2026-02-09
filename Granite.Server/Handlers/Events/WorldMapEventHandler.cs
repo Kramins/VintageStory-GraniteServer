@@ -14,19 +14,19 @@ public class WorldMapEventHandler
     : IEventHandler<MapChunkDataEvent>,
         IEventHandler<MapChunkHashesEvent>
 {
-    private readonly IMapDataStorageService _storageService;
+    private readonly IServerWorldMapService _worldMapService;
     private readonly IMapRenderingService _renderingService;
     private readonly PersistentMessageBusService _messageBus;
     private readonly ILogger<WorldMapEventHandler> _logger;
 
     public WorldMapEventHandler(
-        IMapDataStorageService storageService,
+        IServerWorldMapService worldMapService,
         IMapRenderingService renderingService,
         PersistentMessageBusService messageBus,
         ILogger<WorldMapEventHandler> logger
     )
     {
-        _storageService = storageService;
+        _worldMapService = worldMapService;
         _renderingService = renderingService;
         _messageBus = messageBus;
         _logger = logger;
@@ -52,7 +52,7 @@ public class WorldMapEventHandler
         );
 
         // Store the chunk data
-        var wasUpdated = await _storageService.StoreChunkDataAsync(
+        var wasUpdated = await _worldMapService.StoreChunkDataAsync(
             serverId,
             data.ChunkX,
             data.ChunkZ,
@@ -64,20 +64,15 @@ public class WorldMapEventHandler
 
         if (wasUpdated)
         {
-            // Invalidate cached tile for this chunk
-            _renderingService.InvalidateChunk(serverId, data.ChunkX, data.ChunkZ);
-
-            var tileCoords = _renderingService.ChunkCoordsToTileCoords(data.ChunkX, data.ChunkZ);
+            // Convert chunk coordinates to tile coordinates (groups of 8x8 chunks)
+            int tileX = (int)Math.Floor((double)data.ChunkX / 8);
+            int tileZ = (int)Math.Floor((double)data.ChunkZ / 8);
 
             var mapTileUpdatedEvent = _messageBus.CreateEvent<MapTileUpdatedEvent>(
                 @event.OriginServerId,
                 e =>
                 {
-                    e.Data = new MapTileUpdateEventData
-                    {
-                        TileX = tileCoords.TileX,
-                        TileZ = tileCoords.TileZ,
-                    };
+                    e.Data = new MapTileUpdateEventData { TileX = tileX, TileZ = tileZ };
                 }
             );
 
@@ -110,7 +105,7 @@ public class WorldMapEventHandler
         );
 
         // Get our stored hashes for comparison
-        var storedHashes = await _storageService.GetAllChunkHashesAsync(serverId);
+        var storedHashes = await _worldMapService.GetAllChunkHashesAsync(serverId);
         var storedHashLookup = storedHashes.ToDictionary(
             h => (h.ChunkX, h.ChunkZ),
             h => h.ContentHash

@@ -9,4 +9,14 @@ public interface IServerWorldMapService
     Task<byte[]?> GetGroupedTileImageAsync(Guid serverId, int groupX, int groupZ);
     Task<MapTileMetadataDTO?> GetTileMetadataAsync(Guid serverId, int chunkX, int chunkZ);
     Task<byte[]?> GetNotFoundTileImageAsync(Guid serverid, int chunkX, int chunkZ);
+    Task<List<StoredChunkHashDTO>> GetAllChunkHashesAsync(Guid serverId);
+    Task<bool> StoreChunkDataAsync(
+        Guid serverId,
+        int chunkX,
+        int chunkZ,
+        string contentHash,
+        int[] rainHeightMap,
+        int[] surfaceBlockIds,
+        DateTime extractedAt
+    );
 }
