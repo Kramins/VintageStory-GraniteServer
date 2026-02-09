@@ -1,8 +1,11 @@
 using System;
+using System.Linq;
 using System.Security.Cryptography;
 using Granite.Common.Dto;
 using GraniteServer.Data;
 using GraniteServer.Data.Entities;
+using GraniteServer.Messaging.Commands;
+using GraniteServer.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Granite.Server.Services;
@@ -11,14 +14,20 @@ public class ServersService
 {
     private readonly ILogger<ServersService> _logger;
     private readonly GraniteDataContext _dbContext;
+    private readonly PersistentMessageBusService _messageBus;
 
-    public ServersService(ILogger<ServersService> logger, GraniteDataContext dbContext)
+    public ServersService(
+        ILogger<ServersService> logger,
+        GraniteDataContext dbContext,
+        PersistentMessageBusService messageBus
+    )
     {
         _logger = logger;
         _dbContext = dbContext;
+        _messageBus = messageBus;
     }
 
-    public async Task<List<ServerDTO>> GetServersAsync()
+    public virtual async Task<List<ServerDTO>> GetServersAsync()
     {
         var servers = await _dbContext.Servers.OrderBy(s => s.CreatedAt).ToListAsync();
 
@@ -33,6 +42,62 @@ public class ServersService
                 LastSeenAt = s.LastSeenAt,
             })
             .ToList();
+    }
+
+    public virtual IQueryable<ServerDetailsDTO> GetServerDetailsAsync()
+    {
+        return _dbContext
+            .Servers.Include(s => s.ServerMetrics)
+            .OrderBy(s => s.CreatedAt)
+            .Select(s => new ServerDetailsDTO
+            {
+                Id = s.Id,
+                Name = s.Name,
+                Description = s.Description,
+                CreatedAt = s.CreatedAt,
+                IsOnline = s.IsOnline,
+                LastSeenAt = s.LastSeenAt,
+                CurrentPlayers = _dbContext
+                    .PlayerSessions.Count(ps => ps.ServerId == s.Id && ps.LeaveDate == null),
+                MaxPlayers = s.MaxClients ?? 0,
+                UpTime = s
+                    .ServerMetrics.OrderByDescending(m => m.RecordedAt)
+                    .Select(m => m.UpTimeSeconds)
+                    .FirstOrDefault(),
+                MemoryUsageBytes = s
+                        .ServerMetrics.OrderByDescending(m => m.RecordedAt)
+                        .Select(m => (long)(m.MemoryUsageMB * 1024 * 1024))
+                        .FirstOrDefault(),
+                ServerIp = string.Empty,
+                WorldAgeDays = 0,
+                GameVersion = string.Empty,
+                WorldName = string.Empty,
+                WorldSeed = 0,
+            });
+    }
+
+    public virtual async Task<ServerDetailsDTO?> GetServerDetailsAsync(Guid serverId)
+    {
+        return await GetServerDetailsAsync().FirstOrDefaultAsync(s => s.Id == serverId);
+    }
+
+    public async Task AnnounceMessageAsync(Guid serverId, string message)
+    {
+        var command = _messageBus.CreateCommand<AnnounceMessageCommand>(
+            serverId,
+            cmd =>
+            {
+                cmd.Data.Message = message;
+            }
+        );
+
+        await _messageBus.PublishCommandAsync(command);
+
+        _logger.LogInformation(
+            "Announced message to server {ServerId}: {Message}",
+            serverId,
+            message
+        );
     }
 
     internal async Task MarkServerOfflineAsync(Guid serverId)
@@ -57,7 +122,7 @@ public class ServersService
         }
     }
 
-    public async Task<ServerCreatedResponseDTO> CreateServerAsync(CreateServerRequestDTO request)
+    public virtual async Task<ServerCreatedResponseDTO> CreateServerAsync(CreateServerRequestDTO request)
     {
         _logger.LogInformation("Creating new server with name: {ServerName}", request.Name);
 
@@ -116,7 +181,7 @@ public class ServersService
         };
     }
 
-    public async Task<ServerDTO?> GetServerByIdAsync(Guid serverId)
+    public virtual async Task<ServerDTO?> GetServerByIdAsync(Guid serverId)
     {
         _logger.LogDebug("Fetching server by ID: {ServerId}", serverId);
 
@@ -138,7 +203,7 @@ public class ServersService
         };
     }
 
-    public async Task<ServerDTO?> UpdateServerAsync(Guid serverId, UpdateServerRequestDTO request)
+    public virtual async Task<ServerDTO?> UpdateServerAsync(Guid serverId, UpdateServerRequestDTO request)
     {
         _logger.LogInformation("Updating server: {ServerId}", serverId);
 
@@ -192,7 +257,7 @@ public class ServersService
         };
     }
 
-    public async Task<bool> DeleteServerAsync(Guid serverId)
+    public virtual async Task<bool> DeleteServerAsync(Guid serverId)
     {
         _logger.LogInformation("Deleting server: {ServerId}", serverId);
 
@@ -210,7 +275,7 @@ public class ServersService
         return true;
     }
 
-    public async Task<TokenRegeneratedResponseDTO?> RegenerateAccessTokenAsync(Guid serverId)
+    public virtual async Task<TokenRegeneratedResponseDTO?> RegenerateAccessTokenAsync(Guid serverId)
     {
         _logger.LogInformation("Regenerating access token for server: {ServerId}", serverId);
 

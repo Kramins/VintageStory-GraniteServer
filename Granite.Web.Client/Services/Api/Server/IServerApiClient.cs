@@ -11,12 +11,12 @@ public interface IServerApiClient
     /// <summary>
     /// Gets all servers.
     /// </summary>
-    Task<JsonApiDocument<List<ServerDTO>>> GetServersAsync();
+    Task<JsonApiDocument<List<ServerDetailsDTO>>> GetServersAsync();
 
     /// <summary>
     /// Gets a specific server by ID.
     /// </summary>
-    Task<JsonApiDocument<ServerDTO>> GetServerAsync(string serverId);
+    Task<JsonApiDocument<ServerDetailsDTO>> GetServerAsync(string serverId);
 
     /// <summary>
     /// Creates a new server.
@@ -39,9 +39,9 @@ public interface IServerApiClient
     Task<JsonApiDocument<TokenRegeneratedResponseDTO>> RegenerateAccessTokenAsync(string serverId);
 
     /// <summary>
-    /// Gets the server status.
+    /// Gets the server status (now returns ServerDetailsDTO).
     /// </summary>
-    Task<JsonApiDocument<ServerStatusDTO>> GetServerStatusAsync(string serverId);
+    Task<JsonApiDocument<ServerDetailsDTO>> GetServerStatusAsync(string serverId);
 
     /// <summary>
     /// Gets the server configuration.

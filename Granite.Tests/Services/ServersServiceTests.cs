@@ -5,7 +5,9 @@ using Granite.Common.Dto;
 using Granite.Server.Services;
 using GraniteServer.Data;
 using GraniteServer.Data.Entities;
+using GraniteServer.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -16,6 +18,7 @@ public class ServersServiceTests : IDisposable
 {
     private readonly GraniteDataContext _dataContext;
     private readonly ILogger<ServersService> _mockLogger;
+    private readonly PersistentMessageBusService _mockMessageBus;
     private readonly ServersService _service;
 
     public ServersServiceTests()
@@ -26,8 +29,13 @@ public class ServersServiceTests : IDisposable
 
         _dataContext = new GraniteDataContext(options);
         _mockLogger = Substitute.For<ILogger<ServersService>>();
+        
+        // Mock the dependencies for PersistentMessageBusService
+        var mockScopeFactory = Substitute.For<IServiceScopeFactory>();
+        var mockMessageBusLogger = Substitute.For<ILogger<PersistentMessageBusService>>();
+        _mockMessageBus = Substitute.ForPartsOf<PersistentMessageBusService>(mockScopeFactory, mockMessageBusLogger);
 
-        _service = new ServersService(_mockLogger, _dataContext);
+        _service = new ServersService(_mockLogger, _dataContext, _mockMessageBus);
     }
 
     public void Dispose()

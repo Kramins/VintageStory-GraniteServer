@@ -46,7 +46,7 @@ public static class ServerReducers
     [ReducerMethod]
     public static ServerState ReduceCreateServerSuccessAction(ServerState state, CreateServerSuccessAction action)
     {
-        var updatedServers = new List<ServerDTO>(state.Servers) { action.Server };
+        var updatedServers = new List<ServerDetailsDTO>(state.Servers) { action.Server };
         return state with
         {
             Servers = updatedServers,

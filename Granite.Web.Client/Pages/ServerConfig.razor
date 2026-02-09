@@ -1,6 +1,7 @@
 @page "/server-config"
 @page "/{serverId}/config"
 @using Granite.Common.Dto
+@using Granite.Web.Client.Models
 @using Granite.Web.Client.Services.Api
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
@@ -30,14 +31,7 @@
     }
     else
     {
-        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
-            <MudText Typo="Typo.h4">Server Configuration</MudText>
-            <MudButton StartIcon="@Icons.Material.Filled.Info" 
-                       Variant="Variant.Outlined"
-                       OnClick="@HandleViewStatus">
-                View Status
-            </MudButton>
-        </MudStack>
+        <MudText Typo="Typo.h4" Class="mb-4">Server Configuration</MudText>
 
         @if (!string.IsNullOrEmpty(_error))
         {
@@ -102,22 +96,25 @@
                                      Min="1"
                                      HelperText="Server chunk render distance" />
                     
-                    <MudTextField @bind-Value="_configModel.WhitelistMode" 
-                                  Label="Whitelist Mode" 
-                                  Variant="Variant.Outlined" 
-                                  HelperText="true/false to enable or disable whitelist" />
+                    <MudSelect T="string" @bind-Value="_configModel.WhitelistMode" 
+                               Label="Whitelist Mode" 
+                               Variant="Variant.Outlined" 
+                               HelperText="Enable or disable whitelist">
+                        <MudSelectItem T="string" Value="@("false")">Disabled</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("true")">Enabled</MudSelectItem>
+                    </MudSelect>
 
                     <MudDivider Class="my-2" />
                     <MudText Typo="Typo.h6">Game Rules</MudText>
                     
-            <MudCheckBox T="bool?" @bind-Checked="_configModel.AllowPvP" 
-                         Label="Allow PvP (Player vs Player combat)" />
+                    <MudCheckBox T="bool" @bind-Value="_configModel.AllowPvP" 
+                                 Label="Allow PvP (Player vs Player combat)" />
                     
-                    <MudCheckBox T="bool?" @bind-Checked="_configModel.AllowFireSpread" 
-                         Label="Allow Fire Spread" />
+                    <MudCheckBox T="bool" @bind-Value="_configModel.AllowFireSpread" 
+                                 Label="Allow Fire Spread" />
                     
-                    <MudCheckBox T="bool?" @bind-Checked="_configModel.AllowFallingBlocks" 
-                         Label="Allow Falling Blocks" />
+                    <MudCheckBox T="bool" @bind-Value="_configModel.AllowFallingBlocks" 
+                                 Label="Allow Falling Blocks" />
 
                     <div class="d-flex gap-2 mt-6">
                         <MudButton ButtonType="ButtonType.Submit" 
@@ -236,9 +233,9 @@
                     Password = response.Data.Password,
                     MaxChunkRadius = response.Data.MaxChunkRadius,
                     WhitelistMode = response.Data.WhitelistMode,
-                    AllowPvP = response.Data.AllowPvP,
-                    AllowFireSpread = response.Data.AllowFireSpread,
-                    AllowFallingBlocks = response.Data.AllowFallingBlocks
+                    AllowPvP = response.Data.AllowPvP ?? false,
+                    AllowFireSpread = response.Data.AllowFireSpread ?? false,
+                    AllowFallingBlocks = response.Data.AllowFallingBlocks ?? false
                 };
 
                 await EnsureAccessTokenAsync(serverId);
@@ -351,7 +348,7 @@
 
     private void UpdateConfigSnippet(Guid serverId)
     {
-        var graniteServerHost = "http://localhost:5148";
+        var graniteServerHost = Navigation.BaseUri.TrimEnd('/');
         var tokenValue = _modAccessToken ?? string.Empty;
 
         _dockerSnippet =
@@ -359,7 +356,7 @@
             $"  -e GS_SERVERID={serverId} \\\n" +
             $"  -e GS_GRANITESERVERHOST={graniteServerHost} \\\n" +
             "  -e GS_HUBPATH=/hub/mod \\\n" +
-            $"  -e GS_ACCESSTOKEN=\"{tokenValue}\" \\\n" +
+            $"  -e GS_ACCESSTOKEN={tokenValue} \\\n" +
             "  -v ./data:/app/data \\\n" +
             "  -p 42420:42420/tcp \\\n" +
             "  -p 42420:42420/udp \\\n" +
@@ -373,7 +370,7 @@
             $"      - GS_SERVERID={serverId}\n" +
             $"      - GS_GRANITESERVERHOST={graniteServerHost}\n" +
             "      - GS_HUBPATH=/hub/mod\n" +
-            $"      - GS_ACCESSTOKEN=\"{tokenValue}\"\n" +
+            $"      - GS_ACCESSTOKEN={tokenValue}\n" +
             "    volumes:\n" +
             "      - ./data:/app/data\n" +
             "    ports:\n" +
@@ -390,14 +387,6 @@
     }
 
     private void HandleCancel()
-    {
-        if (!string.IsNullOrEmpty(ServerId))
-        {
-            Navigation.NavigateTo($"/{ServerId}/status");
-        }
-    }
-
-    private void HandleViewStatus()
     {
         if (!string.IsNullOrEmpty(ServerId))
         {

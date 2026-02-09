@@ -1,4 +1,4 @@
-namespace Granite.Web.Client.Pages;
+namespace Granite.Web.Client.Models;
 
 /// <summary>
 /// Mutable model for server configuration form binding.
@@ -12,7 +12,7 @@ public class ServerConfigModel
     public string? Password { get; set; }
     public int? MaxChunkRadius { get; set; }
     public string? WhitelistMode { get; set; }
-    public bool? AllowPvP { get; set; }
-    public bool? AllowFireSpread { get; set; }
-    public bool? AllowFallingBlocks { get; set; }
+    public bool AllowPvP { get; set; }
+    public bool AllowFireSpread { get; set; }
+    public bool AllowFallingBlocks { get; set; }
 }

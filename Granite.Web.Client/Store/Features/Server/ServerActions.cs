@@ -4,7 +4,7 @@ namespace Granite.Web.Client.Store.Features.Server;
 
 // Fetch actions
 public record FetchServersAction;
-public record FetchServersSuccessAction(List<ServerDTO> Servers);
+public record FetchServersSuccessAction(List<ServerDetailsDTO> Servers);
 public record FetchServersFailureAction(string Error);
 
 // Selection actions
@@ -12,12 +12,12 @@ public record SelectServerAction(string ServerId);
 
 // Create server actions
 public record CreateServerAction(CreateServerRequestDTO Request);
-public record CreateServerSuccessAction(ServerDTO Server);
+public record CreateServerSuccessAction(ServerDetailsDTO Server);
 public record CreateServerFailureAction(string Error);
 
 // Update server actions
 public record UpdateServerAction(Guid ServerId, UpdateServerRequestDTO Request);
-public record UpdateServerSuccessAction(ServerDTO Server);
+public record UpdateServerSuccessAction(ServerDetailsDTO Server);
 public record UpdateServerFailureAction(string Error);
 
 // Delete server actions
@@ -25,15 +25,10 @@ public record DeleteServerAction(Guid ServerId);
 public record DeleteServerSuccessAction(Guid ServerId);
 public record DeleteServerFailureAction(string Error);
 
-// Get server details actions
+// Get server details actions (renamed from FetchServerDetailsAction)
 public record FetchServerDetailsAction(Guid ServerId);
-public record FetchServerDetailsSuccessAction(ServerDTO Server);
+public record FetchServerDetailsSuccessAction(ServerDetailsDTO Server);
 public record FetchServerDetailsFailureAction(string Error);
-
-// Get server status actions
-public record FetchServerStatusAction(Guid ServerId);
-public record FetchServerStatusSuccessAction(ServerStatusDTO Status);
-public record FetchServerStatusFailureAction(string Error);
 
 // Get server config actions
 public record FetchServerConfigAction(Guid ServerId);

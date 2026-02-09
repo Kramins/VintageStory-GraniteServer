@@ -14,25 +14,25 @@ namespace Granite.Server.Controllers;
 public class ServerController : ControllerBase
 {
     private readonly ILogger<ServerController> _logger;
-    private readonly ServerService _serverService;
+    private readonly ServersService _serversService;
 
-    public ServerController(ILogger<ServerController> logger, ServerService serverService)
+    public ServerController(ILogger<ServerController> logger, ServersService serversService)
     {
         _logger = logger;
-        _serverService = serverService;
+        _serversService = serversService;
     }
 
     [HttpGet("status")]
-    public async Task<ActionResult<JsonApiDocument<ServerStatusDTO>>> GetServerStatus(
+    public async Task<ActionResult<JsonApiDocument<ServerDetailsDTO>>> GetServerStatus(
         [FromRoute] Guid serverid
     )
     {
-        var status = await _serverService.GetServerStatusAsync(serverid);
+        var status = await _serversService.GetServerDetailsAsync(serverid);
 
         if (status == null)
         {
             return NotFound(
-                new JsonApiDocument<ServerStatusDTO>
+                new JsonApiDocument<ServerDetailsDTO>
                 {
                     Errors = new List<JsonApiError>
                     {
@@ -46,7 +46,7 @@ public class ServerController : ControllerBase
             );
         }
 
-        return new JsonApiDocument<ServerStatusDTO> { Data = status };
+        return new JsonApiDocument<ServerDetailsDTO> { Data = status };
     }
 
     [HttpPost("announce")]
@@ -68,7 +68,7 @@ public class ServerController : ControllerBase
             );
         }
 
-        await _serverService.AnnounceMessageAsync(serverid, request.Message);
+        await _serversService.AnnounceMessageAsync(serverid, request.Message);
 
         return new JsonApiDocument<string> { Data = "Message announced successfully" };
     }

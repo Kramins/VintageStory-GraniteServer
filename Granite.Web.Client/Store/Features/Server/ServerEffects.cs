@@ -60,7 +60,8 @@ public class ServerEffects
             if (response?.Data != null)
             {
                 _logger.LogInformation("Server created successfully: {ServerId}", response.Data.Id);
-                dispatcher.Dispatch(new CreateServerSuccessAction(response.Data));
+                // Refetch the full servers list to get complete details
+                dispatcher.Dispatch(new FetchServersAction());
             }
             else
             {
@@ -85,7 +86,8 @@ public class ServerEffects
             if (response?.Data != null)
             {
                 _logger.LogInformation("Server updated successfully: {ServerId}", action.ServerId);
-                dispatcher.Dispatch(new UpdateServerSuccessAction(response.Data));
+                // Refetch the full servers list to get complete details
+                dispatcher.Dispatch(new FetchServersAction());
             }
             else
             {
@@ -139,31 +141,6 @@ public class ServerEffects
         {
             _logger.LogError(ex, "Failed to regenerate token");
             dispatcher.Dispatch(new RegenerateTokenFailureAction(ex.Message));
-        }
-    }
-
-    [EffectMethod]
-    public async Task HandleFetchServerStatusAction(FetchServerStatusAction action, IDispatcher dispatcher)
-    {
-        try
-        {
-            _logger.LogInformation("Fetching server status: {ServerId}", action.ServerId);
-            var response = await _serverApiClient.GetServerStatusAsync(action.ServerId.ToString());
-
-            if (response?.Data != null)
-            {
-                _logger.LogInformation("Server status fetched: {ServerId}", action.ServerId);
-                dispatcher.Dispatch(new FetchServerStatusSuccessAction(response.Data));
-            }
-            else
-            {
-                dispatcher.Dispatch(new FetchServerStatusFailureAction("Failed to fetch server status"));
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to fetch server status");
-            dispatcher.Dispatch(new FetchServerStatusFailureAction(ex.Message));
         }
     }
 

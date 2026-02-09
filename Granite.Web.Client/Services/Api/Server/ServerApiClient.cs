@@ -15,11 +15,11 @@ public class ServerApiClient : BaseApiClient, IServerApiClient
     {
     }
 
-    public async Task<JsonApiDocument<List<ServerDTO>>> GetServersAsync()
+    public async Task<JsonApiDocument<List<ServerDetailsDTO>>> GetServersAsync()
     {
         try
         {
-            return await GetAsync<List<ServerDTO>>(BasePath);
+            return await GetAsync<List<ServerDetailsDTO>>(BasePath);
         }
         catch (ApiException ex)
         {
@@ -28,11 +28,11 @@ public class ServerApiClient : BaseApiClient, IServerApiClient
         }
     }
 
-    public async Task<JsonApiDocument<ServerDTO>> GetServerAsync(string serverId)
+    public async Task<JsonApiDocument<ServerDetailsDTO>> GetServerAsync(string serverId)
     {
         try
         {
-            return await GetAsync<ServerDTO>($"{BasePath}/{serverId}");
+            return await GetAsync<ServerDetailsDTO>($"{BasePath}/{serverId}");
         }
         catch (ApiException ex)
         {
@@ -94,11 +94,11 @@ public class ServerApiClient : BaseApiClient, IServerApiClient
         }
     }
 
-    public async Task<JsonApiDocument<ServerStatusDTO>> GetServerStatusAsync(string serverId)
+    public async Task<JsonApiDocument<ServerDetailsDTO>> GetServerStatusAsync(string serverId)
     {
         try
         {
-            return await GetAsync<ServerStatusDTO>($"/api/{serverId}/server/status");
+            return await GetAsync<ServerDetailsDTO>($"/api/{serverId}/server/status");
         }
         catch (ApiException ex)
         {
@@ -124,7 +124,7 @@ public class ServerApiClient : BaseApiClient, IServerApiClient
     {
         try
         {
-            return await PutAsync<ServerConfigDTO>($"/api/{serverId}/config", config);
+            return await PatchAsync<ServerConfigDTO>($"/api/{serverId}/config", config);
         }
         catch (ApiException ex)
         {

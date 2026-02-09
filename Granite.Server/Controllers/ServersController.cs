@@ -4,6 +4,7 @@ using Granite.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Granite.Server.Controllers;
 
@@ -22,10 +23,10 @@ public class ServersController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<JsonApiDocument<List<ServerDTO>>>> GetServers()
+    public async Task<ActionResult<JsonApiDocument<List<ServerDetailsDTO>>>> GetServers()
     {
-        var servers = await _serversService.GetServersAsync();
-        return Ok(new JsonApiDocument<List<ServerDTO>>(servers));
+        var servers = await _serversService.GetServerDetailsAsync().ToListAsync();
+        return Ok(new JsonApiDocument<List<ServerDetailsDTO>>(servers));
     }
 
     [HttpGet("{id}")]

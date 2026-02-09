@@ -88,6 +88,24 @@ public abstract class BaseApiClient
     }
 
     /// <summary>
+    /// Makes a PATCH request and deserializes the response as JsonApiDocument{T}.
+    /// </summary>
+    protected async Task<JsonApiDocument<T>> PatchAsync<T>(string url, object content)
+    {
+        try
+        {
+            var httpClient = GetHttpClient();
+            var response = await httpClient.PatchAsJsonAsync(url, content);
+            return await HandleResponse<T>(response);
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "HTTP request failed for PATCH {Url}", url);
+            throw new ApiException($"Failed to patch data at {url}", ex);
+        }
+    }
+
+    /// <summary>
     /// Makes a DELETE request.
     /// </summary>
     protected async Task DeleteAsync(string url)

@@ -41,7 +41,7 @@
     }
 
     <MudPaper Elevation="0" Style="height: 600px;">
-        <MudDataGrid T="ServerDTO" 
+        <MudDataGrid T="ServerDetailsDTO" 
                      Items="@ServerState.Value.Servers" 
                      Dense="true"
                      Hover="true"
@@ -50,8 +50,8 @@
             <Columns>
                 <TemplateColumn Title="Server" Sortable="false">
                     <CellTemplate>
-                        <MudStack Spacing="0">
-                            <MudText Typo="Typo.body2" Class="font-weight-bold">
+                        <MudStack Spacing="0" Style="cursor: pointer;" @onclick="@(() => Navigation.NavigateTo($"/{context.Item.Id}/config"))">
+                            <MudText Typo="Typo.body2" Class="font-weight-bold" Color="Color.Primary">
                                 @context.Item.Name
                             </MudText>
                             @if (!string.IsNullOrEmpty(context.Item.Description))
@@ -69,6 +69,14 @@
                                  Variant="Variant.Filled">
                             @(context.Item.IsOnline ? "Online" : "Offline")
                         </MudChip>
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Players" Sortable="false">
+                    <CellTemplate>
+                        <MudText Typo="Typo.body2">
+                            @context.Item.CurrentPlayers / @context.Item.MaxPlayers
+                        </MudText>
                     </CellTemplate>
                 </TemplateColumn>
 
@@ -97,13 +105,21 @@
 
                 <TemplateColumn Title="Actions" Sortable="false">
                     <CellTemplate>
-                        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true">
-                            <MudMenuItem OnClick="@(() => HandleViewDetails(context.Item.Id))">View Details</MudMenuItem>
-                            <MudMenuItem OnClick="@(() => HandleEditServer(context.Item))">Edit</MudMenuItem>
-                            <MudMenuItem OnClick="@(() => HandleRegenerateToken(context.Item.Id))">Regenerate Token</MudMenuItem>
-                            <MudDivider />
-                            <MudMenuItem OnClick="@(() => HandleDeleteConfirm(context.Item))">Delete</MudMenuItem>
-                        </MudMenu>
+                        <MudStack Row="true" Spacing="1">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                          Size="Size.Small" 
+                                          OnClick="@(() => HandleEditServer(context.Item))"
+                                          Title="Edit Server" />
+                            <MudIconButton Icon="@Icons.Material.Filled.VpnKey" 
+                                          Size="Size.Small" 
+                                          OnClick="@(() => HandleRegenerateToken(context.Item.Id))"
+                                          Title="Regenerate Token" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                          Size="Size.Small" 
+                                          Color="Color.Error"
+                                          OnClick="@(() => HandleDeleteConfirm(context.Item))"
+                                          Title="Delete Server" />
+                        </MudStack>
                     </CellTemplate>
                 </TemplateColumn>
             </Columns>
@@ -288,8 +304,8 @@
     private bool _tokenDialogOpen = false;
     
     private CreateServerRequestDTO _serverFormModel = new() { Name = "" };
-    private ServerDTO? _editingServer;
-    private ServerDTO? _serverToDelete;
+    private ServerDetailsDTO? _editingServer;
+    private ServerDetailsDTO? _serverToDelete;
     private Guid? _serverToRegenerateToken;
     
     private bool _serverFormSubmitting = false;
@@ -323,7 +339,7 @@
         _serverDialogOpen = true;
     }
 
-    private void HandleEditServer(ServerDTO server)
+    private void HandleEditServer(ServerDetailsDTO server)
     {
         _editingServer = server;
         _serverFormModel = new()
@@ -378,12 +394,7 @@
         }
     }
 
-    private void HandleViewDetails(Guid serverId)
-    {
-        Navigation.NavigateTo($"/{serverId}/status");
-    }
-
-    private void HandleDeleteConfirm(ServerDTO server)
+    private void HandleDeleteConfirm(ServerDetailsDTO server)
     {
         _serverToDelete = server;
         _deleteDialogOpen = true;

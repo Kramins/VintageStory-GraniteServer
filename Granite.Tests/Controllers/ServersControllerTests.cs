@@ -5,8 +5,12 @@ using Granite.Common.Dto;
 using Granite.Common.Dto.JsonApi;
 using Granite.Server.Controllers;
 using Granite.Server.Services;
+using GraniteServer.Data;
+using GraniteServer.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -23,7 +27,14 @@ public class ServersControllerTests
     public ServersControllerTests()
     {
         _mockLogger = Substitute.For<ILogger<ServersController>>();
-        _mockService = Substitute.For<ServersService>();
+        
+        // Create a partial substitute for ServersService
+        // We pass null for constructor arguments since we're only mocking virtual methods
+        _mockService = Substitute.ForPartsOf<ServersService>(
+            Substitute.For<ILogger<ServersService>>(),
+            null!,  // GraniteDataContext - not used when methods are mocked
+            null!   // PersistentMessageBusService - not used when methods are mocked
+        );
         _controller = new ServersController(_mockLogger, _mockService);
 
         // Setup mock HttpContext
@@ -39,12 +50,12 @@ public class ServersControllerTests
     public async Task GetServers_ReturnsOkWithServerList()
     {
         // Arrange
-        var servers = new List<ServerDTO>
+        var servers = new List<ServerDetailsDTO>
         {
-            new() { Id = Guid.NewGuid(), Name = "Server 1", CreatedAt = DateTime.UtcNow, IsOnline = true },
-            new() { Id = Guid.NewGuid(), Name = "Server 2", CreatedAt = DateTime.UtcNow, IsOnline = false }
+            new() { Id = Guid.NewGuid(), Name = "Server 1", CreatedAt = DateTime.UtcNow, IsOnline = true, CurrentPlayers = 0, MaxPlayers = 10 },
+            new() { Id = Guid.NewGuid(), Name = "Server 2", CreatedAt = DateTime.UtcNow, IsOnline = false, CurrentPlayers = 0, MaxPlayers = 5 }
         };
-        _mockService.GetServersAsync().Returns(servers);
+        _mockService.GetServerDetailsAsync().Returns(servers.AsQueryable());
 
         // Act
         var result = await _controller.GetServers();
@@ -55,7 +66,7 @@ public class ServersControllerTests
         okResult.Should().NotBeNull();
         okResult!.StatusCode.Should().Be(StatusCodes.Status200OK);
 
-        var jsonApiDoc = okResult.Value as JsonApiDocument<List<ServerDTO>>;
+        var jsonApiDoc = okResult.Value as JsonApiDocument<List<ServerDetailsDTO>>;
         jsonApiDoc.Should().NotBeNull();
         jsonApiDoc!.Data.Should().NotBeNull();
         jsonApiDoc.Data!.Should().HaveCount(2);

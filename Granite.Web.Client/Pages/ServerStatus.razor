@@ -64,7 +64,7 @@
                         <tbody>
                             <tr>
                                 <td style="width: 200px;"><strong>Server Name</strong></td>
-                                <td>@_serverStatus.ServerName</td>
+                                <td>@_serverStatus.Name</td>
                             </tr>
                             <tr>
                                 <td><strong>IP Address</strong></td>
@@ -175,7 +175,7 @@
 </MudContainer>
 
 @code {
-    private ServerStatusDTO? _serverStatus;
+    private ServerDetailsDTO? _serverStatus;
     private bool _isLoading = true;
     private bool _controlsLoading = false;
     private string? _error;
