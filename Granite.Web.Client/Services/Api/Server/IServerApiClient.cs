@@ -11,22 +11,43 @@ public interface IServerApiClient
     /// <summary>
     /// Gets all servers.
     /// </summary>
-    Task<JsonApiDocument<List<ServerDTO>>> GetServersAsync();
+    Task<JsonApiDocument<List<ServerDetailsDTO>>> GetServersAsync();
 
     /// <summary>
     /// Gets a specific server by ID.
     /// </summary>
-    Task<JsonApiDocument<ServerDTO>> GetServerAsync(string serverId);
+    Task<JsonApiDocument<ServerDetailsDTO>> GetServerAsync(string serverId);
 
     /// <summary>
-    /// Gets the server status.
+    /// Creates a new server.
     /// </summary>
-    Task<JsonApiDocument<ServerStatusDTO>> GetServerStatusAsync(string serverId);
+    Task<JsonApiDocument<ServerDTO>> CreateServerAsync(CreateServerRequestDTO request);
+
+    /// <summary>
+    /// Updates an existing server.
+    /// </summary>
+    Task<JsonApiDocument<ServerDTO>> UpdateServerAsync(string serverId, UpdateServerRequestDTO request);
+
+    /// <summary>
+    /// Deletes a server.
+    /// </summary>
+    Task<JsonApiDocument<object>> DeleteServerAsync(string serverId);
+
+    /// <summary>
+    /// Regenerates the access token for a server.
+    /// </summary>
+    Task<JsonApiDocument<TokenRegeneratedResponseDTO>> RegenerateAccessTokenAsync(string serverId);
+
+    /// <summary>
+    /// Gets the server status (now returns ServerDetailsDTO).
+    /// </summary>
+    Task<JsonApiDocument<ServerDetailsDTO>> GetServerStatusAsync(string serverId);
 
     /// <summary>
     /// Gets the server configuration.
     /// </summary>
     Task<JsonApiDocument<ServerConfigDTO>> GetServerConfigAsync(string serverId);
+    Task<JsonApiDocument<ServerDetailsDTO>> GetServerDetailsAsync(string serverId);
 
     /// <summary>
     /// Updates the server configuration.

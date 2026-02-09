@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Granite.Data.Migrations.Sqlite
 {
     [DbContext(typeof(GraniteDataContextSqlite))]
-    [Migration("20260203003802_v100")]
+    [Migration("20260207185256_v100")]
     partial class v100
     {
         /// <inheritdoc />
@@ -536,6 +536,9 @@ namespace Granite.Data.Migrations.Sqlite
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
 
                     b.ToTable("Servers");
                 });

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using Granite.Common.Services;
 using Granite.Server.Configuration;
 using Granite.Server.Extensions;
@@ -8,9 +9,11 @@ using Granite.Server.Services.Map;
 using GraniteServer.Server.HostedServices;
 using GraniteServer.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,7 +48,6 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<ServersService>();
 builder.Services.AddScoped<ServerPlayersService>();
 builder.Services.AddScoped<ServerConfigService>();
-builder.Services.AddScoped<ServerService>();
 builder.Services.AddScoped<IServerWorldMapService, ServerWorldMapService>();
 builder.Services.AddScoped<IPlayersService, PlayersService>();
 builder.Services.AddScoped<IMapDataStorageService, MapDataStorageService>();
@@ -124,10 +126,68 @@ builder
 
                 return Task.CompletedTask;
             },
+            OnAuthenticationFailed = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<
+                    ILogger<Program>
+                >();
+                logger.LogWarning(
+                    context.Exception,
+                    "JWT authentication failed for {Path} from {RemoteIp}",
+                    context.Request.Path,
+                    context.HttpContext.Connection.RemoteIpAddress
+                );
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<
+                    ILogger<Program>
+                >();
+                logger.LogWarning(
+                    "JWT challenge for {Path} from {RemoteIp}. Error={Error} Description={Description}",
+                    context.Request.Path,
+                    context.HttpContext.Connection.RemoteIpAddress,
+                    context.Error,
+                    context.ErrorDescription
+                );
+                return Task.CompletedTask;
+            },
+            OnForbidden = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<
+                    ILogger<Program>
+                >();
+                logger.LogWarning(
+                    "JWT forbidden for {Path} from {RemoteIp}",
+                    context.Request.Path,
+                    context.HttpContext.Connection.RemoteIpAddress
+                );
+                return Task.CompletedTask;
+            },
         };
     });
 
 builder.Services.AddAuthorization();
+
+// Add rate limiting for player search endpoint
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter(
+        "PlayerSearchLimit",
+        limiterOptions =>
+        {
+            limiterOptions.PermitLimit = 10; // 10 requests
+            limiterOptions.Window = TimeSpan.FromMinutes(1); // per minute
+            limiterOptions.QueueProcessingOrder = System
+                .Threading
+                .RateLimiting
+                .QueueProcessingOrder
+                .OldestFirst;
+            limiterOptions.QueueLimit = 2; // Allow 2 requests to queue
+        }
+    );
+});
 
 builder.Services.AddResponseCompression(options =>
 {
@@ -181,6 +241,9 @@ app.UseWebSockets();
 app.UseCors();
 
 //app.UseHttpsRedirection();
+
+// Enable rate limiting
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -43,6 +43,7 @@ public class ServerConfigService
             AllowPvP = server.AllowPvP,
             AllowFireSpread = server.AllowFireSpread,
             AllowFallingBlocks = server.AllowFallingBlocks,
+            AccessToken = server.AccessToken,
         };
     }
 
@@ -61,6 +62,34 @@ public class ServerConfigService
 
     public virtual async Task UpdateServerConfigAsync(Guid serverId, ServerConfigDTO config)
     {
+        // Update database first - control plane is the source of truth
+        var server = await _dbContext.Servers.FirstOrDefaultAsync(s => s.Id == serverId);
+        if (server == null)
+        {
+            throw new InvalidOperationException($"Server with ID {serverId} not found");
+        }
+
+        // Update all config properties in the database (except AccessToken which is managed separately)
+        server.Name = config.ServerName ?? server.Name;
+        server.Port = config.Port;
+        server.WelcomeMessage = config.WelcomeMessage;
+        server.MaxClients = config.MaxClients;
+        server.Password = config.Password;
+        server.MaxChunkRadius = config.MaxChunkRadius;
+        server.WhitelistMode = config.WhitelistMode;
+        server.AllowPvP = config.AllowPvP;
+        server.AllowFireSpread = config.AllowFireSpread;
+        server.AllowFallingBlocks = config.AllowFallingBlocks;
+        // Note: AccessToken is NOT updated here - it's managed via RegenerateAccessToken endpoint
+
+        await _dbContext.SaveChangesAsync();
+        _logger.LogInformation("Server configuration updated in database for server {ServerId}", serverId);
+
+        // NOTE: Potential race condition if a game admin modifies config via in-game commands
+        // simultaneously. The ServerConfigSyncedEvent handler will overwrite with game server values.
+        // Consider implementing optimistic locking or timestamp-based conflict detection if this becomes an issue.
+
+        // Push configuration to the game server
         var updateCommand = _messageBus.CreateCommand<UpdateServerConfigCommand>(
             serverId,
             cmd =>
@@ -70,5 +99,6 @@ public class ServerConfigService
         );
 
         await _messageBus.PublishCommandAsync(updateCommand);
+        _logger.LogInformation("UpdateServerConfigCommand sent to game server {ServerId}", serverId);
     }
 }

@@ -541,6 +541,9 @@ namespace Granite.Data.Migrations.Postgres
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Name")
+                        .IsUnique();
+
                     b.ToTable("Servers");
                 });
 

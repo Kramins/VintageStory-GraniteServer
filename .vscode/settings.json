@@ -15,5 +15,8 @@
       "Itemstack",
       "Unban",
       "Unwhitelisted"
-    ]
+    ],
+    "chat.tools.terminal.autoApprove": {
+      "mv": true
+    }
 }

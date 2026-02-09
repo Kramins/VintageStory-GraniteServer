@@ -1,13 +1,303 @@
 @page "/server-status"
 @page "/{serverId}/status"
+@using Granite.Common.Dto
+@using Granite.Web.Client.Services.Api
+@using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
+
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IServerApiClient ServerApiClient
+
+<PageTitle>Status - Granite Server Manager</PageTitle>
 
 @code {
     [Parameter]
     public string? ServerId { get; set; }
 }
 
-<PageTitle>Status - Granite Server Manager</PageTitle>
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    @if (string.IsNullOrEmpty(ServerId))
+    {
+        <MudPaper Class="pa-8 d-flex flex-column align-center justify-center" Style="min-height: 400px;" Elevation="0">
+            <MudText Typo="Typo.h5" Color="Color.Secondary" Class="mb-2">
+                Select a server to view status
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Use the server dropdown in the navigation to select a server.
+            </MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
+            <MudText Typo="Typo.h4">Server Status</MudText>
+            <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
+                       OnClick="@HandleRefresh" 
+                       Disabled="@_isLoading">
+                Refresh
+            </MudButton>
+            <MudButton StartIcon="@Icons.Material.Filled.Settings" 
+                       Variant="Variant.Outlined"
+                       OnClick="@HandleViewConfig">
+                Configuration
+            </MudButton>
+        </MudStack>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Server Status</MudText>
-<MudText Typo="Typo.body1">Server status page</MudText>
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+        }
+
+        @if (_isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Class="mb-4" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Loading server status...</MudText>
+        }
+        else if (_serverStatus != null)
+        {
+            <MudStack Spacing="3">
+                @* Server Info Section *@
+                <MudPaper Class="pa-6" Elevation="1">
+                    <MudText Typo="Typo.h6" Class="mb-3">Server Information</MudText>
+                    <MudSimpleTable Dense="true" Style="overflow-x: unset;">
+                        <tbody>
+                            <tr>
+                                <td style="width: 200px;"><strong>Server Name</strong></td>
+                                <td>@_serverStatus.Name</td>
+                            </tr>
+                            <tr>
+                                <td><strong>IP Address</strong></td>
+                                <td>@_serverStatus.ServerIp</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Status</strong></td>
+                                <td>
+                                    <MudChip T="string" Size="Size.Small" 
+                                             Color="@(_serverStatus.IsOnline ? Color.Success : Color.Default)"
+                                             Variant="Variant.Filled">
+                                        @(_serverStatus.IsOnline ? "Online" : "Offline")
+                                    </MudChip>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Game Version</strong></td>
+                                <td>@_serverStatus.GameVersion</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Uptime</strong></td>
+                                <td>@FormatUptime(_serverStatus.UpTime)</td>
+                            </tr>
+                        </tbody>
+                    </MudSimpleTable>
+                </MudPaper>
+
+                @* World Info Section *@
+                <MudPaper Class="pa-6" Elevation="1">
+                    <MudText Typo="Typo.h6" Class="mb-3">World Information</MudText>
+                    <MudSimpleTable Dense="true" Style="overflow-x: unset;">
+                        <tbody>
+                            <tr>
+                                <td style="width: 200px;"><strong>World Name</strong></td>
+                                <td>@_serverStatus.WorldName</td>
+                            </tr>
+                            <tr>
+                                <td><strong>World Seed</strong></td>
+                                <td>@_serverStatus.WorldSeed</td>
+                            </tr>
+                            <tr>
+                                <td><strong>World Age</strong></td>
+                                <td>@_serverStatus.WorldAgeDays days</td>
+                            </tr>
+                        </tbody>
+                    </MudSimpleTable>
+                </MudPaper>
+
+                @* Performance Metrics Section *@
+                <MudPaper Class="pa-6" Elevation="1">
+                    <MudText Typo="Typo.h6" Class="mb-3">Performance Metrics</MudText>
+                    <MudSimpleTable Dense="true" Style="overflow-x: unset;">
+                        <tbody>
+                            <tr>
+                                <td style="width: 200px;"><strong>Players Online</strong></td>
+                                <td>@_serverStatus.CurrentPlayers / @_serverStatus.MaxPlayers</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Memory Usage</strong></td>
+                                <td>@FormatBytes(_serverStatus.MemoryUsageBytes)</td>
+                            </tr>
+                        </tbody>
+                    </MudSimpleTable>
+                </MudPaper>
+
+                @* Server Controls Section *@
+                @if (_serverStatus.IsOnline)
+                {
+                    <MudPaper Class="pa-6" Elevation="1">
+                        <MudText Typo="Typo.h6" Class="mb-3">Server Controls</MudText>
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Warning"
+                                       StartIcon="@Icons.Material.Filled.Refresh"
+                                       OnClick="@HandleRestartServer"
+                                       Disabled="@_controlsLoading">
+                                @if (_controlsLoading)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">Restarting...</MudText>
+                                }
+                                else
+                                {
+                                    <span>Restart Server</span>
+                                }
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Error"
+                                       StartIcon="@Icons.Material.Filled.Stop"
+                                       OnClick="@HandleStopServer"
+                                       Disabled="@_controlsLoading">
+                                @if (_controlsLoading)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">Stopping...</MudText>
+                                }
+                                else
+                                {
+                                    <span>Stop Server</span>
+                                }
+                            </MudButton>
+                        </MudStack>
+                    </MudPaper>
+                }
+            </MudStack>
+        }
+    }
+</MudContainer>
+
+@code {
+    private ServerDetailsDTO? _serverStatus;
+    private bool _isLoading = true;
+    private bool _controlsLoading = false;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(ServerId) && Guid.TryParse(ServerId, out var serverIdGuid))
+        {
+            await LoadServerStatusAsync(serverIdGuid);
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(ServerId) && Guid.TryParse(ServerId, out var serverIdGuid))
+        {
+            await LoadServerStatusAsync(serverIdGuid);
+        }
+    }
+
+    private async Task LoadServerStatusAsync(Guid serverId)
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            var response = await ServerApiClient.GetServerStatusAsync(serverId.ToString());
+            if (response?.Data != null)
+            {
+                _serverStatus = response.Data;
+            }
+            else
+            {
+                _error = "Failed to load server status.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleRefresh()
+    {
+        if (!string.IsNullOrEmpty(ServerId) && Guid.TryParse(ServerId, out var serverIdGuid))
+        {
+            await LoadServerStatusAsync(serverIdGuid);
+        }
+    }
+
+    private async Task HandleRestartServer()
+    {
+        if (!string.IsNullOrEmpty(ServerId) && Guid.TryParse(ServerId, out var serverIdGuid))
+        {
+            _controlsLoading = true;
+            try
+            {
+                await ServerApiClient.RestartServerAsync(serverIdGuid.ToString());
+                Snackbar.Add("Server restart initiated", Severity.Info);
+                await Task.Delay(2000);
+                await HandleRefresh();
+            }
+            finally
+            {
+                _controlsLoading = false;
+            }
+        }
+    }
+
+    private async Task HandleStopServer()
+    {
+        if (!string.IsNullOrEmpty(ServerId) && Guid.TryParse(ServerId, out var serverIdGuid))
+        {
+            _controlsLoading = true;
+            try
+            {
+                await ServerApiClient.StopServerAsync(serverIdGuid.ToString());
+                Snackbar.Add("Server stop initiated", Severity.Info);
+                await Task.Delay(2000);
+                await HandleRefresh();
+            }
+            finally
+            {
+                _controlsLoading = false;
+            }
+        }
+    }
+
+    private void HandleViewConfig()
+    {
+        if (!string.IsNullOrEmpty(ServerId))
+        {
+            Navigation.NavigateTo($"/{ServerId}/config");
+        }
+    }
+
+    private string FormatUptime(int seconds)
+    {
+        var totalSeconds = seconds;
+        var days = totalSeconds / 86400;
+        var hours = (totalSeconds % 86400) / 3600;
+        var minutes = (totalSeconds % 3600) / 60;
+        var secs = totalSeconds % 60;
+
+        return $"{days}d {hours}h {minutes}m {secs}s";
+    }
+
+    private string FormatBytes(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}

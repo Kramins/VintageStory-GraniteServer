@@ -1,7 +1,472 @@
 @page "/servers"
+@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using Granite.Web.Client.Store.Features.Server
+@using Granite.Web.Client.Services.Api
+@using Granite.Common.Dto
+@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
+@inherits FluxorComponent
+
+@inject IState<ServerState> ServerState
+@inject IDispatcher Dispatcher
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IServerApiClient ServerApiClient
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Servers - Granite Server Manager</PageTitle>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Servers</MudText>
-<MudText Typo="Typo.body1">Server management page</MudText>
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
+        <MudText Typo="Typo.h4">Servers</MudText>
+        <MudButton StartIcon="@Icons.Material.Filled.Add" 
+                   Variant="Variant.Filled" 
+                   Color="Color.Primary"
+                   OnClick="@(() => OpenCreateDialog())"
+                   Disabled="@ServerState.Value.IsLoading">
+            Create Server
+        </MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
+                   OnClick="@HandleRefresh" 
+                   Disabled="@ServerState.Value.IsLoading">
+            Refresh
+        </MudButton>
+    </MudStack>
+
+    @if (!string.IsNullOrEmpty(ServerState.Value.Error))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@ServerState.Value.Error</MudAlert>
+    }
+
+    <MudPaper Elevation="0" Style="height: 600px;">
+        <MudDataGrid T="ServerDetailsDTO" 
+                     Items="@ServerState.Value.Servers" 
+                     Dense="true"
+                     Hover="true"
+                     Loading="@ServerState.Value.IsLoading"
+                     Height="560px">
+            <Columns>
+                <TemplateColumn Title="Server" Sortable="false">
+                    <CellTemplate>
+                        <MudStack Spacing="0" Style="cursor: pointer;" @onclick="@(() => Navigation.NavigateTo($"/{context.Item.Id}/config"))">
+                            <MudText Typo="Typo.body2" Class="font-weight-bold" Color="Color.Primary">
+                                @context.Item.Name
+                            </MudText>
+                            @if (!string.IsNullOrEmpty(context.Item.Description))
+                            {
+                                <MudText Typo="Typo.caption">@context.Item.Description</MudText>
+                            }
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Status" Sortable="false">
+                    <CellTemplate>
+                        <MudChip Size="Size.Small" 
+                                 Color="@(context.Item.IsOnline ? Color.Success : Color.Default)"
+                                 Variant="Variant.Filled">
+                            @(context.Item.IsOnline ? "Online" : "Offline")
+                        </MudChip>
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Players" Sortable="false">
+                    <CellTemplate>
+                        <MudText Typo="Typo.body2">
+                            @context.Item.CurrentPlayers / @context.Item.MaxPlayers
+                        </MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Created" Sortable="false">
+                    <CellTemplate>
+                        <MudText Typo="Typo.body2">
+                            @context.Item.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                        </MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Last Seen" Sortable="false">
+                    <CellTemplate>
+                        <MudText Typo="Typo.body2">
+                            @if (context.Item.LastSeenAt.HasValue)
+                            {
+                                @context.Item.LastSeenAt.Value.ToString("yyyy-MM-dd HH:mm")
+                            }
+                            else
+                            {
+                                <span>Never</span>
+                            }
+                        </MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Actions" Sortable="false">
+                    <CellTemplate>
+                        <MudStack Row="true" Spacing="1">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                          Size="Size.Small" 
+                                          OnClick="@(() => HandleEditServer(context.Item))"
+                                          title="Edit Server" />
+                            <MudIconButton Icon="@Icons.Material.Filled.VpnKey" 
+                                          Size="Size.Small" 
+                                          OnClick="@(() => HandleRegenerateToken(context.Item.Id))"
+                                          title="Regenerate Token" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                          Size="Size.Small" 
+                                          Color="Color.Error"
+                                          OnClick="@(() => HandleDeleteConfirm(context.Item))"
+                                          title="Delete Server" />
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="ServerDTO" />
+            </PagerContent>
+        </MudDataGrid>
+    </MudPaper>
+</MudContainer>
+
+@* Create/Edit Server Dialog *@
+<MudDialog @bind-Visible="_serverDialogOpen">
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">@(_editingServer != null ? "Edit Server" : "Create Server")</MudText>
+        
+        @if (!string.IsNullOrEmpty(_serverDialogError))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@_serverDialogError</MudAlert>
+        }
+
+        <EditForm Model="@_serverFormModel" OnValidSubmit="@HandleServerFormSubmit" Class="d-flex flex-column gap-3">
+            <DataAnnotationsValidator />
+            
+            <MudTextField @bind-Value="_serverFormModel.Name" 
+                          Label="Server Name" 
+                          Variant="Variant.Outlined" 
+                          Required="true"
+                          For="@(() => _serverFormModel.Name)" />
+            
+            <MudTextField @bind-Value="_serverFormModel.Description" 
+                          Label="Description" 
+                          Variant="Variant.Outlined" 
+                          Lines="2" />
+            
+            <MudNumericField @bind-Value="_serverFormModel.Port" 
+                             Label="Port (optional)" 
+                             Variant="Variant.Outlined" 
+                             Min="1024"
+                             Max="65535" />
+            
+            <MudTextField @bind-Value="_serverFormModel.WelcomeMessage" 
+                          Label="Welcome Message (optional)" 
+                          Variant="Variant.Outlined" 
+                          Lines="2" />
+            
+            <MudNumericField @bind-Value="_serverFormModel.MaxClients" 
+                             Label="Max Clients (optional)" 
+                             Variant="Variant.Outlined" 
+                             Min="1" />
+            
+            <MudTextField @bind-Value="_serverFormModel.Password" 
+                          Label="Password (optional)" 
+                          Variant="Variant.Outlined" 
+                          InputType="InputType.Password" />
+            
+            <MudNumericField @bind-Value="_serverFormModel.MaxChunkRadius" 
+                             Label="Max Chunk Radius (optional)" 
+                             Variant="Variant.Outlined" 
+                             Min="1" />
+            
+            <MudCheckBox T="bool?" @bind-checked="_serverFormModel.AllowPvP" 
+                         Label="Allow PvP" />
+            
+            <MudCheckBox T="bool?" @bind-checked="_serverFormModel.AllowFireSpread" 
+                         Label="Allow Fire Spread" />
+            
+            <MudCheckBox T="bool?" @bind-checked="_serverFormModel.AllowFallingBlocks" 
+                         Label="Allow Falling Blocks" />
+
+            <div class="d-flex gap-2 mt-4">
+                <MudButton ButtonType="ButtonType.Submit" 
+                           Variant="Variant.Filled" 
+                           Color="Color.Primary"
+                           Disabled="@_serverFormSubmitting">
+                    @if (_serverFormSubmitting)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">Saving...</MudText>
+                    }
+                    else
+                    {
+                        @(_editingServer != null ? "Update" : "Create")
+                    }
+                </MudButton>
+                <MudButton OnClick="@(() => _serverDialogOpen = false)">Cancel</MudButton>
+            </div>
+        </EditForm>
+    </DialogContent>
+</MudDialog>
+
+@* Delete Confirmation Dialog *@
+<MudDialog @bind-Visible="_deleteDialogOpen">
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Delete Server?</MudText>
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            This action cannot be undone. All data associated with this server will be permanently deleted.
+        </MudAlert>
+        @if (_serverToDelete != null)
+        {
+            <MudText Class="mb-4">
+                Server: <strong>@_serverToDelete.Name</strong>
+            </MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _deleteDialogOpen = false)">Cancel</MudButton>
+        <MudButton Color="Color.Error" 
+                   Variant="Variant.Filled" 
+                   OnClick="@HandleDeleteConfirmed"
+                   Disabled="@_deleteSubmitting">
+            @if (_deleteSubmitting)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Deleting...</MudText>
+            }
+            else
+            {
+                <span>Delete</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* Token Regeneration Dialog *@
+<MudDialog @bind-Visible="_tokenDialogOpen">
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Regenerate Access Token</MudText>
+        @if (_tokenDialogError != null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@_tokenDialogError</MudAlert>
+        }
+        else if (_regeneratedToken != null)
+        {
+            <MudAlert Severity="Severity.Success" Class="mb-4">Token regenerated successfully!</MudAlert>
+            <MudTextField @bind-Value="_regeneratedToken.AccessToken" 
+                          Label="New Access Token" 
+                          Variant="Variant.Outlined" 
+                          ReadOnly="true"
+                          Lines="3"
+                          HelperText="Copy this token. You won't be able to see it again."
+                          HelperTextOnFocus="true" />
+            <MudButton StartIcon="@Icons.Material.Filled.ContentCopy" 
+                       OnClick="@CopyTokenToClipboard"
+                       Class="mt-4">
+                Copy Token
+            </MudButton>
+        }
+        else
+        {
+            <MudText Class="mb-4">Are you sure you want to regenerate the access token for this server? The old token will no longer work.</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        @if (_regeneratedToken == null)
+        {
+            <MudButton OnClick="@(() => _tokenDialogOpen = false)">Cancel</MudButton>
+            <MudButton Color="Color.Warning" 
+                       Variant="Variant.Filled" 
+                       OnClick="@HandleTokenRegenerationConfirmed"
+                       Disabled="@_tokenSubmitting">
+                @if (_tokenSubmitting)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ms-2">Regenerating...</MudText>
+                }
+                else
+                {
+                    <span>Regenerate</span>
+                }
+            </MudButton>
+        }
+        else
+        {
+            <MudButton OnClick="@(() => _tokenDialogOpen = false)">Close</MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private bool _serverDialogOpen = false;
+    private bool _deleteDialogOpen = false;
+    private bool _tokenDialogOpen = false;
+    
+    private CreateServerRequestDTO _serverFormModel = new() { Name = "" };
+    private ServerDetailsDTO? _editingServer;
+    private ServerDetailsDTO? _serverToDelete;
+    private Guid? _serverToRegenerateToken;
+    
+    private bool _serverFormSubmitting = false;
+    private bool _deleteSubmitting = false;
+    private bool _tokenSubmitting = false;
+    
+    private string? _serverDialogError;
+    private string? _tokenDialogError;
+    
+    private TokenRegeneratedResponseDTO? _regeneratedToken;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if (ServerState.Value.Servers.Count == 0)
+        {
+            Dispatcher.Dispatch(new FetchServersAction());
+        }
+    }
+
+    private void HandleRefresh()
+    {
+        Dispatcher.Dispatch(new FetchServersAction());
+    }
+
+    private void OpenCreateDialog()
+    {
+        _editingServer = null;
+        _serverFormModel = new() { Name = "" };
+        _serverDialogError = null;
+        _serverDialogOpen = true;
+    }
+
+    private void HandleEditServer(ServerDetailsDTO server)
+    {
+        _editingServer = server;
+        _serverFormModel = new()
+        {
+            Name = server.Name,
+            Description = server.Description
+        };
+        _serverDialogError = null;
+        _serverDialogOpen = true;
+    }
+
+    private async Task HandleServerFormSubmit()
+    {
+        _serverFormSubmitting = true;
+        _serverDialogError = null;
+
+        try
+        {
+            if (_editingServer != null)
+            {
+                var updateRequest = new UpdateServerRequestDTO
+                {
+                    Name = _serverFormModel.Name,
+                    Description = _serverFormModel.Description,
+                    Port = _serverFormModel.Port,
+                    WelcomeMessage = _serverFormModel.WelcomeMessage,
+                    MaxClients = _serverFormModel.MaxClients,
+                    Password = _serverFormModel.Password,
+                    MaxChunkRadius = _serverFormModel.MaxChunkRadius,
+                    AllowPvP = _serverFormModel.AllowPvP,
+                    AllowFireSpread = _serverFormModel.AllowFireSpread,
+                    AllowFallingBlocks = _serverFormModel.AllowFallingBlocks
+                };
+                Dispatcher.Dispatch(new UpdateServerAction(_editingServer.Id, updateRequest));
+                Snackbar.Add("Server updated successfully", Severity.Success);
+            }
+            else
+            {
+                Dispatcher.Dispatch(new CreateServerAction(_serverFormModel));
+                Snackbar.Add("Server created successfully", Severity.Success);
+            }
+            
+            _serverDialogOpen = false;
+        }
+        catch (Exception ex)
+        {
+            _serverDialogError = ex.Message;
+        }
+        finally
+        {
+            _serverFormSubmitting = false;
+        }
+    }
+
+    private void HandleDeleteConfirm(ServerDetailsDTO server)
+    {
+        _serverToDelete = server;
+        _deleteDialogOpen = true;
+    }
+
+    private async Task HandleDeleteConfirmed()
+    {
+        if (_serverToDelete == null) return;
+        
+        _deleteSubmitting = true;
+        try
+        {
+            Dispatcher.Dispatch(new DeleteServerAction(_serverToDelete.Id));
+            Snackbar.Add("Server deleted successfully", Severity.Success);
+            _deleteDialogOpen = false;
+        }
+        finally
+        {
+            _deleteSubmitting = false;
+        }
+    }
+
+    private void HandleRegenerateToken(Guid serverId)
+    {
+        _serverToRegenerateToken = serverId;
+        _regeneratedToken = null;
+        _tokenDialogError = null;
+        _tokenDialogOpen = true;
+    }
+
+    private async Task HandleTokenRegenerationConfirmed()
+    {
+        if (_serverToRegenerateToken == null) return;
+        
+        _tokenSubmitting = true;
+        _tokenDialogError = null;
+        
+        try
+        {
+            var response = await ServerApiClient.RegenerateAccessTokenAsync(
+                _serverToRegenerateToken.Value.ToString()
+            );
+
+            if (response?.Data?.AccessToken != null)
+            {
+                _regeneratedToken = response.Data;
+                Snackbar.Add("Token regenerated successfully", Severity.Success);
+            }
+            else
+            {
+                _tokenDialogError = "Failed to regenerate access token.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _tokenDialogError = ex.Message;
+        }
+        finally
+        {
+            _tokenSubmitting = false;
+        }
+    }
+
+    private async Task CopyTokenToClipboard()
+    {
+        if (_regeneratedToken?.AccessToken != null)
+        {
+            await JSRuntime.InvokeVoidAsync(
+                "navigator.clipboard.writeText",
+                _regeneratedToken.AccessToken
+            );
+            Snackbar.Add("Token copied to clipboard", Severity.Success);
+        }
+    }
+}

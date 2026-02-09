@@ -13,12 +13,6 @@
         Dashboard
     </MudNavLink>
 
-    <MudNavGroup Title="Server Management" Icon="@Icons.Material.Filled.Storage" Expanded="true">
-        <MudNavLink Href="@ServersPath" Icon="@Icons.Material.Filled.Dns">Servers</MudNavLink>
-        <MudNavLink Href="@ServerConfigPath" Icon="@Icons.Material.Filled.Settings">Configuration</MudNavLink>
-        <MudNavLink Href="@ServerStatusPath" Icon="@Icons.Material.Filled.Info">Status</MudNavLink>
-    </MudNavGroup>
-
     <MudNavGroup Title="Players" Icon="@Icons.Material.Filled.People" Expanded="true">
         <MudNavLink Href="@PlayersPath" Icon="@Icons.Material.Filled.PersonSearch">Manage Players</MudNavLink>
         <MudNavLink Href="@WhitelistPath" Icon="@Icons.Material.Filled.CheckCircle">Whitelist</MudNavLink>
@@ -36,6 +30,10 @@
         <MudNavLink Href="@CollectiblesPath" Icon="@Icons.Material.Filled.Inventory2">Collectibles</MudNavLink>
     </MudNavGroup>
 
+    <MudNavGroup Title="Server Management" Icon="@Icons.Material.Filled.Storage" Expanded="true">
+        <MudNavLink Href="/servers" Icon="@Icons.Material.Filled.Dns">Servers</MudNavLink>
+    </MudNavGroup>
+
     <MudDivider Class="my-3" />
 
     <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
@@ -46,9 +44,6 @@
     private string? SelectedServerId => ServerState.Value.SelectedServerId;
 
     private string OverviewPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}" : "/";
-    private string ServersPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/servers" : "/servers";
-    private string ServerConfigPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/config" : "/server-config";
-    private string ServerStatusPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/status" : "/server-status";
     private string PlayersPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/players" : "/players";
     private string WhitelistPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/whitelist" : "/whitelist";
     private string BansPath => !string.IsNullOrEmpty(SelectedServerId) ? $"/{SelectedServerId}/bans" : "/bans";

@@ -12,17 +12,29 @@
             FullWidth="true" ResetValueOnEmptyText="false" CoerceText="true" CoerceValue="true" SelectValueOnTab="true"
             AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Primary" @onblur="@OnInputBlurAsync"
             HelperText="@_validationError" HelperTextOnFocus="false" Error="@(!string.IsNullOrEmpty(_validationError))"
-            Class="mb-3">
+            Class="mb-3" Disabled="@_isLoading">
             <ItemTemplate Context="player">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudAvatar Size="Size.Small" Color="Color.Primary">
-                        @(player.Name?.FirstOrDefault().ToString().ToUpper() ?? "?")
-                    </MudAvatar>
-                    <MudStack Spacing="0">
-                        <MudText Typo="Typo.body2">@player.Name</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@player.Id</MudText>
+                @if (player.Id == "__SERVER_SEARCH__")
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Cloud" Color="Color.Info" />
+                        <MudText Typo="Typo.body2" Color="Color.Info" Style="font-style: italic;">
+                            Search for "@player.Name" on VintageStory servers...
+                        </MudText>
                     </MudStack>
-                </MudStack>
+                }
+                else
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudAvatar Size="Size.Small" Color="Color.Primary">
+                            @(player.Name?.FirstOrDefault().ToString().ToUpper() ?? "?")
+                        </MudAvatar>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body2">@player.Name</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@player.Id</MudText>
+                        </MudStack>
+                    </MudStack>
+                }
             </ItemTemplate>
             <NoItemsTemplate>
                 <MudText Align="Align.Center" Class="px-4 py-3">No players found</MudText>
@@ -30,10 +42,22 @@
         </MudAutocomplete>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton OnClick="Cancel" Disabled="@_isLoading">Cancel</MudButton>
         <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="ConfirmAsync"
-            Disabled="@(string.IsNullOrEmpty(_selectedPlayerUid) || !string.IsNullOrEmpty(_validationError))">
-            @SelectButtonText
+            Disabled="@(_selectedPlayer == null || !string.IsNullOrEmpty(_validationError) || _isLoading)">
+            @if (_isLoading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ml-2">Searching...</MudText>
+            }
+            else if (_pendingServerSearch)
+            {
+                @:Search and Add
+            }
+            else
+            {
+                @SelectButtonText
+            }
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -59,49 +83,51 @@
     private string? _selectedPlayerUid = null;
     private string _validationError = string.Empty;
     private string _lastSearchText = string.Empty;
+    private bool _pendingServerSearch = false;
+    private bool _isLoading = false;
 
-    private async Task<IEnumerable<PlayerNameIdDTO>> SearchPlayersAsync(string searchText, CancellationToken
+    private Task<IEnumerable<PlayerNameIdDTO>> SearchPlayersAsync(string searchText, CancellationToken
     cancellationToken)
     {
         // Track the current input text for validation on blur
         _lastSearchText = searchText;
 
-        // Clear validation error when user is actively searching
+        // Clear validation error and pending state when user is actively searching
         _validationError = string.Empty;
+        _pendingServerSearch = false;
 
         if (string.IsNullOrWhiteSpace(searchText))
         {
             // Return initial filtered players when search is empty, converted to PlayerNameIdDTO
-            return InitialPlayers.Where(OnFilterPlayer).Select(ConvertToPlayerNameIdDTO).ToList();
+            return Task.FromResult(InitialPlayers.Where(OnFilterPlayer).Select(ConvertToPlayerNameIdDTO).AsEnumerable());
         }
 
-        var query = searchText.Trim().ToLower();
+        var query = searchText.Trim();
 
-        // First, search locally in InitialPlayers
+        // Search locally in InitialPlayers
         var localResults = InitialPlayers
-        .Where(OnFilterPlayer)
-        .Where(p => p.Name?.Contains(query, StringComparison.OrdinalIgnoreCase) == true ||
-        p.PlayerUID?.Contains(query, StringComparison.OrdinalIgnoreCase) == true)
-        .Select(ConvertToPlayerNameIdDTO)
-        .ToList();
+            .Where(OnFilterPlayer)
+            .Where(p => p.Name?.Contains(query, StringComparison.OrdinalIgnoreCase) == true ||
+                       p.PlayerUID?.Contains(query, StringComparison.OrdinalIgnoreCase) == true)
+            .Select(ConvertToPlayerNameIdDTO)
+            .ToList();
 
         // If we have local results, return them
         if (localResults.Any())
         {
-            return localResults;
+            return Task.FromResult(localResults.AsEnumerable());
         }
 
-        // Otherwise, attempt server-side search
-        try
+        // No local results - return a special sentinel item to trigger server search
+        var result = new List<PlayerNameIdDTO>
         {
-            var serverResults = await FindPlayerByNameAsync(searchText);
-            return serverResults.ToList();
-        }
-        catch (Exception)
-        {
-            // Silently fail - return empty results
-            return Enumerable.Empty<PlayerNameIdDTO>();
-        }
+            new PlayerNameIdDTO
+            {
+                Id = "__SERVER_SEARCH__",
+                Name = query
+            }
+        };
+        return Task.FromResult(result.AsEnumerable());
     }
 
     private PlayerNameIdDTO ConvertToPlayerNameIdDTO(PlayerDTO dto)
@@ -169,7 +195,11 @@
         try
         {
             var response = await PlayersApiClient.FindPlayerByNameAsync(playerName);
-            return response.Data ?? Enumerable.Empty<PlayerNameIdDTO>();
+            if (response.Data != null)
+            {
+                return new[] { response.Data };
+            }
+            return Enumerable.Empty<PlayerNameIdDTO>();
         }
         catch
         {
@@ -177,29 +207,61 @@
         }
     }
 
-    private void ConfirmAsync()
+    private async Task ConfirmAsync()
     {
-        // Validate input if a player object is selected
-        if (_selectedPlayer != null)
+        if (_selectedPlayer == null)
         {
-            _selectedPlayerUid = _selectedPlayer.Id;
-        }
-        else if (!string.IsNullOrEmpty(_selectedPlayerUid))
-        {
-            // Player UID is already set from dropdown selection
-        }
-        else
-        {
-            _validationError = "Please select or enter a valid player";
+            _validationError = "Please select a player";
             return;
         }
 
-        if (string.IsNullOrEmpty(_selectedPlayerUid) || !string.IsNullOrEmpty(_validationError))
+        // Check if user selected the server search option
+        if (_selectedPlayer.Id == "__SERVER_SEARCH__")
         {
+            await PerformServerSearchAsync(_selectedPlayer.Name);
+            return;
+        }
+
+        // Normal selection - close with the player UID
+        _selectedPlayerUid = _selectedPlayer.Id;
+        if (string.IsNullOrEmpty(_selectedPlayerUid))
+        {
+            _validationError = "Invalid player selection";
             return;
         }
 
         MudDialog.Close(DialogResult.Ok(_selectedPlayerUid));
+    }
+
+    private async Task PerformServerSearchAsync(string playerName)
+    {
+        _isLoading = true;
+        _validationError = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var response = await PlayersApiClient.FindPlayerByNameAsync(playerName);
+            var player = response.Data;
+
+            if (player == null || string.IsNullOrEmpty(player.Id))
+            {
+                _validationError = $"No player found with name '{playerName}' on VintageStory servers";
+                return;
+            }
+
+            // Success - close dialog with the found player UID
+            MudDialog.Close(DialogResult.Ok(player.Id));
+        }
+        catch (Exception ex)
+        {
+            _validationError = $"Error searching server: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
     }
 
     private Task OnInputBlurAsync()

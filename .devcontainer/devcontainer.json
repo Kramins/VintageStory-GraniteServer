@@ -17,7 +17,7 @@
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "uname -a",
 	// Use 'postStartCommand' to run commands after the container starts.
-	"postStartCommand": "dotnet tool install --global dotnet-ef --version 8.0  && dotnet tool install csharpier --global && dotnet tool install code-butler --global",
+	"postStartCommand": "dotnet tool install --global dotnet-ef --version 8.0  && dotnet tool install csharpier --global && dotnet tool install code-butler --global && grep -q '/.dotnet/tools' ~/.bashrc || echo 'export PATH=\"$PATH:$HOME/.dotnet/tools\"' >> ~/.bashrc",
 	"remoteUser": "vscode",
 	// Configure tool-specific properties.
 	"customizations": {

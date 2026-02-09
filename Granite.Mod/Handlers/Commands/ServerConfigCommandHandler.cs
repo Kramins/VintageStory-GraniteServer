@@ -103,99 +103,106 @@ public class UpdateServerConfigCommandHandler : ICommandHandler<UpdateServerConf
         try
         {
             _logger.Notification(
-                "[ServerConfig] Received update command from control plane. Applying changes..."
+                "[ServerConfig] Received update command from control plane. Comparing and applying changes..."
             );
 
             var configDto = command.Data.Config;
             var serverConfig = _api.Server.Config;
+            var hasChanges = false;
 
-            // Update config properties (only non-null values)
-            if (configDto.ServerName != null)
+            // Compare and update config properties (only apply changed values)
+            if (configDto.ServerName != null && serverConfig.ServerName != configDto.ServerName)
             {
                 _logger.Notification(
                     $"[ServerConfig] ServerName: {serverConfig.ServerName} -> {configDto.ServerName}"
                 );
                 serverConfig.ServerName = configDto.ServerName;
+                hasChanges = true;
             }
 
-            if (configDto.WelcomeMessage != null)
+            if (configDto.WelcomeMessage != null && serverConfig.WelcomeMessage != configDto.WelcomeMessage)
             {
-                _logger.Notification("[ServerConfig] WelcomeMessage updated.");
+                _logger.Notification($"[ServerConfig] WelcomeMessage: {serverConfig.WelcomeMessage} -> {configDto.WelcomeMessage}");
                 serverConfig.WelcomeMessage = configDto.WelcomeMessage;
+                hasChanges = true;
             }
 
-            if (configDto.MaxClients.HasValue)
+            if (configDto.MaxClients.HasValue && serverConfig.MaxClients != configDto.MaxClients.Value)
             {
                 _logger.Notification(
                     $"[ServerConfig] MaxClients: {serverConfig.MaxClients} -> {configDto.MaxClients.Value}"
                 );
                 serverConfig.MaxClients = configDto.MaxClients.Value;
+                hasChanges = true;
             }
 
-            if (configDto.Password != null)
+            var newPassword = string.IsNullOrEmpty(configDto.Password) ? null : configDto.Password;
+            if (serverConfig.Password != newPassword)
             {
                 _logger.Notification("[ServerConfig] Password updated.");
-                serverConfig.Password = string.IsNullOrEmpty(configDto.Password)
-                    ? null
-                    : configDto.Password;
+                serverConfig.Password = newPassword;
+                hasChanges = true;
             }
 
-            if (configDto.MaxChunkRadius.HasValue)
+            if (configDto.MaxChunkRadius.HasValue && serverConfig.MaxChunkRadius != configDto.MaxChunkRadius.Value)
             {
                 _logger.Notification(
                     $"[ServerConfig] MaxChunkRadius: {serverConfig.MaxChunkRadius} -> {configDto.MaxChunkRadius.Value}"
                 );
                 serverConfig.MaxChunkRadius = configDto.MaxChunkRadius.Value;
+                hasChanges = true;
             }
 
             if (
                 configDto.WhitelistMode != null
                 && Enum.TryParse(configDto.WhitelistMode, out EnumWhitelistMode whitelistMode)
+                && serverConfig.WhitelistMode != whitelistMode
             )
             {
                 _logger.Notification(
                     $"[ServerConfig] WhitelistMode: {serverConfig.WhitelistMode} -> {whitelistMode}"
                 );
                 serverConfig.WhitelistMode = whitelistMode;
+                hasChanges = true;
             }
 
-            if (configDto.AllowPvP.HasValue)
+            if (configDto.AllowPvP.HasValue && serverConfig.AllowPvP != configDto.AllowPvP.Value)
             {
                 _logger.Notification(
                     $"[ServerConfig] AllowPvP: {serverConfig.AllowPvP} -> {configDto.AllowPvP.Value}"
                 );
                 serverConfig.AllowPvP = configDto.AllowPvP.Value;
+                hasChanges = true;
             }
 
-            if (configDto.AllowFireSpread.HasValue)
+            if (configDto.AllowFireSpread.HasValue && serverConfig.AllowFireSpread != configDto.AllowFireSpread.Value)
             {
                 _logger.Notification(
                     $"[ServerConfig] AllowFireSpread: {serverConfig.AllowFireSpread} -> {configDto.AllowFireSpread.Value}"
                 );
                 serverConfig.AllowFireSpread = configDto.AllowFireSpread.Value;
+                hasChanges = true;
             }
 
-            if (configDto.AllowFallingBlocks.HasValue)
+            if (configDto.AllowFallingBlocks.HasValue && serverConfig.AllowFallingBlocks != configDto.AllowFallingBlocks.Value)
             {
                 _logger.Notification(
                     $"[ServerConfig] AllowFallingBlocks: {serverConfig.AllowFallingBlocks} -> {configDto.AllowFallingBlocks.Value}"
                 );
                 serverConfig.AllowFallingBlocks = configDto.AllowFallingBlocks.Value;
+                hasChanges = true;
             }
 
-            // Mark config as dirty to persist changes
-            _api.Server.MarkConfigDirty();
-            _logger.Notification("[ServerConfig] Configuration marked as dirty for persistence.");
-
-            // Publish sync event to confirm changes
-            var syncEvent = _messageBus.CreateEvent<ServerConfigSyncedEvent>(
-                _config.ServerId,
-                e =>
-                {
-                    e.Data.Config = ReadServerConfig();
-                }
-            );
-            _messageBus.Publish(syncEvent);
+            // Only mark config as dirty and persist if changes were made
+            if (hasChanges)
+            {
+                _api.Server.MarkConfigDirty();
+                _logger.Notification("[ServerConfig] Configuration marked as dirty for persistence.");
+            }
+            else
+            {
+                _logger.Notification("[ServerConfig] No changes detected, config already matches.");
+            }
 
             _logger.Notification("[ServerConfig] Server configuration updated successfully.");
         }

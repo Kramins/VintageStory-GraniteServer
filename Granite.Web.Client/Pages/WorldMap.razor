@@ -68,7 +68,7 @@
     public string? ServerId { get; set; }
 
     private WorldMapBoundsDTO? _bounds;
-    private MapTileMetadataDTO? _selectedTileMetadata;
+    private MapTileMetadataDTO? _selectedTileMetadata = null;
     private bool _isLoading = true;
     private string? _error;
     private Guid _serverGuid;

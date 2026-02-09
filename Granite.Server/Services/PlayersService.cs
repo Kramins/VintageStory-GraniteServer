@@ -21,7 +21,8 @@ public class PlayersService : IPlayersService
         ILogger<PlayersService> logger,
         GraniteDataContext dbContext,
         IPlayerNameResolver playerNameResolver,
-        IMemoryCache cache)
+        IMemoryCache cache
+    )
     {
         _logger = logger;
         _dbContext = dbContext;
@@ -36,7 +37,10 @@ public class PlayersService : IPlayersService
     /// <param name="name">The player name to search for</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Player name and ID if found, null otherwise</returns>
-    public virtual async Task<PlayerNameIdDTO?> FindPlayerByNameAsync(string name, CancellationToken cancellationToken = default)
+    public virtual async Task<PlayerNameIdDTO?> FindPlayerByNameAsync(
+        string name,
+        CancellationToken cancellationToken = default
+    )
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -53,54 +57,56 @@ public class PlayersService : IPlayersService
         }
 
         // Search database across all servers, ordered by most recent activity
-        var playerFromDb = await _dbContext.Players
-            .Where(p => p.Name == name)
+        var playerFromDb = await _dbContext
+            .Players.Where(p => p.Name == name)
             .OrderByDescending(p => p.LastJoinDate)
-            .Select(p => new PlayerNameIdDTO
-            {
-                Id = p.PlayerUID,
-                Name = p.Name
-            })
+            .Select(p => new PlayerNameIdDTO { Id = p.PlayerUID, Name = p.Name })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (playerFromDb != null)
         {
-            _logger.LogDebug("Player '{Name}' found in database with UID '{PlayerUID}'", name, playerFromDb.Id);
-            
+            _logger.LogDebug(
+                "Player '{Name}' found in database with UID '{PlayerUID}'",
+                name,
+                playerFromDb.Id
+            );
+
             // Cache the database result
-            _cache.Set(cacheKey, playerFromDb, new MemoryCacheEntryOptions
-            {
-                SlidingExpiration = CacheExpiration
-            });
-            
+            _cache.Set(
+                cacheKey,
+                playerFromDb,
+                new MemoryCacheEntryOptions { SlidingExpiration = CacheExpiration }
+            );
+
             return playerFromDb;
         }
 
         // Not in database, try external Vintage Story API
         _logger.LogDebug("Player '{Name}' not found in database, querying Vintage Story API", name);
-        
+
         var playerUid = await _playerNameResolver.ResolvePlayerNameAsync(name, cancellationToken);
-        
+
         if (playerUid == null)
         {
             _logger.LogDebug("Player '{Name}' not found in Vintage Story API", name);
             return null;
         }
 
-        var result = new PlayerNameIdDTO
-        {
-            Id = playerUid,
-            Name = name
-        };
+        var result = new PlayerNameIdDTO { Id = playerUid, Name = name };
 
         // Cache the API result with sliding expiration
-        _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
-        {
-            SlidingExpiration = CacheExpiration
-        });
+        _cache.Set(
+            cacheKey,
+            result,
+            new MemoryCacheEntryOptions { SlidingExpiration = CacheExpiration }
+        );
 
-        _logger.LogInformation("Player '{Name}' resolved from Vintage Story API with UID '{PlayerUID}' and cached", name, playerUid);
-        
+        _logger.LogInformation(
+            "Player '{Name}' resolved from Vintage Story API with UID '{PlayerUID}' and cached",
+            name,
+            playerUid
+        );
+
         return result;
     }
 }

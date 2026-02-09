@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Granite.Data.Migrations.Postgres
 {
     [DbContext(typeof(GraniteDataContextPostgres))]
-    [Migration("20260203003759_v100")]
+    [Migration("20260207185254_v100")]
     partial class v100
     {
         /// <inheritdoc />
@@ -543,6 +543,9 @@ namespace Granite.Data.Migrations.Postgres
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
 
                     b.ToTable("Servers");
                 });

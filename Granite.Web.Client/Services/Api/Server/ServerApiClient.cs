@@ -15,11 +15,11 @@ public class ServerApiClient : BaseApiClient, IServerApiClient
     {
     }
 
-    public async Task<JsonApiDocument<List<ServerDTO>>> GetServersAsync()
+    public async Task<JsonApiDocument<List<ServerDetailsDTO>>> GetServersAsync()
     {
         try
         {
-            return await GetAsync<List<ServerDTO>>(BasePath);
+            return await GetAsync<List<ServerDetailsDTO>>(BasePath);
         }
         catch (ApiException ex)
         {
@@ -28,11 +28,11 @@ public class ServerApiClient : BaseApiClient, IServerApiClient
         }
     }
 
-    public async Task<JsonApiDocument<ServerDTO>> GetServerAsync(string serverId)
+    public async Task<JsonApiDocument<ServerDetailsDTO>> GetServerAsync(string serverId)
     {
         try
         {
-            return await GetAsync<ServerDTO>($"{BasePath}/{serverId}");
+            return await GetAsync<ServerDetailsDTO>($"{BasePath}/{serverId}");
         }
         catch (ApiException ex)
         {
@@ -41,11 +41,64 @@ public class ServerApiClient : BaseApiClient, IServerApiClient
         }
     }
 
-    public async Task<JsonApiDocument<ServerStatusDTO>> GetServerStatusAsync(string serverId)
+    public async Task<JsonApiDocument<ServerDTO>> CreateServerAsync(CreateServerRequestDTO request)
     {
         try
         {
-            return await GetAsync<ServerStatusDTO>($"{BasePath}/{serverId}/status");
+            return await PostAsync<ServerDTO>(BasePath, request);
+        }
+        catch (ApiException ex)
+        {
+            Logger.LogError(ex, "Failed to create server");
+            throw;
+        }
+    }
+
+    public async Task<JsonApiDocument<ServerDTO>> UpdateServerAsync(string serverId, UpdateServerRequestDTO request)
+    {
+        try
+        {
+            return await PutAsync<ServerDTO>($"{BasePath}/{serverId}", request);
+        }
+        catch (ApiException ex)
+        {
+            Logger.LogError(ex, "Failed to update server {ServerId}", serverId);
+            throw;
+        }
+    }
+
+    public async Task<JsonApiDocument<object>> DeleteServerAsync(string serverId)
+    {
+        try
+        {
+            await DeleteAsync($"{BasePath}/{serverId}");
+            return new JsonApiDocument<object>();
+        }
+        catch (ApiException ex)
+        {
+            Logger.LogError(ex, "Failed to delete server {ServerId}", serverId);
+            throw;
+        }
+    }
+
+    public async Task<JsonApiDocument<TokenRegeneratedResponseDTO>> RegenerateAccessTokenAsync(string serverId)
+    {
+        try
+        {
+            return await PostAsync<TokenRegeneratedResponseDTO>($"{BasePath}/{serverId}/regenerate-token", null);
+        }
+        catch (ApiException ex)
+        {
+            Logger.LogError(ex, "Failed to regenerate token {ServerId}", serverId);
+            throw;
+        }
+    }
+
+    public async Task<JsonApiDocument<ServerDetailsDTO>> GetServerStatusAsync(string serverId)
+    {
+        try
+        {
+            return await GetAsync<ServerDetailsDTO>($"/api/{serverId}/server/status");
         }
         catch (ApiException ex)
         {
@@ -58,7 +111,7 @@ public class ServerApiClient : BaseApiClient, IServerApiClient
     {
         try
         {
-            return await GetAsync<ServerConfigDTO>($"{BasePath}/{serverId}/config");
+            return await GetAsync<ServerConfigDTO>($"/api/{serverId}/config");
         }
         catch (ApiException ex)
         {
@@ -66,12 +119,23 @@ public class ServerApiClient : BaseApiClient, IServerApiClient
             throw;
         }
     }
-
+    public async Task<JsonApiDocument<ServerDetailsDTO>> GetServerDetailsAsync(string serverId)
+    {
+        try
+        {
+            return await GetAsync<ServerDetailsDTO>($"{BasePath}/{serverId}/details");
+        }
+        catch (ApiException ex)
+        {
+            Logger.LogError(ex, "Failed to get server details {ServerId}", serverId);
+            throw;
+        }
+    }
     public async Task<JsonApiDocument<ServerConfigDTO>> UpdateServerConfigAsync(string serverId, ServerConfigDTO config)
     {
         try
         {
-            return await PutAsync<ServerConfigDTO>($"{BasePath}/{serverId}/config", config);
+            return await PutAsync<ServerConfigDTO>($"/api/{serverId}/config", config);
         }
         catch (ApiException ex)
         {
