@@ -8,7 +8,29 @@ namespace GraniteServer.Map;
 public static class MapColors
 {
     /// <summary>
+    /// Default block material to map color code mapping.
+    /// Ported from Vintagestory.GameContent.ChunkMapLayer.defaultMapColorCodes.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> DefaultMapColorCodes =
+        new Dictionary<string, string>
+        {
+            { "Soil", "land" },
+            { "Sand", "desert" },
+            { "Ore", "land" },
+            { "Gravel", "desert" },
+            { "Stone", "land" },
+            { "Leaves", "forest" },
+            { "Plant", "plant" },
+            { "Wood", "forest" },
+            { "Snow", "glacier" },
+            { "Liquid", "lake" },
+            { "Ice", "glacier" },
+            { "Lava", "lava" },
+        };
+
+    /// <summary>
     /// Color palette for medieval-style map rendering (hex strings).
+    /// Ported from Vintagestory.GameContent.ChunkMapLayer.hexColorsByCode.
     /// </summary>
     public static readonly IReadOnlyDictionary<string, string> HexColorsByCode =
         new Dictionary<string, string>
@@ -106,5 +128,68 @@ public static class MapColors
         var g = (byte)Math.Clamp((int)(((color >> 8) & 0xFF) * multiplier), 0, 255);
         var b = (byte)Math.Clamp((int)((color & 0xFF) * multiplier), 0, 255);
         return (uint)((a << 24) | (r << 16) | (g << 8) | b);
+    }
+
+    /// <summary>
+    /// Multiplies RGB channels of a color by a factor, clamping to 0-255.
+    /// Ported from Vintagestory.API.MathTools.ColorUtil.ColorMultiply3Clamped.
+    /// Alpha channel is preserved unchanged.
+    /// </summary>
+    public static int ColorMultiply3Clamped(int color, float multiplier)
+    {
+        int a = (int)(color & 0xFF000000u);
+        int r = Math.Clamp((int)(((color >> 16) & 0xFF) * multiplier), 0, 255);
+        int g = Math.Clamp((int)(((color >> 8) & 0xFF) * multiplier), 0, 255);
+        int b = Math.Clamp((int)((color & 0xFF) * multiplier), 0, 255);
+        return a | (r << 16) | (g << 8) | b;
+    }
+
+    /// <summary>
+    /// Resolves a block ID to its color code using the block-color mapping
+    /// and block-material fallback.
+    /// </summary>
+    /// <param name="blockId">The block ID</param>
+    /// <param name="blockIdToColorCode">Block ID to mapColorCode mapping (from collectibles sync)</param>
+    /// <param name="blockIdToMaterial">Block ID to BlockMaterial string mapping (from collectibles sync)</param>
+    /// <returns>The resolved color code string</returns>
+    public static string ResolveColorCode(
+        int blockId,
+        IReadOnlyDictionary<int, string>? blockIdToColorCode,
+        IReadOnlyDictionary<int, string>? blockIdToMaterial)
+    {
+        // Try explicit mapColorCode first
+        if (blockIdToColorCode != null
+            && blockIdToColorCode.TryGetValue(blockId, out var colorCode)
+            && !string.IsNullOrEmpty(colorCode)
+            && ColorsByCode.ContainsKey(colorCode))
+        {
+            return colorCode;
+        }
+
+        // Fall back to material-based mapping
+        if (blockIdToMaterial != null
+            && blockIdToMaterial.TryGetValue(blockId, out var material)
+            && !string.IsNullOrEmpty(material)
+            && DefaultMapColorCodes.TryGetValue(material, out var materialColorCode))
+        {
+            return materialColorCode;
+        }
+
+        return "land";
+    }
+
+    /// <summary>
+    /// Determines whether a block is a lake/water block based on its material.
+    /// Ported from ChunkMapLayer.isLake().
+    /// </summary>
+    public static bool IsLake(string blockMaterial, string? blockPath = null)
+    {
+        if (blockMaterial == "Liquid")
+            return true;
+
+        if (blockMaterial == "Ice")
+            return blockPath != "glacierice";
+
+        return false;
     }
 }

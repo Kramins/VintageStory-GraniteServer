@@ -97,9 +97,7 @@ public class MessageBridgeService : IAsyncDisposable
             eventMessage.MessageType
         );
 
-        var handlerInterfaceType = typeof(IEventHandler<>).MakeGenericType(
-            eventMessage.GetType()
-        );
+        var handlerInterfaceType = typeof(IEventHandler<>).MakeGenericType(eventMessage.GetType());
 
         if (eventMessage.Data == null)
         {
@@ -110,6 +108,11 @@ public class MessageBridgeService : IAsyncDisposable
             return;
         }
 
+        _logger.LogDebug(
+            "[ClientEventBridge] Received event {EventType} with data: {@EventData}",
+            eventMessage.MessageType,
+            eventMessage.Data
+        );
         using (var scope = _serviceProvider.CreateScope())
         {
             var handlers = scope.ServiceProvider.GetServices(handlerInterfaceType);

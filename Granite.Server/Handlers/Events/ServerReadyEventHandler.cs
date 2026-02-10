@@ -15,19 +15,19 @@ namespace GraniteServer.Handlers.Events;
 public class ServerReadyEventHandler : IEventHandler<ServerReadyEvent>
 {
     private readonly PersistentMessageBusService _messageBus;
-    private readonly IMapDataStorageService _mapStorageService;
+    private readonly IServerWorldMapService _mapService;
     private readonly ServerConfigService _configService;
     private readonly ILogger<ServerReadyEventHandler> _logger;
 
     public ServerReadyEventHandler(
         PersistentMessageBusService messageBus,
-        IMapDataStorageService mapStorageService,
+        IServerWorldMapService mapService,
         ServerConfigService configService,
         ILogger<ServerReadyEventHandler> logger
     )
     {
         _messageBus = messageBus;
-        _mapStorageService = mapStorageService;
+        _mapService = mapService;
         _configService = configService;
         _logger = logger;
     }
@@ -123,7 +123,7 @@ public class ServerReadyEventHandler : IEventHandler<ServerReadyEvent>
         try
         {
             // Get all known chunks with hashes from database
-            var knownChunks = await _mapStorageService.GetAllChunkHashesAsync(serverId);
+            var knownChunks = await _mapService.GetAllChunkHashesAsync(serverId);
 
             var syncCommand = _messageBus.CreateCommand<SyncMapCommand>(
                 serverId,
@@ -149,11 +149,7 @@ public class ServerReadyEventHandler : IEventHandler<ServerReadyEvent>
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Failed to issue SyncMapCommand to server {ServerId}",
-                serverId
-            );
+            _logger.LogError(ex, "Failed to issue SyncMapCommand to server {ServerId}", serverId);
         }
     }
 }

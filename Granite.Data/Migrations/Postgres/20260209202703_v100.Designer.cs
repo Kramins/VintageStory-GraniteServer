@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Granite.Data.Migrations.Postgres
 {
     [DbContext(typeof(GraniteDataContextPostgres))]
-    [Migration("20260207185254_v100")]
+    [Migration("20260209202703_v100")]
     partial class v100
     {
         /// <inheritdoc />
@@ -48,6 +48,10 @@ namespace Granite.Data.Migrations.Postgres
 
                     b.Property<DateTime>("LastSynced")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MapColorCode")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<int>("MaxStackSize")
                         .HasColumnType("integer");

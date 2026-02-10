@@ -32,6 +32,10 @@
     <ProjectReference Include="..\Granite.Common\Granite.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Models/" />
+  </ItemGroup>
+
 
 
   <!-- Package publish output into artifacts -->

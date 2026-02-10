@@ -17,6 +17,7 @@
       "Unwhitelisted"
     ],
     "chat.tools.terminal.autoApprove": {
-      "mv": true
+      "mv": true,
+      "mkdir": true
     }
 }

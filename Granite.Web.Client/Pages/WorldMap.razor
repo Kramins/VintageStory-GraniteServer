@@ -1,74 +1,48 @@
 @page "/world-map"
 @page "/{serverId}/world-map"
 @attribute [Authorize]
+@using Fluxor
+@using Fluxor.Blazor.Web.Components
 @using Granite.Common.Dto
+@using Granite.Common.Messaging.Events.Client
 @using Granite.Web.Client.Services
+@using Granite.Web.Client.Store.Features.Map
+@using Granite.Web.Client.Store.Features.Players
 @using Microsoft.JSInterop
+@inherits FluxorComponent
 @inject WorldMapService MapService
 @inject IJSRuntime JSRuntime
 @inject ILogger<WorldMap> Logger
+@inject IState<MapState> MapState
+@inject IDispatcher Dispatcher
 @implements IAsyncDisposable
 
 <PageTitle>World Map - Granite Server Manager</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <MudText Typo="Typo.h3" GutterBottom="true">World Map</MudText>
+@if (_isLoading)
+{
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+        <MudText Align="Align.Center" Class="mt-2">Loading map data...</MudText>
+    </div>
+}
+else if (_error != null)
+{
+    <div style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 500px; max-width: 90%;">
+        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    </div>
+}
 
-    @if (_isLoading)
-    {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
-        <MudText>Loading map data...</MudText>
-    }
-    else if (_error != null)
-    {
-        <MudAlert Severity="Severity.Error" Class="my-4">@_error</MudAlert>
-    }
-    else if (_bounds != null)
-    {
-        <MudPaper Class="pa-4 mb-4">
-            <MudGrid>
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.body2"><strong>X Range:</strong> @_bounds.MinChunkX to @_bounds.MaxChunkX</MudText>
-                    <MudText Typo="Typo.body2"><strong>Z Range:</strong> @_bounds.MinChunkZ to @_bounds.MaxChunkZ</MudText>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.body2"><strong>Total Chunks:</strong> @_bounds.TotalChunks</MudText>
-                    <MudText Typo="Typo.body2" Class="text-muted">Each tile is 32x32 blocks</MudText>
-                </MudItem>
-            </MudGrid>
-        </MudPaper>
-
-        <MudPaper Class="pa-0" Style="height: 600px; position: relative;">
-            <div id="map" style="width: 100%; height: 100%;"></div>
-        </MudPaper>
-
-        @if (_selectedTileMetadata != null)
-        {
-            <MudPaper Class="pa-4 mt-4">
-                <MudText Typo="Typo.h6">Selected Tile Information</MudText>
-                <MudGrid>
-                    <MudItem xs="12" md="6">
-                        <MudText Typo="Typo.body2"><strong>Chunk X:</strong> @_selectedTileMetadata.ChunkX</MudText>
-                        <MudText Typo="Typo.body2"><strong>Chunk Z:</strong> @_selectedTileMetadata.ChunkZ</MudText>
-                    </MudItem>
-                    <MudItem xs="12" md="6">
-                        <MudText Typo="Typo.body2"><strong>Size:</strong> @_selectedTileMetadata.Width x
-                            @_selectedTileMetadata.Height</MudText>
-                        <MudText Typo="Typo.body2"><strong>Extracted:</strong> @_selectedTileMetadata.ExtractedAt.ToString("g")
-                        </MudText>
-                    </MudItem>
-                </MudGrid>
-            </MudPaper>
-        }
-    }
-</MudContainer>
+@if (_bounds != null)
+{
+    <div id="map" style="position: fixed; top: 64px; left: 0; right: 0; bottom: 0; width: 100%; height: calc(100vh - 64px);"></div>
+}
 
 @code {
     [Parameter]
     public string? ServerId { get; set; }
 
     private WorldMapBoundsDTO? _bounds;
-    private MapTileMetadataDTO? _selectedTileMetadata = null;
     private bool _isLoading = true;
     private string? _error;
     private Guid _serverGuid;
@@ -76,11 +50,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // For now, use a test server ID if none provided
-        // TODO: Get from route or state management
+        await base.OnInitializedAsync();
+        
         if (!string.IsNullOrEmpty(ServerId) && Guid.TryParse(ServerId, out var guid))
         {
             _serverGuid = guid;
+            
+            // Fetch players for this server to ensure player names are available for markers
+            Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
         }
         else
         {
@@ -88,7 +65,7 @@
             _isLoading = false;
             return;
         }
-
+        
         await LoadMapData();
     }
 
@@ -101,28 +78,38 @@
                 var baseTileUrl = MapService.GetBaseTileUrl(_serverGuid);
                 var authToken = await MapService.GetTileServerBearerTokenAsync();
 
-
-                // Calculate center from bounds
-                var centerX = (_bounds.MinChunkX + _bounds.MaxChunkX) / 2.0;
-                var centerZ = (_bounds.MinChunkZ + _bounds.MaxChunkZ) / 2.0;
+                // Calculate center from bounds (convert chunk coords to block coords)
+                // Each chunk is 32 blocks, so multiply by 32
+                var centerChunkX = (_bounds.MinChunkX + _bounds.MaxChunkX) / 2.0;
+                var centerChunkZ = (_bounds.MinChunkZ + _bounds.MaxChunkZ) / 2.0;
+                var centerBlockX = centerChunkX * 32;
+                var centerBlockZ = centerChunkZ * 32;
+                
+                // OpenLayers uses [X, -Z] coordinate system
+                var mapCenter = new[] { centerBlockX, -centerBlockZ };
+                
+                Logger.LogInformation("Initializing map at block ({X}, {Z}), map coords [{MapX}, {MapY}]",
+                    centerBlockX, centerBlockZ, mapCenter[0], mapCenter[1]);
 
                 await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap",
-                "map",
-                baseTileUrl,
-                new[] { centerX, centerZ } // center [lon, lat]
-                , authToken
+                    "map",
+                    baseTileUrl,
+                    mapCenter,
+                    authToken
                 );
 
                 _mapInitialized = true;
-                Logger.LogInformation("Map initialized for server {ServerId} with center ({CenterX}, {CenterZ})",
-                _serverGuid, centerX, centerZ);
+                Logger.LogInformation("Map initialized for server {ServerId} at block ({X}, {Z})",
+                    _serverGuid, centerBlockX, centerBlockZ);
 
-                MapService.SubscribeToTileUpdates(_serverGuid, async (metadata) =>
+                MapService.SubscribeToTileUpdates(_serverGuid, async (evt) =>
                 {
-                    Logger.LogInformation("Received map tile update for server {ServerId} at tile ({TileX}, {TileZ})",
-                    _serverGuid, metadata.Data.TileX, metadata.Data.TileZ);
-                    await JSRuntime.InvokeVoidAsync("mapInterop.invalidateTile", metadata.Data.TileX, metadata.Data.TileZ);
-                } );
+                    Logger.LogInformation("Received map tiles update for server {ServerId} with {Count} tiles",
+                        _serverGuid, evt.Data.UpdatedTiles.Count);
+                    
+                    // Batch invalidate all tiles at once for better performance
+                    await JSRuntime.InvokeVoidAsync("mapInterop.invalidateTiles", (object)evt.Data.UpdatedTiles);
+                });
             }
             catch (Exception ex)
             {
@@ -130,6 +117,39 @@
                 _error = $"Failed to initialize map: {ex.Message}";
                 StateHasChanged();
             }
+        }
+
+        // Sync player positions to JavaScript after any render
+        if (_mapInitialized && MapState.Value.PlayerPositions.Any())
+        {
+            try
+            {
+                Logger.LogInformation("Syncing {Count} player positions to map", MapState.Value.PlayerPositions.Count);
+                
+                foreach (var position in MapState.Value.PlayerPositions.Values)
+                {
+                    Logger.LogDebug("Updating marker for {PlayerName} at ({X}, {Z})", 
+                        position.PlayerName, position.BlockX, position.BlockZ);
+                    
+                    await JSRuntime.InvokeVoidAsync(
+                        "mapInterop.updatePlayerMarker",
+                        position.PlayerUID,
+                        position.BlockX,
+                        position.BlockZ,
+                        position.PlayerName
+                    );
+                }
+                
+                Logger.LogInformation("Player positions synced successfully");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error syncing player positions to map");
+            }
+        }
+        else if (_mapInitialized && !MapState.Value.PlayerPositions.Any())
+        {
+            Logger.LogDebug("Map initialized but no player positions to display");
         }
     }
 
@@ -158,11 +178,12 @@
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public new async ValueTask DisposeAsync()
     {
         try
         {
             await JSRuntime.InvokeVoidAsync("mapInterop.dispose");
+            await base.DisposeAsync();
         }
         catch (Exception ex)
         {

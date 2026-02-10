@@ -49,7 +49,9 @@
     console.log('=== Vintage Story Map Initializing ===');
     console.log(`Spawn: Chunk(${SPAWN_CHUNK_X}, ${SPAWN_CHUNK_Z}) = Group(${SPAWN_GROUP_X}, ${SPAWN_GROUP_Z})`);
 
-    const extent = [-1000000, -1000000, 1000000, 1000000];
+    // Align extent to 256-block (group) boundaries
+    // -1000192 = -3907 * 256 (start of group -3907)
+    const extent = [-1000192, -1000192, 1000192, 1000192];
 
     const projection = new ol.proj.Projection({
       code: 'VS-PIXEL',

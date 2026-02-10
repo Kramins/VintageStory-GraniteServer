@@ -1,4 +1,5 @@
 using Fluxor;
+using Granite.Common.Messaging.Events;
 using Granite.Web.Client;
 using Granite.Web.Client.Handlers.Events;
 using Granite.Web.Client.HostedServices;
@@ -66,6 +67,7 @@ builder.Services.AddSingleton<IAuthApiClient, AuthApiClient>();
 builder.Services.AddSingleton<IWorldApiClient, WorldApiClient>();
 
 builder.Services.AddScoped<WorldMapService>();
+builder.Services.AddScoped<MapCoordinateService>();
 
 // Register message bus and event handling infrastructure
 builder.Services.AddSingleton<ClientMessageBusService>();
@@ -79,6 +81,7 @@ builder.Services.AddScoped<IEventHandler<PlayerUnbannedEvent>, PlayerEventHandle
 builder.Services.AddScoped<IEventHandler<PlayerLeaveEvent>, PlayerEventHandlers>();
 builder.Services.AddScoped<IEventHandler<PlayerJoinedEvent>, PlayerEventHandlers>();
 builder.Services.AddScoped<IEventHandler<PlayerKickedEvent>, PlayerEventHandlers>();
+builder.Services.AddScoped<IEventHandler<PlayerPositionChangedEvent>, PlayerEventHandlers>();
 
 // Register SignalR service
 builder.Services.AddScoped<ISignalRService, SignalRService>();

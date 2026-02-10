@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using System.Threading.Channels;
+using Granite.Common.Messaging.Events;
 using Granite.Mod.Services.Map;
 using GraniteServer.Messaging.Commands;
 using GraniteServer.Messaging.Events;
@@ -11,6 +12,7 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
+using Vintagestory.API.Util;
 
 public class WorldMapHostedService : IHostedService, IDisposable
 {
@@ -26,8 +28,12 @@ public class WorldMapHostedService : IHostedService, IDisposable
     private readonly Channel<(int chunkX, int chunkZ)> _chunkQueue;
     private CancellationTokenSource _cts;
     private IDisposable _syncSubscription;
+    private IDisposable _playerJoinedSubscription;
     private Task _processingTask;
+    private Task _processingPlayerPositionsTask;
     private bool _isReadyToSendMapChunks;
+    private TimeSpan _playerPositionUpdateInterval = TimeSpan.FromSeconds(1);
+    private float _playerPositionMovementThreshold = 0.1f; // Minimum movement in blocks to trigger an update
     private readonly TaskCompletionSource<bool> _readyToSendMapChunksTcs =
         new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -79,11 +85,95 @@ public class WorldMapHostedService : IHostedService, IDisposable
                 _readyToSendMapChunksTcs.TrySetResult(true);
             });
 
+        // Subscribe to PlayerJoinedEvent to send initial player position
+        _playerJoinedSubscription = _messageBus
+            .GetObservable()
+            .Where(msg => msg is PlayerJoinedEvent)
+            .Subscribe(msg =>
+            {
+                var joinEvent = (PlayerJoinedEvent)msg;
+                SendPlayerPosition(joinEvent.Data.PlayerUID);
+            });
+
         // Start background processor
         _processingTask = ProcessChunkQueueAsync(_cts.Token);
+        _processingPlayerPositionsTask = ProcessPlayerPositionsAsync(_cts.Token);
 
         _logger.Notification("WorldMapHostedService started");
         return Task.CompletedTask;
+    }
+
+    private async Task ProcessPlayerPositionsAsync(CancellationToken cancellationToken)
+    {
+        var lastKnownPositions = new ConcurrentDictionary<string, Vec3f>();
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                _api.Server.Players.Foreach(player =>
+                {
+                    try
+                    {
+                        // Safety check - player entity might not be loaded
+                        if (player?.Entity?.Pos == null)
+                            return;
+
+                        var playerPos = player.Entity.Pos.XYZFloat;
+                        var playerUID = player.PlayerUID;
+
+                        // Check if player has moved significantly
+                        if (lastKnownPositions.TryGetValue(playerUID, out var lastPos))
+                        {
+                            var distance = Math.Sqrt(
+                                Math.Pow(playerPos.X - lastPos.X, 2)
+                                    + Math.Pow(playerPos.Y - lastPos.Y, 2)
+                                    + Math.Pow(playerPos.Z - lastPos.Z, 2)
+                            );
+
+                            if (distance < _playerPositionMovementThreshold)
+                                return; // Skip if player hasn't moved enough
+                        }
+
+                        // Update last known position
+                        lastKnownPositions[playerUID] = playerPos;
+
+                        var playerPositionChangedEvent =
+                            _messageBus.CreateEvent<PlayerPositionChangedEvent>(evt =>
+                            {
+                                evt.Data.PlayerUID = playerUID;
+                                evt.Data.X = playerPos.X;
+                                evt.Data.Y = playerPos.Y;
+                                evt.Data.Z = playerPos.Z;
+                            });
+
+                        _messageBus.Publish(playerPositionChangedEvent);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Warning(
+                            $"Error processing position for player {player?.PlayerName}: {ex.Message}"
+                        );
+                    }
+                });
+
+                // Use await instead of blocking Wait()
+                await Task.Delay(_playerPositionUpdateInterval, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected on shutdown, exit gracefully
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Error in player position processing loop: {ex}");
+                // Continue running despite errors
+                await Task.Delay(_playerPositionUpdateInterval, cancellationToken);
+            }
+        }
+
+        _logger.Debug("Player position processing stopped");
     }
 
     private void OnChunkDirty(Vec3i chunkCoord, IWorldChunk chunk, EnumChunkDirtyReason reason)
@@ -206,6 +296,38 @@ public class WorldMapHostedService : IHostedService, IDisposable
     public void Dispose()
     {
         _syncSubscription?.Dispose();
+        _playerJoinedSubscription?.Dispose();
         _cts?.Dispose();
+    }
+
+    private void SendPlayerPosition(string playerUID)
+    {
+        try
+        {
+            var player = _api.World.PlayerByUid(playerUID);
+            if (player?.Entity?.Pos == null)
+            {
+                _logger.Debug($"Player {playerUID} entity not loaded yet, cannot send position");
+                return;
+            }
+
+            var playerPos = player.Entity.Pos.XYZFloat;
+            var playerPositionChangedEvent = _messageBus.CreateEvent<PlayerPositionChangedEvent>(
+                evt =>
+                {
+                    evt.Data.PlayerUID = playerUID;
+                    evt.Data.X = playerPos.X;
+                    evt.Data.Y = playerPos.Y;
+                    evt.Data.Z = playerPos.Z;
+                }
+            );
+
+            _messageBus.Publish(playerPositionChangedEvent);
+            _logger.Debug($"Sent initial position for player {player.PlayerName}");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Failed to send initial position for player {playerUID}: {ex.Message}");
+        }
     }
 }

@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using Granite.Common.Services;
 using Granite.Server.Configuration;
 using Granite.Server.Extensions;
+using Granite.Server.HostedServices;
 using Granite.Server.Hubs;
 using Granite.Server.Services;
 using Granite.Server.Services.Map;
@@ -50,11 +51,7 @@ builder.Services.AddScoped<ServerPlayersService>();
 builder.Services.AddScoped<ServerConfigService>();
 builder.Services.AddScoped<IServerWorldMapService, ServerWorldMapService>();
 builder.Services.AddScoped<IPlayersService, PlayersService>();
-builder.Services.AddScoped<IMapDataStorageService, MapDataStorageService>();
 builder.Services.AddScoped<IMapRenderingService, MapRenderingService>();
-
-// TODO: need a better caching strategy here
-builder.Services.AddSingleton<IMemoryCache, MemoryCache>();
 
 // Add player name resolver for Vintage Story auth server integration
 builder
@@ -72,6 +69,9 @@ builder.Services.AddHostedService<MessageBridgeHostedService>();
 
 // Add ServerInitializationHostedService to ensure server entity exists on startup
 builder.Services.AddHostedService<ServerInitializationHostedService>();
+
+// Add ServerWorldMapHostedService to subscribe to world map events
+builder.Services.AddHostedService<ServerWorldMapHostedService>();
 
 // Register event handlers
 builder.Services.AddEventHandlers();
