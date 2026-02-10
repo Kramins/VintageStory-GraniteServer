@@ -1,13 +1,20 @@
 @page "/world-map"
 @page "/{serverId}/world-map"
 @attribute [Authorize]
+@using Fluxor
+@using Fluxor.Blazor.Web.Components
 @using Granite.Common.Dto
 @using Granite.Common.Messaging.Events.Client
 @using Granite.Web.Client.Services
+@using Granite.Web.Client.Store.Features.Map
+@using Granite.Web.Client.Store.Features.Players
 @using Microsoft.JSInterop
+@inherits FluxorComponent
 @inject WorldMapService MapService
 @inject IJSRuntime JSRuntime
 @inject ILogger<WorldMap> Logger
+@inject IState<MapState> MapState
+@inject IDispatcher Dispatcher
 @implements IAsyncDisposable
 
 <PageTitle>World Map - Granite Server Manager</PageTitle>
@@ -43,9 +50,14 @@ else if (_error != null)
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+        
         if (!string.IsNullOrEmpty(ServerId) && Guid.TryParse(ServerId, out var guid))
         {
             _serverGuid = guid;
+            
+            // Fetch players for this server to ensure player names are available for markers
+            Dispatcher.Dispatch(new FetchPlayersAction(ServerId));
         }
         else
         {
@@ -53,7 +65,7 @@ else if (_error != null)
             _isLoading = false;
             return;
         }
-
+        
         await LoadMapData();
     }
 
@@ -66,20 +78,29 @@ else if (_error != null)
                 var baseTileUrl = MapService.GetBaseTileUrl(_serverGuid);
                 var authToken = await MapService.GetTileServerBearerTokenAsync();
 
-                // Calculate center from bounds
-                var centerX = (_bounds.MinChunkX + _bounds.MaxChunkX) / 2.0;
-                var centerZ = (_bounds.MinChunkZ + _bounds.MaxChunkZ) / 2.0;
+                // Calculate center from bounds (convert chunk coords to block coords)
+                // Each chunk is 32 blocks, so multiply by 32
+                var centerChunkX = (_bounds.MinChunkX + _bounds.MaxChunkX) / 2.0;
+                var centerChunkZ = (_bounds.MinChunkZ + _bounds.MaxChunkZ) / 2.0;
+                var centerBlockX = centerChunkX * 32;
+                var centerBlockZ = centerChunkZ * 32;
+                
+                // OpenLayers uses [X, -Z] coordinate system
+                var mapCenter = new[] { centerBlockX, -centerBlockZ };
+                
+                Logger.LogInformation("Initializing map at block ({X}, {Z}), map coords [{MapX}, {MapY}]",
+                    centerBlockX, centerBlockZ, mapCenter[0], mapCenter[1]);
 
                 await JSRuntime.InvokeVoidAsync("mapInterop.initializeMap",
                     "map",
                     baseTileUrl,
-                    new[] { centerX, centerZ },
+                    mapCenter,
                     authToken
                 );
 
                 _mapInitialized = true;
-                Logger.LogInformation("Map initialized for server {ServerId} with center ({CenterX}, {CenterZ})",
-                    _serverGuid, centerX, centerZ);
+                Logger.LogInformation("Map initialized for server {ServerId} at block ({X}, {Z})",
+                    _serverGuid, centerBlockX, centerBlockZ);
 
                 MapService.SubscribeToTileUpdates(_serverGuid, async (evt) =>
                 {
@@ -96,6 +117,39 @@ else if (_error != null)
                 _error = $"Failed to initialize map: {ex.Message}";
                 StateHasChanged();
             }
+        }
+
+        // Sync player positions to JavaScript after any render
+        if (_mapInitialized && MapState.Value.PlayerPositions.Any())
+        {
+            try
+            {
+                Logger.LogInformation("Syncing {Count} player positions to map", MapState.Value.PlayerPositions.Count);
+                
+                foreach (var position in MapState.Value.PlayerPositions.Values)
+                {
+                    Logger.LogDebug("Updating marker for {PlayerName} at ({X}, {Z})", 
+                        position.PlayerName, position.BlockX, position.BlockZ);
+                    
+                    await JSRuntime.InvokeVoidAsync(
+                        "mapInterop.updatePlayerMarker",
+                        position.PlayerUID,
+                        position.BlockX,
+                        position.BlockZ,
+                        position.PlayerName
+                    );
+                }
+                
+                Logger.LogInformation("Player positions synced successfully");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error syncing player positions to map");
+            }
+        }
+        else if (_mapInitialized && !MapState.Value.PlayerPositions.Any())
+        {
+            Logger.LogDebug("Map initialized but no player positions to display");
         }
     }
 
@@ -124,11 +178,12 @@ else if (_error != null)
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public new async ValueTask DisposeAsync()
     {
         try
         {
             await JSRuntime.InvokeVoidAsync("mapInterop.dispose");
+            await base.DisposeAsync();
         }
         catch (Exception ex)
         {

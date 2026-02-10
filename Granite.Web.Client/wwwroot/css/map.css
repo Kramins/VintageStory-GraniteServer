@@ -24,3 +24,45 @@
     height: 600px;
     min-height: 400px;
 }
+
+/* Player marker styling */
+.player-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    pointer-events: auto;
+    /* Center the marker on its position */
+    transform: translate(-50%, -100%);
+    transition: opacity 0.2s;
+}
+
+.player-marker:hover {
+    opacity: 0.9;
+    z-index: 1000;
+}
+
+.player-marker-icon {
+    font-size: 20px;
+    line-height: 1;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.8),
+                 0 0 6px rgba(0, 0, 0, 0.6);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+    /* Keep icon size consistent regardless of zoom */
+    display: block;
+    margin-bottom: 2px;
+}
+
+.player-marker-label {
+    background-color: rgba(0, 0, 0, 0.75);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    white-space: nowrap;
+    margin-top: 2px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}

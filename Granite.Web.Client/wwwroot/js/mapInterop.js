@@ -5,6 +5,7 @@ window.mapInterop = {
     extent: null,
     TILE_SIZE: 256,
     objectUrls: new Set(), // Track object URLs for cleanup
+    playerMarkers: new Map(), // Track player markers: playerUID -> ol.Overlay
 
     initializeMap: function (elementId, baseUrl, center, authToken) {
         var self = this;
@@ -16,7 +17,10 @@ window.mapInterop = {
         const SPAWN_GROUP_X = Math.floor(SPAWN_CHUNK_X / CHUNKS_PER_GROUP);
         const SPAWN_GROUP_Z = Math.floor(SPAWN_CHUNK_Z / CHUNKS_PER_GROUP);
 
-        const extent = [-1000000, -1000000, 1000000, 1000000];
+        // Align extent to 256-block (group) boundaries
+        // -1000192 = -3907 * 256 (start of group -3907)
+        // 1000192 = 3907 * 256 (end of group 3906)
+        const extent = [-1000192, -1000192, 1000192, 1000192];
         this.extent = extent;
 
         const projection = new ol.proj.Projection({
@@ -43,6 +47,8 @@ window.mapInterop = {
                 const tileX = tileCoord[1];
                 const tileY = tileCoord[2];
 
+                // Convert OpenLayers tile coordinates to game group coordinates
+                // This formula matches the working mapTesting/index.html
                 const groupX = tileX + Math.floor(extent[0] / TILE_SIZE);
                 const groupZ = tileY - Math.floor(extent[3] / TILE_SIZE);
 
@@ -50,6 +56,20 @@ window.mapInterop = {
                 const key = self.getTileKey(groupX, groupZ);
                 const timestamp = self.invalidatedTiles?.get(key) || '';
                 const cacheBuster = timestamp ? `?t=${timestamp}` : '';
+
+                // Calculate what blocks this tile covers
+                const tileBlockX = extent[0] + tileX * TILE_SIZE;
+                const tileMapY = extent[3] - tileY * TILE_SIZE;
+                const tileBlockZ = -tileMapY;
+                
+                // Calculate expected block range for this group
+                const groupBlockX = groupX * TILE_SIZE;
+                const groupBlockZ = groupZ * TILE_SIZE;
+                
+                console.log(`=== TILE DEBUG ===`);
+                console.log(`Tile(${tileX}, ${tileY}) -> Group(${groupX}, ${groupZ})`);
+                console.log(`Expected group blocks: X[${groupBlockX} to ${groupBlockX + 255}], Z[${groupBlockZ} to ${groupBlockZ + 255}]`);
+                console.log(`Map places tile at: map[${tileBlockX}, ${tileMapY}] = block(${tileBlockX}, ${tileBlockZ})`);
 
                 return `${baseUrl}/${groupX}/${groupZ}${cacheBuster}`;
             },
@@ -94,10 +114,7 @@ window.mapInterop = {
             layers: [new ol.layer.Tile({ source: tileSource })],
             view: new ol.View({
                 projection: projection,
-                center: [
-                    SPAWN_GROUP_X * TILE_SIZE,
-                    -SPAWN_GROUP_Z * TILE_SIZE
-                ],
+                center: center, // Use the center passed from C# (in chunk coords converted to pixels)
                 resolution: 1,
                 minResolution: 0.25,
                 maxResolution: 4,
@@ -107,6 +124,7 @@ window.mapInterop = {
         });
 
         this.map = map;
+        console.log(`Map initialized with center: [${center[0]}, ${center[1]}]`);
     },
     getTileKey: function(groupX, groupZ) {
         return `${groupX},${groupZ}`;
@@ -123,13 +141,15 @@ window.mapInterop = {
         }
     },
 
-    setCenter: function (x, z, zoom) {
+    setCenter: function (blockX, blockZ, zoom) {
         if (this.map) {
             const view = this.map.getView();
-            view.setCenter([x, z]); // Direct chunk coordinates
+            // Convert block coords to map coords: [X, -Z]
+            view.setCenter([blockX, -blockZ]);
             if (zoom !== undefined) {
                 view.setZoom(zoom);
             }
+            console.log(`Map centered at block (${blockX}, ${blockZ}), map coords [${blockX}, ${-blockZ}]`);
         }
     },
 
@@ -137,7 +157,8 @@ window.mapInterop = {
         if (this.map) {
             const view = this.map.getView();
             const center = view.getCenter();
-            return { x: center[0], z: center[1], zoom: view.getZoom() };
+            // Convert map coords back to block coords: [X, -Z] -> (X, Z)
+            return { blockX: center[0], blockZ: -center[1], zoom: view.getZoom() };
         }
         return null;
     },
@@ -178,6 +199,12 @@ window.mapInterop = {
 
     dispose: function () {
         if (this.map) {
+            // Clean up player markers
+            this.playerMarkers.forEach(marker => {
+                this.map.removeOverlay(marker);
+            });
+            this.playerMarkers.clear();
+            
             this.map.setTarget(null);
             this.map = null;
             this.tileLayer = null;
@@ -193,5 +220,93 @@ window.mapInterop = {
             
             console.log('OpenLayers map disposed');
         }
+    },
+
+    // Player marker management
+    updatePlayerMarker: function (playerUID, blockX, blockZ, playerName) {
+        if (!this.map) {
+            console.warn('Map not initialized, cannot update player marker');
+            return;
+        }
+
+        // Convert VS block coordinates to OpenLayers map coordinates
+        const mapCoords = [blockX, -blockZ];
+        
+        // Debug logging
+        const view = this.map.getView();
+        const currentCenter = view.getCenter();
+        const currentZoom = view.getZoom();
+        console.log(`=== Player Marker Update ===`);
+        console.log(`Player: ${playerName} (${playerUID.substring(0,8)})`);
+        console.log(`Block coords (VS): (${blockX}, ${blockZ})`);
+        console.log(`Map coords (OL): [${mapCoords[0]}, ${mapCoords[1]}]`);
+        console.log(`Current map center: [${currentCenter[0]}, ${currentCenter[1]}]`);
+        console.log(`Current zoom: ${currentZoom}`);
+        console.log(`Tile group: (${Math.floor(blockX/256)}, ${Math.floor(blockZ/256)})`);
+
+        console.log('=== PLAYER DEBUG ===');
+        console.log(`Player ${playerName}: Block(${blockX}, ${blockZ})`);
+        console.log(`Map coords: [${blockX}, ${-blockZ}]`);
+        console.log(`Expected chunk: (${Math.floor(blockX / 32)}, ${Math.floor(blockZ / 32)})`);
+        console.log(`Expected group: (${Math.floor(blockX / 256)}, ${Math.floor(blockZ / 256)})`);
+        console.log(`Map center: [${this.map.getView().getCenter()}]`);
+        // console.log(`Extent: [${extent}]`);
+
+        let overlay = this.playerMarkers.get(playerUID);
+        
+        if (!overlay) {
+            // Create new marker
+            const element = document.createElement('div');
+            element.className = 'player-marker';
+            element.innerHTML = `
+                <div class="player-marker-icon">📍</div>
+                <div class="player-marker-label">${playerName}</div>
+            `;
+            element.title = `${playerName} (${Math.floor(blockX)}, ${Math.floor(blockZ)})`;
+
+            overlay = new ol.Overlay({
+                position: mapCoords,
+                positioning: 'top-left',  // Position from top-left, CSS handles centering
+                element: element,
+                stopEvent: false,
+                offset: [0, 0]  // No offset - CSS translate handles positioning
+            });
+
+            this.map.addOverlay(overlay);
+            this.playerMarkers.set(playerUID, overlay);
+            console.log(`Added player marker for ${playerName} at (${blockX}, ${blockZ})`);
+        } else {
+            // Update existing marker position
+            overlay.setPosition(mapCoords);
+            
+            // Update label if name changed
+            const element = overlay.getElement();
+            const label = element.querySelector('.player-marker-label');
+            if (label && label.textContent !== playerName) {
+                label.textContent = playerName;
+            }
+            element.title = `${playerName} (${Math.floor(blockX)}, ${Math.floor(blockZ)})`;
+        }
+    },
+
+    removePlayerMarker: function (playerUID) {
+        if (!this.map) return;
+
+        const overlay = this.playerMarkers.get(playerUID);
+        if (overlay) {
+            this.map.removeOverlay(overlay);
+            this.playerMarkers.delete(playerUID);
+            console.log(`Removed player marker for ${playerUID}`);
+        }
+    },
+
+    clearAllPlayerMarkers: function () {
+        if (!this.map) return;
+
+        this.playerMarkers.forEach(overlay => {
+            this.map.removeOverlay(overlay);
+        });
+        this.playerMarkers.clear();
+        console.log('Cleared all player markers');
     }
 };
