@@ -28,6 +28,7 @@ public class WorldMapHostedService : IHostedService, IDisposable
     private readonly Channel<(int chunkX, int chunkZ)> _chunkQueue;
     private CancellationTokenSource _cts;
     private IDisposable _syncSubscription;
+    private IDisposable _playerJoinedSubscription;
     private Task _processingTask;
     private Task _processingPlayerPositionsTask;
     private bool _isReadyToSendMapChunks;
@@ -82,6 +83,16 @@ public class WorldMapHostedService : IHostedService, IDisposable
                 }
                 _isReadyToSendMapChunks = true;
                 _readyToSendMapChunksTcs.TrySetResult(true);
+            });
+
+        // Subscribe to PlayerJoinedEvent to send initial player position
+        _playerJoinedSubscription = _messageBus
+            .GetObservable()
+            .Where(msg => msg is PlayerJoinedEvent)
+            .Subscribe(msg =>
+            {
+                var joinEvent = (PlayerJoinedEvent)msg;
+                SendPlayerPosition(joinEvent.Data.PlayerUID);
             });
 
         // Start background processor
@@ -285,6 +296,38 @@ public class WorldMapHostedService : IHostedService, IDisposable
     public void Dispose()
     {
         _syncSubscription?.Dispose();
+        _playerJoinedSubscription?.Dispose();
         _cts?.Dispose();
+    }
+
+    private void SendPlayerPosition(string playerUID)
+    {
+        try
+        {
+            var player = _api.World.PlayerByUid(playerUID);
+            if (player?.Entity?.Pos == null)
+            {
+                _logger.Debug($"Player {playerUID} entity not loaded yet, cannot send position");
+                return;
+            }
+
+            var playerPos = player.Entity.Pos.XYZFloat;
+            var playerPositionChangedEvent = _messageBus.CreateEvent<PlayerPositionChangedEvent>(
+                evt =>
+                {
+                    evt.Data.PlayerUID = playerUID;
+                    evt.Data.X = playerPos.X;
+                    evt.Data.Y = playerPos.Y;
+                    evt.Data.Z = playerPos.Z;
+                }
+            );
+
+            _messageBus.Publish(playerPositionChangedEvent);
+            _logger.Debug($"Sent initial position for player {player.PlayerName}");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Failed to send initial position for player {playerUID}: {ex.Message}");
+        }
     }
 }

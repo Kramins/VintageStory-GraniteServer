@@ -1,27 +1,86 @@
+/**
+ * OpenLayers map interop for Vintage Story Granite Server
+ * Handles map initialization, tile management, and player marker display
+ */
 window.mapInterop = {
+    // ===== Constants =====
+    TILE_SIZE: 256, // Size of each map tile in blocks (one group = 256 blocks)
+    BLOCKS_PER_CHUNK: 32,
+    CHUNKS_PER_GROUP: 8, // 8 chunks per group = 256 blocks
+    
+    // World extent aligned to 256-block (group) boundaries
+    // Covers groups from -3907 to 3906 in both X and Z
+    // -1000192 = -3907 * 256, 1000192 = 3907 * 256
+    WORLD_EXTENT: [-1000192, -1000192, 1000192, 1000192],
+    
+    DEBUG_ENABLED: false, // Set to true to enable verbose logging
+    
+    // ===== State =====
     map: null,
-    tileLayer: null,
     tileSource: null,
     extent: null,
-    TILE_SIZE: 256,
+    invalidatedTiles: null,
     objectUrls: new Set(), // Track object URLs for cleanup
     playerMarkers: new Map(), // Track player markers: playerUID -> ol.Overlay
 
+    // ===== Coordinate Conversion Helpers =====
+    
+    /**
+     * Convert Vintage Story block coordinates to OpenLayers map coordinates
+     * @param {number} blockX - Block X coordinate (east/west)
+     * @param {number} blockZ - Block Z coordinate (north/south)
+     * @returns {Array<number>} [mapX, mapY] coordinates for OpenLayers
+     */
+    blockToMapCoords: function(blockX, blockZ) {
+        return [blockX, -blockZ];
+    },
+    
+    /**
+     * Convert OpenLayers map coordinates to Vintage Story block coordinates
+     * @param {Array<number>} mapCoords - [mapX, mapY] from OpenLayers
+     * @returns {Object} {blockX, blockZ} in Vintage Story coordinates
+     */
+    mapToBlockCoords: function(mapCoords) {
+        return { blockX: mapCoords[0], blockZ: -mapCoords[1] };
+    },
+    
+    /**
+     * Convert OpenLayers tile coordinates to game group coordinates
+     * @param {number} tileX - OpenLayers tile X
+     * @param {number} tileY - OpenLayers tile Y
+     * @param {Array<number>} extent - Map extent [minX, minY, maxX, maxY]
+     * @returns {Object} {groupX, groupZ} in game coordinates
+     */
+    tileToGroupCoords: function(tileX, tileY, extent) {
+        const groupX = tileX + Math.floor(extent[0] / this.TILE_SIZE);
+        const groupZ = tileY - Math.floor(extent[3] / this.TILE_SIZE);
+        return { groupX, groupZ };
+    },
+    
+    /**
+     * Create a unique key for tile caching
+     * @param {number} groupX - Group X coordinate
+     * @param {number} groupZ - Group Z coordinate
+     * @returns {string} Unique tile key
+     */
+    getTileKey: function(groupX, groupZ) {
+        return `${groupX},${groupZ}`;
+    },
+
+    // ===== Map Initialization =====
+    
+    /**
+     * Initialize the OpenLayers map with Vintage Story tile source
+     * @param {string} elementId - DOM element ID for the map container
+     * @param {string} baseUrl - Base URL for tile requests
+     * @param {Array<number>} center - Initial map center [x, y] in map coordinates
+     * @param {string} authToken - Bearer token for authenticated tile requests
+     */
     initializeMap: function (elementId, baseUrl, center, authToken) {
-        var self = this;
-        const TILE_SIZE = this.TILE_SIZE;
-        const CHUNKS_PER_GROUP = 8;
-
-        const SPAWN_CHUNK_X = 15998;
-        const SPAWN_CHUNK_Z = 16000;
-        const SPAWN_GROUP_X = Math.floor(SPAWN_CHUNK_X / CHUNKS_PER_GROUP);
-        const SPAWN_GROUP_Z = Math.floor(SPAWN_CHUNK_Z / CHUNKS_PER_GROUP);
-
-        // Align extent to 256-block (group) boundaries
-        // -1000192 = -3907 * 256 (start of group -3907)
-        // 1000192 = 3907 * 256 (end of group 3906)
-        const extent = [-1000192, -1000192, 1000192, 1000192];
+        const self = this;
+        const extent = this.WORLD_EXTENT;
         this.extent = extent;
+        this.invalidatedTiles = new Map();
 
         const projection = new ol.proj.Projection({
             code: 'VS-PIXEL',
@@ -31,90 +90,19 @@ window.mapInterop = {
 
         const tileGrid = new ol.tilegrid.TileGrid({
             origin: [extent[0], extent[3]],
-            tileSize: TILE_SIZE,
-            resolutions: [1] // This is only one resolution as we only have 256 sized map titles.
+            tileSize: this.TILE_SIZE,
+            resolutions: [1] // Single resolution - tiles are 256x256 blocks
         });
 
-        const tileSource = new ol.source.TileImage({
-            projection: projection,
-            tileGrid: tileGrid,
-            wrapX: false,
-            crossOrigin: 'anonymous',
-            tileUrlFunction: function (tileCoord) {
-                if (!tileCoord) return null;
-
-                const z = tileCoord[0]; // zoom level
-                const tileX = tileCoord[1];
-                const tileY = tileCoord[2];
-
-                // Convert OpenLayers tile coordinates to game group coordinates
-                // This formula matches the working mapTesting/index.html
-                const groupX = tileX + Math.floor(extent[0] / TILE_SIZE);
-                const groupZ = tileY - Math.floor(extent[3] / TILE_SIZE);
-
-                // Add cache-busting parameter if tile was invalidated
-                const key = self.getTileKey(groupX, groupZ);
-                const timestamp = self.invalidatedTiles?.get(key) || '';
-                const cacheBuster = timestamp ? `?t=${timestamp}` : '';
-
-                // Calculate what blocks this tile covers
-                const tileBlockX = extent[0] + tileX * TILE_SIZE;
-                const tileMapY = extent[3] - tileY * TILE_SIZE;
-                const tileBlockZ = -tileMapY;
-                
-                // Calculate expected block range for this group
-                const groupBlockX = groupX * TILE_SIZE;
-                const groupBlockZ = groupZ * TILE_SIZE;
-                
-                console.log(`=== TILE DEBUG ===`);
-                console.log(`Tile(${tileX}, ${tileY}) -> Group(${groupX}, ${groupZ})`);
-                console.log(`Expected group blocks: X[${groupBlockX} to ${groupBlockX + 255}], Z[${groupBlockZ} to ${groupBlockZ + 255}]`);
-                console.log(`Map places tile at: map[${tileBlockX}, ${tileMapY}] = block(${tileBlockX}, ${tileBlockZ})`);
-
-                return `${baseUrl}/${groupX}/${groupZ}${cacheBuster}`;
-            },
-            tileLoadFunction: function (imageTile, src) {
-                const img = imageTile.getImage();
-                if (src.startsWith('data:')) {
-                    img.src = src;
-                    return;
-                }
-                
-                fetch(src, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                }).then(resp => {
-                    if (!resp.ok) throw new Error(resp.statusText);
-                    return resp.blob();
-                }).then(blob => {
-                    const objectUrl = URL.createObjectURL(blob);
-                    self.objectUrls.add(objectUrl);
-                    img.src = objectUrl;
-                    
-                    // Clean up old object URL when image loads
-                    img.onload = function() {
-                        if (img.previousObjectUrl && img.previousObjectUrl !== objectUrl) {
-                            URL.revokeObjectURL(img.previousObjectUrl);
-                            self.objectUrls.delete(img.previousObjectUrl);
-                        }
-                        img.previousObjectUrl = objectUrl;
-                    };
-                }).catch(err => {
-                    console.error('Tile load failed:', err);
-                });
-            }
-        });
-
+        const tileSource = this._createTileSource(projection, tileGrid, extent, baseUrl, authToken);
         this.tileSource = tileSource;
-        this.invalidatedTiles = new Map(); // Track invalidated tiles with timestamps
 
         const map = new ol.Map({
             target: elementId,
             layers: [new ol.layer.Tile({ source: tileSource })],
             view: new ol.View({
                 projection: projection,
-                center: center, // Use the center passed from C# (in chunk coords converted to pixels)
+                center: center,
                 resolution: 1,
                 minResolution: 0.25,
                 maxResolution: 4,
@@ -124,58 +112,150 @@ window.mapInterop = {
         });
 
         this.map = map;
-        console.log(`Map initialized with center: [${center[0]}, ${center[1]}]`);
-    },
-    getTileKey: function(groupX, groupZ) {
-        return `${groupX},${groupZ}`;
-    },
-    updateTileUrl: function (tileUrlTemplate) {
-        if (this.tileLayer) {
-            const newSource = new ol.source.XYZ({
-                url: tileUrlTemplate,
-                crossOrigin: 'anonymous',
-                tileSize: [32, 32]
-            });
-            this.tileLayer.setSource(newSource);
-            console.log('Tile URL updated:', tileUrlTemplate);
+        
+        if (this.DEBUG_ENABLED) {
+            console.log(`Map initialized with center: [${center[0]}, ${center[1]}]`);
         }
     },
+    
+    /**
+     * Create the tile source for loading map tiles
+     * @private
+     */
+    _createTileSource: function(projection, tileGrid, extent, baseUrl, authToken) {
+        const self = this;
+        
+        return new ol.source.TileImage({
+            projection: projection,
+            tileGrid: tileGrid,
+            wrapX: false,
+            crossOrigin: 'anonymous',
+            tileUrlFunction: function (tileCoord) {
+                if (!tileCoord) return null;
 
-    setCenter: function (blockX, blockZ, zoom) {
-        if (this.map) {
-            const view = this.map.getView();
-            // Convert block coords to map coords: [X, -Z]
-            view.setCenter([blockX, -blockZ]);
-            if (zoom !== undefined) {
-                view.setZoom(zoom);
+                const tileX = tileCoord[1];
+                const tileY = tileCoord[2];
+
+                // Convert OpenLayers tile coordinates to game group coordinates
+                const { groupX, groupZ } = self.tileToGroupCoords(tileX, tileY, extent);
+
+                // Add cache-busting parameter if tile was invalidated
+                const key = self.getTileKey(groupX, groupZ);
+                const timestamp = self.invalidatedTiles?.get(key) || '';
+                const cacheBuster = timestamp ? `?t=${timestamp}` : '';
+                
+                if (self.DEBUG_ENABLED) {
+                    console.log(`Tile(${tileX}, ${tileY}) -> Group(${groupX}, ${groupZ})`);
+                }
+
+                return `${baseUrl}/${groupX}/${groupZ}${cacheBuster}`;
+            },
+            tileLoadFunction: function (imageTile, src) {
+                self._loadTileWithAuth(imageTile, src, authToken);
             }
-            console.log(`Map centered at block (${blockX}, ${blockZ}), map coords [${blockX}, ${-blockZ}]`);
+        });
+    },
+    
+    /**
+     * Load a tile image with authentication
+     * @private
+     */
+    _loadTileWithAuth: function(imageTile, src, authToken) {
+        const self = this;
+        const img = imageTile.getImage();
+        
+        if (src.startsWith('data:')) {
+            img.src = src;
+            return;
+        }
+        
+        fetch(src, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        })
+        .then(resp => {
+            if (!resp.ok) throw new Error(resp.statusText);
+            return resp.blob();
+        })
+        .then(blob => {
+            const objectUrl = URL.createObjectURL(blob);
+            self.objectUrls.add(objectUrl);
+            img.src = objectUrl;
+            
+            // Clean up old object URL when image loads
+            img.onload = function() {
+                if (img.previousObjectUrl && img.previousObjectUrl !== objectUrl) {
+                    URL.revokeObjectURL(img.previousObjectUrl);
+                    self.objectUrls.delete(img.previousObjectUrl);
+                }
+                img.previousObjectUrl = objectUrl;
+            };
+        })
+        .catch(err => {
+            console.error('Tile load failed:', err);
+        });
+    },
+    
+    // ===== Map View Control =====
+    
+    /**
+     * Set the map center to a specific block location
+     * @param {number} blockX - Block X coordinate
+     * @param {number} blockZ - Block Z coordinate
+     * @param {number} [zoom] - Optional zoom level
+     */
+    setCenter: function (blockX, blockZ, zoom) {
+        if (!this.map) return;
+        
+        const view = this.map.getView();
+        const mapCoords = this.blockToMapCoords(blockX, blockZ);
+        view.setCenter(mapCoords);
+        
+        if (zoom !== undefined) {
+            view.setZoom(zoom);
+        }
+        
+        if (this.DEBUG_ENABLED) {
+            console.log(`Map centered at block (${blockX}, ${blockZ})`);
         }
     },
-
+    
+    /**
+     * Get the current map center in block coordinates
+     * @returns {Object|null} {blockX, blockZ, zoom} or null if map not initialized
+     */
     getCenter: function () {
-        if (this.map) {
-            const view = this.map.getView();
-            const center = view.getCenter();
-            // Convert map coords back to block coords: [X, -Z] -> (X, Z)
-            return { blockX: center[0], blockZ: -center[1], zoom: view.getZoom() };
-        }
-        return null;
+        if (!this.map) return null;
+        
+        const view = this.map.getView();
+        const center = view.getCenter();
+        const blockCoords = this.mapToBlockCoords(center);
+        
+        return { ...blockCoords, zoom: view.getZoom() };
     },
+    
+    // ===== Tile Cache Management =====
+    
+    /**
+     * Invalidate a single tile to force reload on next render
+     * @param {number} groupX - Group X coordinate
+     * @param {number} groupZ - Group Z coordinate
+     */
     invalidateTile: function (groupX, groupZ) {
         if (!this.tileSource) return;
 
         const key = this.getTileKey(groupX, groupZ);
-        
-        // Add timestamp to force cache busting on next load
         this.invalidatedTiles.set(key, Date.now());
-
-        // Trigger re-render - tiles with timestamps will get new URLs
         this.tileSource.changed();
 
-        console.log(`Invalidated tile ${key}`);
+        if (this.DEBUG_ENABLED) {
+            console.log(`Invalidated tile ${key}`);
+        }
     },
-
+    
+    /**
+     * Invalidate multiple tiles to force reload
+     * @param {Array<Object>} tiles - Array of tile objects with tileX/TileX and tileZ/TileZ properties
+     */
     invalidateTiles: function (tiles) {
         if (!tiles || tiles.length === 0 || !this.tileSource) return;
 
@@ -183,112 +263,130 @@ window.mapInterop = {
 
         // Mark all tiles as invalidated with timestamp for cache busting
         tiles.forEach(tile => {
+            // Handle both camelCase and PascalCase property names from C#
             const tileX = tile.tileX ?? tile.TileX;
             const tileZ = tile.tileZ ?? tile.TileZ;
             const key = this.getTileKey(tileX, tileZ);
-            
-            // Mark as invalidated with timestamp for cache busting
             this.invalidatedTiles.set(key, timestamp);
         });
 
-        // Trigger changed event once - OpenLayers will check visible tiles and reload those with new URLs
+        // Trigger changed event once - OpenLayers will reload visible tiles with new cache-busted URLs
         this.tileSource.changed();
 
-        console.log(`Invalidated ${tiles.length} tiles with cache-busting timestamps`);
+        if (this.DEBUG_ENABLED) {
+            console.log(`Invalidated ${tiles.length} tiles`);
+        }
     },
-
+    
+    // ===== Lifecycle Management =====
+    
+    /**
+     * Dispose of the map and clean up all resources
+     */
     dispose: function () {
-        if (this.map) {
-            // Clean up player markers
-            this.playerMarkers.forEach(marker => {
-                this.map.removeOverlay(marker);
-            });
-            this.playerMarkers.clear();
-            
-            this.map.setTarget(null);
-            this.map = null;
-            this.tileLayer = null;
-            this.tileSource = null;
-            
-            // Clean up all object URLs to prevent memory leaks
-            this.objectUrls.forEach(url => URL.revokeObjectURL(url));
-            this.objectUrls.clear();
-            
-            if (this.invalidatedTiles) {
-                this.invalidatedTiles.clear();
-            }
-            
+        if (!this.map) return;
+        
+        // Clean up player markers
+        this.clearAllPlayerMarkers();
+        
+        // Dispose map
+        this.map.setTarget(null);
+        this.map = null;
+        this.tileSource = null;
+        
+        // Clean up all object URLs to prevent memory leaks
+        this.objectUrls.forEach(url => URL.revokeObjectURL(url));
+        this.objectUrls.clear();
+        
+        // Clean up tile cache
+        if (this.invalidatedTiles) {
+            this.invalidatedTiles.clear();
+        }
+        
+        if (this.DEBUG_ENABLED) {
             console.log('OpenLayers map disposed');
         }
     },
 
-    // Player marker management
+    // ===== Player Marker Management =====
+    
+    /**
+     * Update or create a player marker at the specified location
+     * @param {string} playerUID - Unique player identifier
+     * @param {number} blockX - Block X coordinate
+     * @param {number} blockZ - Block Z coordinate
+     * @param {string} playerName - Display name for the player
+     */
     updatePlayerMarker: function (playerUID, blockX, blockZ, playerName) {
         if (!this.map) {
             console.warn('Map not initialized, cannot update player marker');
             return;
         }
 
-        // Convert VS block coordinates to OpenLayers map coordinates
-        const mapCoords = [blockX, -blockZ];
+        const mapCoords = this.blockToMapCoords(blockX, blockZ);
         
-        // Debug logging
-        const view = this.map.getView();
-        const currentCenter = view.getCenter();
-        const currentZoom = view.getZoom();
-        console.log(`=== Player Marker Update ===`);
-        console.log(`Player: ${playerName} (${playerUID.substring(0,8)})`);
-        console.log(`Block coords (VS): (${blockX}, ${blockZ})`);
-        console.log(`Map coords (OL): [${mapCoords[0]}, ${mapCoords[1]}]`);
-        console.log(`Current map center: [${currentCenter[0]}, ${currentCenter[1]}]`);
-        console.log(`Current zoom: ${currentZoom}`);
-        console.log(`Tile group: (${Math.floor(blockX/256)}, ${Math.floor(blockZ/256)})`);
-
-        console.log('=== PLAYER DEBUG ===');
-        console.log(`Player ${playerName}: Block(${blockX}, ${blockZ})`);
-        console.log(`Map coords: [${blockX}, ${-blockZ}]`);
-        console.log(`Expected chunk: (${Math.floor(blockX / 32)}, ${Math.floor(blockZ / 32)})`);
-        console.log(`Expected group: (${Math.floor(blockX / 256)}, ${Math.floor(blockZ / 256)})`);
-        console.log(`Map center: [${this.map.getView().getCenter()}]`);
-        // console.log(`Extent: [${extent}]`);
+        if (this.DEBUG_ENABLED) {
+            console.log(`Player ${playerName}: Block(${blockX}, ${blockZ}) Group(${Math.floor(blockX/this.TILE_SIZE)}, ${Math.floor(blockZ/this.TILE_SIZE)})`);
+        }
 
         let overlay = this.playerMarkers.get(playerUID);
         
         if (!overlay) {
-            // Create new marker
-            const element = document.createElement('div');
-            element.className = 'player-marker';
-            element.innerHTML = `
-                <div class="player-marker-icon">📍</div>
-                <div class="player-marker-label">${playerName}</div>
-            `;
-            element.title = `${playerName} (${Math.floor(blockX)}, ${Math.floor(blockZ)})`;
-
-            overlay = new ol.Overlay({
-                position: mapCoords,
-                positioning: 'top-left',  // Position from top-left, CSS handles centering
-                element: element,
-                stopEvent: false,
-                offset: [0, 0]  // No offset - CSS translate handles positioning
-            });
-
-            this.map.addOverlay(overlay);
-            this.playerMarkers.set(playerUID, overlay);
-            console.log(`Added player marker for ${playerName} at (${blockX}, ${blockZ})`);
-        } else {
-            // Update existing marker position
-            overlay.setPosition(mapCoords);
-            
-            // Update label if name changed
-            const element = overlay.getElement();
-            const label = element.querySelector('.player-marker-label');
-            if (label && label.textContent !== playerName) {
-                label.textContent = playerName;
+            overlay = this._createPlayerMarkerOverlay(playerUID, mapCoords, blockX, blockZ, playerName);
+            if (this.DEBUG_ENABLED) {
+                console.log(`Added player marker for ${playerName}`);
             }
-            element.title = `${playerName} (${Math.floor(blockX)}, ${Math.floor(blockZ)})`;
+        } else {
+            this._updatePlayerMarkerOverlay(overlay, mapCoords, blockX, blockZ, playerName);
         }
     },
+    
+    /**
+     * Create a new player marker overlay
+     * @private
+     */
+    _createPlayerMarkerOverlay: function(playerUID, mapCoords, blockX, blockZ, playerName) {
+        const element = document.createElement('div');
+        element.className = 'player-marker';
+        element.innerHTML = `
+            <div class="player-marker-icon">📍</div>
+            <div class="player-marker-label">${playerName}</div>
+        `;
+        element.title = `${playerName} (${Math.floor(blockX)}, ${Math.floor(blockZ)})`;
 
+        const overlay = new ol.Overlay({
+            position: mapCoords,
+            positioning: 'top-left',
+            element: element,
+            stopEvent: false,
+            offset: [0, 0]
+        });
+
+        this.map.addOverlay(overlay);
+        this.playerMarkers.set(playerUID, overlay);
+        
+        return overlay;
+    },
+    
+    /**
+     * Update an existing player marker overlay
+     * @private
+     */
+    _updatePlayerMarkerOverlay: function(overlay, mapCoords, blockX, blockZ, playerName) {
+        overlay.setPosition(mapCoords);
+        
+        const element = overlay.getElement();
+        const label = element.querySelector('.player-marker-label');
+        if (label && label.textContent !== playerName) {
+            label.textContent = playerName;
+        }
+        element.title = `${playerName} (${Math.floor(blockX)}, ${Math.floor(blockZ)})`;
+    },
+    
+    /**
+     * Remove a player marker from the map
+     * @param {string} playerUID - Unique player identifier
+     */
     removePlayerMarker: function (playerUID) {
         if (!this.map) return;
 
@@ -296,10 +394,16 @@ window.mapInterop = {
         if (overlay) {
             this.map.removeOverlay(overlay);
             this.playerMarkers.delete(playerUID);
-            console.log(`Removed player marker for ${playerUID}`);
+            
+            if (this.DEBUG_ENABLED) {
+                console.log(`Removed player marker for ${playerUID}`);
+            }
         }
     },
-
+    
+    /**
+     * Remove all player markers from the map
+     */
     clearAllPlayerMarkers: function () {
         if (!this.map) return;
 
@@ -307,6 +411,9 @@ window.mapInterop = {
             this.map.removeOverlay(overlay);
         });
         this.playerMarkers.clear();
-        console.log('Cleared all player markers');
+        
+        if (this.DEBUG_ENABLED) {
+            console.log('Cleared all player markers');
+        }
     }
 };
