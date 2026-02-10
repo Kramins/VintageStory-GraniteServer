@@ -41,6 +41,10 @@ namespace Granite.Data.Migrations.Sqlite
                     b.Property<DateTime>("LastSynced")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("MapColorCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("MaxStackSize")
                         .HasColumnType("INTEGER");
 

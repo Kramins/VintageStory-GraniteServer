@@ -21,4 +21,5 @@ public class CollectibleEventData
     public string Domain { get; set; } = string.Empty;
     public string Path { get; set; } = string.Empty;
     public string BlockMaterial { get; set; } = string.Empty;
+    public string MapColorCode { get; set; } = string.Empty;
 }

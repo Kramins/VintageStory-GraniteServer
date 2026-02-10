@@ -141,6 +141,7 @@ namespace Granite.Data.Migrations.Postgres
                     Domain = table.Column<string>(type: "text", nullable: false),
                     Path = table.Column<string>(type: "text", nullable: false),
                     BlockMaterial = table.Column<string>(type: "text", nullable: false),
+                    MapColorCode = table.Column<string>(type: "text", nullable: false),
                     LastSynced = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>

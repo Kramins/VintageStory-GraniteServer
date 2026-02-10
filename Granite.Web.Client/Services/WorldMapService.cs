@@ -88,10 +88,10 @@ public class WorldMapService : IDisposable
         }
     }
 
-    public object SubscribeToTileUpdates(Guid serverId, Action<MapTileUpdatedEvent> onUpdate)
+    public object SubscribeToTileUpdates(Guid serverId, Action<MapTilesUpdatedEvent> onUpdate)
     {
         var subscription = _messageBus
-            .GetObservable<MapTileUpdatedEvent>(serverId)
+            .GetObservable<MapTilesUpdatedEvent>(serverId)
             .Throttle(TimeSpan.FromMilliseconds(5000)) // Throttle to avoid flooding
             .Subscribe(onUpdate);
 

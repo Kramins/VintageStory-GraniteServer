@@ -140,6 +140,7 @@ namespace Granite.Data.Migrations.Sqlite
                     Domain = table.Column<string>(type: "TEXT", nullable: false),
                     Path = table.Column<string>(type: "TEXT", nullable: false),
                     BlockMaterial = table.Column<string>(type: "TEXT", nullable: false),
+                    MapColorCode = table.Column<string>(type: "TEXT", nullable: false),
                     LastSynced = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>

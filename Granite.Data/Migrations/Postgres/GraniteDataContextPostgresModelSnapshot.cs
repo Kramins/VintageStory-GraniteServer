@@ -46,6 +46,10 @@ namespace Granite.Data.Migrations.Postgres
                     b.Property<DateTime>("LastSynced")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("MapColorCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("MaxStackSize")
                         .HasColumnType("integer");
 

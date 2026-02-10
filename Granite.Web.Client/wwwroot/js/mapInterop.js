@@ -1,10 +1,14 @@
 window.mapInterop = {
     map: null,
     tileLayer: null,
+    tileSource: null,
+    extent: null,
+    TILE_SIZE: 256,
+    objectUrls: new Set(), // Track object URLs for cleanup
 
     initializeMap: function (elementId, baseUrl, center, authToken) {
         var self = this;
-        const TILE_SIZE = 256;
+        const TILE_SIZE = this.TILE_SIZE;
         const CHUNKS_PER_GROUP = 8;
 
         const SPAWN_CHUNK_X = 15998;
@@ -12,15 +16,8 @@ window.mapInterop = {
         const SPAWN_GROUP_X = Math.floor(SPAWN_CHUNK_X / CHUNKS_PER_GROUP);
         const SPAWN_GROUP_Z = Math.floor(SPAWN_CHUNK_Z / CHUNKS_PER_GROUP);
 
-        // Tile cache: track which tiles exist and which don't
-        this.tileCache = {
-            loaded: new Set(),    // Successfully loaded tiles
-            failed: new Set(),    // Tiles that returned 404
-            pending: new Map(),   // Currently loading tiles
-        };
-
-
         const extent = [-1000000, -1000000, 1000000, 1000000];
+        this.extent = extent;
 
         const projection = new ol.proj.Projection({
             code: 'VS-PIXEL',
@@ -42,30 +39,19 @@ window.mapInterop = {
             tileUrlFunction: function (tileCoord) {
                 if (!tileCoord) return null;
 
+                const z = tileCoord[0]; // zoom level
                 const tileX = tileCoord[1];
                 const tileY = tileCoord[2];
 
                 const groupX = tileX + Math.floor(extent[0] / TILE_SIZE);
                 const groupZ = tileY - Math.floor(extent[3] / TILE_SIZE);
 
-                const key = window.mapInterop.getTileKey(groupX, groupZ);
+                // Add cache-busting parameter if tile was invalidated
+                const key = self.getTileKey(groupX, groupZ);
+                const timestamp = self.invalidatedTiles?.get(key) || '';
+                const cacheBuster = timestamp ? `?t=${timestamp}` : '';
 
-                // If we know this tile failed before, return a data URL for empty tile
-                // if (self.tileCache.failed.has(key)) {
-                //     // Return a 1x1 transparent PNG to avoid the request
-                //     return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-                // }
-
-                const url = `${baseUrl}/${groupX}/${groupZ}`;
-
-               
-
-                // Mark as pending
-                // if (!self.tileCache.loaded.has(key) && !self.tileCache.pending.has(key)) {
-                //     self.tileCache.pending.set(key, Date.now());
-                // }
-
-                return url;
+                return `${baseUrl}/${groupX}/${groupZ}${cacheBuster}`;
             },
             tileLoadFunction: function (imageTile, src) {
                 const img = imageTile.getImage();
@@ -73,7 +59,7 @@ window.mapInterop = {
                     img.src = src;
                     return;
                 }
-                // imageTile.setState(ol.TileState.LOADING);
+                
                 fetch(src, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
@@ -83,14 +69,25 @@ window.mapInterop = {
                     return resp.blob();
                 }).then(blob => {
                     const objectUrl = URL.createObjectURL(blob);
+                    self.objectUrls.add(objectUrl);
                     img.src = objectUrl;
-                    // imageTile.setState(ol.TileState.LOADED);
+                    
+                    // Clean up old object URL when image loads
+                    img.onload = function() {
+                        if (img.previousObjectUrl && img.previousObjectUrl !== objectUrl) {
+                            URL.revokeObjectURL(img.previousObjectUrl);
+                            self.objectUrls.delete(img.previousObjectUrl);
+                        }
+                        img.previousObjectUrl = objectUrl;
+                    };
                 }).catch(err => {
-                    //console.error('Tile load failed', err);
-                    // imageTile.setState(ol.TileState.ERROR);
+                    console.error('Tile load failed:', err);
                 });
             }
         });
+
+        this.tileSource = tileSource;
+        this.invalidatedTiles = new Map(); // Track invalidated tiles with timestamps
 
         const map = new ol.Map({
             target: elementId,
@@ -145,16 +142,38 @@ window.mapInterop = {
         return null;
     },
     invalidateTile: function (groupX, groupZ) {
+        if (!this.tileSource) return;
+
         const key = this.getTileKey(groupX, groupZ);
+        
+        // Add timestamp to force cache busting on next load
+        this.invalidatedTiles.set(key, Date.now());
 
-        this.tileCache.loaded.delete(key);
-        this.tileCache.failed.delete(key);
-        this.tileCache.pending.delete(key);
-
-        const layer = this.map.getLayers().item(0);
-        layer.getSource().refresh();
+        // Trigger re-render - tiles with timestamps will get new URLs
+        this.tileSource.changed();
 
         console.log(`Invalidated tile ${key}`);
+    },
+
+    invalidateTiles: function (tiles) {
+        if (!tiles || tiles.length === 0 || !this.tileSource) return;
+
+        const timestamp = Date.now();
+
+        // Mark all tiles as invalidated with timestamp for cache busting
+        tiles.forEach(tile => {
+            const tileX = tile.tileX ?? tile.TileX;
+            const tileZ = tile.tileZ ?? tile.TileZ;
+            const key = this.getTileKey(tileX, tileZ);
+            
+            // Mark as invalidated with timestamp for cache busting
+            this.invalidatedTiles.set(key, timestamp);
+        });
+
+        // Trigger changed event once - OpenLayers will check visible tiles and reload those with new URLs
+        this.tileSource.changed();
+
+        console.log(`Invalidated ${tiles.length} tiles with cache-busting timestamps`);
     },
 
     dispose: function () {
@@ -162,6 +181,16 @@ window.mapInterop = {
             this.map.setTarget(null);
             this.map = null;
             this.tileLayer = null;
+            this.tileSource = null;
+            
+            // Clean up all object URLs to prevent memory leaks
+            this.objectUrls.forEach(url => URL.revokeObjectURL(url));
+            this.objectUrls.clear();
+            
+            if (this.invalidatedTiles) {
+                this.invalidatedTiles.clear();
+            }
+            
             console.log('OpenLayers map disposed');
         }
     }

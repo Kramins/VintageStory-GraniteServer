@@ -58,11 +58,13 @@ public class SyncCollectiblesCommandHandler : ICommandHandler<SyncCollectiblesCo
 
         var type = "item";
         var blockMaterial = "";
+        var mapColorCode = "";
         if (collectible is Block)
         {
             var block = (Block)collectible;
             blockMaterial = block.BlockMaterial.ToString();
             type = "block";
+            mapColorCode = block.Attributes?["mapColorCode"]?.AsString() ?? "";
         }
 
         return new CollectibleEventData
@@ -74,7 +76,8 @@ public class SyncCollectiblesCommandHandler : ICommandHandler<SyncCollectiblesCo
             Class = collectible.Class,
             BlockMaterial = blockMaterial,
             MaxStackSize = collectible.MaxStackSize,
-            Type = type
+            Type = type,
+            MapColorCode = mapColorCode
         };
     }
 }

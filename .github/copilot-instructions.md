@@ -3,6 +3,7 @@ Global Instructions
 - Linter will reformat code on save. don't worry about formatting or if the file looks different.
 - Use dotnet build to build the project.
 - Don't use the tasks in the .vscode/tasks.json file
+- Event/Command Handler is deprecated in favor of creating Hosted Services that subscribe to events and commands in their StartAsync method
 
 Granite Server Instructions
 ---

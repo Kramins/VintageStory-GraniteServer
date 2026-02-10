@@ -173,11 +173,35 @@ public class ServerWorldMapService : IServerWorldMapService
     {
         try
         {
-            var chunk = await _dbContext.MapChunks.FirstOrDefaultAsync(c =>
-                c.ServerId == serverId && c.ChunkX == chunkX && c.ChunkZ == chunkZ
+            // Load the target chunk and its neighbors for hill-shading/water-edge detection
+            var neighborCoords = new[]
+            {
+                (chunkX, chunkZ),
+                (chunkX - 1, chunkZ - 1), // NW
+                (chunkX - 1, chunkZ),       // W
+                (chunkX, chunkZ - 1),       // N
+                (chunkX + 1, chunkZ),       // E
+                (chunkX, chunkZ + 1),       // S
+            };
+
+            var entities = await _dbContext
+                .MapChunks.Where(c =>
+                    c.ServerId == serverId
+                    && neighborCoords.Select(n => n.Item1).Contains(c.ChunkX)
+                    && neighborCoords.Select(n => n.Item2).Contains(c.ChunkZ)
+                )
+                .ToListAsync();
+
+            // Filter to only the exact coordinates we need
+            var chunkEntities = entities
+                .Where(e => neighborCoords.Any(n => n.Item1 == e.ChunkX && n.Item2 == e.ChunkZ))
+                .ToList();
+
+            var mainChunk = chunkEntities.FirstOrDefault(c =>
+                c.ChunkX == chunkX && c.ChunkZ == chunkZ
             );
 
-            if (chunk == null)
+            if (mainChunk == null)
             {
                 _logger.LogWarning(
                     "Chunk ({ChunkX}, {ChunkZ}) not found for server {ServerId}",
@@ -188,18 +212,28 @@ public class ServerWorldMapService : IServerWorldMapService
                 return null;
             }
 
-            // Convert entity to StoredChunkData and render
-            var chunkData = new StoredChunkData
-            {
-                ChunkX = chunk.ChunkX,
-                ChunkZ = chunk.ChunkZ,
-                ContentHash = chunk.ContentHash,
-                RainHeightMap = chunk.RainHeightMapData,
-                SurfaceBlockId = chunk.SurfaceBlockIdsData,
-            };
+            var chunkArray = chunkEntities
+                .Select(e => new StoredChunkData
+                {
+                    ChunkX = e.ChunkX,
+                    ChunkZ = e.ChunkZ,
+                    ContentHash = e.ContentHash,
+                    RainHeightMap = e.RainHeightMapData,
+                    SurfaceBlockId = e.SurfaceBlockIdsData,
+                })
+                .ToArray();
 
-            var chunkArray = new[] { chunkData };
-            var imageBytes = await _mapRendering.RenderGroupedTileAsync(0, 0, chunkArray);
+            // Load block color mappings from Collectibles
+            var (blockIdToColorCode, blockIdToMaterial) =
+                await LoadBlockColorMappingsAsync(serverId);
+
+            var imageBytes = await _mapRendering.RenderGroupedTileAsync(
+                0,
+                0,
+                chunkArray,
+                blockIdToColorCode,
+                blockIdToMaterial
+            );
 
             return imageBytes;
         }
@@ -220,41 +254,45 @@ public class ServerWorldMapService : IServerWorldMapService
     {
         try
         {
-            // Fetch all chunks for this group from the database
-            var chunkList = new List<StoredChunkData>();
+            // Calculate chunk coordinate ranges for this group plus 1-chunk border for neighbor shading
+            var minChunkX = (groupX * 8) - 1;
+            var maxChunkX = (groupX * 8) + 8; // inclusive (border chunk)
+            var minChunkZ = (groupZ * 8) - 1;
+            var maxChunkZ = (groupZ * 8) + 8; // inclusive (border chunk)
 
-            for (var chunkOffsetZ = 0; chunkOffsetZ < 8; chunkOffsetZ++)
-            {
-                for (var chunkOffsetX = 0; chunkOffsetX < 8; chunkOffsetX++)
+            // Batch-load all chunks in range (including neighbors) in a single query
+            var entities = await _dbContext
+                .MapChunks.Where(c =>
+                    c.ServerId == serverId
+                    && c.ChunkX >= minChunkX
+                    && c.ChunkX <= maxChunkX
+                    && c.ChunkZ >= minChunkZ
+                    && c.ChunkZ <= maxChunkZ
+                )
+                .ToListAsync();
+
+            var chunkArray = entities
+                .Select(e => new StoredChunkData
                 {
-                    var chunkX = (groupX * 8) + chunkOffsetX;
-                    var chunkZ = (groupZ * 8) + chunkOffsetZ;
+                    ChunkX = e.ChunkX,
+                    ChunkZ = e.ChunkZ,
+                    ContentHash = e.ContentHash,
+                    RainHeightMap = e.RainHeightMapData,
+                    SurfaceBlockId = e.SurfaceBlockIdsData,
+                })
+                .ToArray();
 
-                    var entity = await _dbContext.MapChunks.FirstOrDefaultAsync(c =>
-                        c.ServerId == serverId && c.ChunkX == chunkX && c.ChunkZ == chunkZ
-                    );
+            // Load block color mappings from Collectibles
+            var (blockIdToColorCode, blockIdToMaterial) =
+                await LoadBlockColorMappingsAsync(serverId);
 
-                    if (entity != null)
-                    {
-                        chunkList.Add(
-                            new StoredChunkData
-                            {
-                                ChunkX = entity.ChunkX,
-                                ChunkZ = entity.ChunkZ,
-                                ContentHash = entity.ContentHash,
-                                RainHeightMap = entity.RainHeightMapData,
-                                SurfaceBlockId = entity.SurfaceBlockIdsData,
-                            }
-                        );
-                    }
-                }
-            }
-
-            // Render with the loaded chunks
+            // Render with the loaded chunks (renderer will pick the right ones per group position)
             var imageBytes = await _mapRendering.RenderGroupedTileAsync(
                 groupX,
                 groupZ,
-                chunkList.ToArray()
+                chunkArray,
+                blockIdToColorCode,
+                blockIdToMaterial
             );
 
             return imageBytes;
@@ -326,5 +364,43 @@ public class ServerWorldMapService : IServerWorldMapService
         var mapTile = await _mapRendering.GetFogOfWarTileAsync();
 
         return mapTile;
+    }
+
+    /// <summary>
+    /// Loads block ID to color code and block ID to material mappings from the Collectibles table.
+    /// Only loads blocks (not items) since items don't appear on the map.
+    /// </summary>
+    private async Task<(
+        IReadOnlyDictionary<int, string> blockIdToColorCode,
+        IReadOnlyDictionary<int, string> blockIdToMaterial
+    )> LoadBlockColorMappingsAsync(Guid serverId)
+    {
+        var blocks = await _dbContext
+            .Collectibles.Where(c => c.ServerId == serverId && c.Type == "block")
+            .Select(c => new
+            {
+                c.CollectibleId,
+                c.MapColorCode,
+                c.BlockMaterial,
+            })
+            .ToListAsync();
+
+        var colorCodeDict = new Dictionary<int, string>();
+        var materialDict = new Dictionary<int, string>();
+
+        foreach (var block in blocks)
+        {
+            if (!string.IsNullOrEmpty(block.MapColorCode))
+            {
+                colorCodeDict[block.CollectibleId] = block.MapColorCode;
+            }
+
+            if (!string.IsNullOrEmpty(block.BlockMaterial))
+            {
+                materialDict[block.CollectibleId] = block.BlockMaterial;
+            }
+        }
+
+        return (colorCodeDict, materialDict);
     }
 }

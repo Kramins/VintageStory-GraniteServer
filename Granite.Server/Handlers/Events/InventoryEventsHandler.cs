@@ -214,6 +214,7 @@ public class CollectiblesLoadedEventHandler : IEventHandler<CollectiblesLoadedEv
                 BlockMaterial = collectible.BlockMaterial,
                 MaxStackSize = collectible.MaxStackSize,
                 Class = collectible.Class,
+                MapColorCode = collectible.MapColorCode,
                 LastSynced = LastSynced,
             };
             _dataContext.Collectibles.Add(collectibleEntity);
