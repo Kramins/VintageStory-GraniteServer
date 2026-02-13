@@ -6,6 +6,8 @@ using GraniteServer.Data;
 using GraniteServer.Messaging.Commands;
 using GraniteServer.Services;
 using Microsoft.EntityFrameworkCore;
+using Sieve.Models;
+using Sieve.Services;
 
 namespace Granite.Server.Services;
 
@@ -14,16 +16,19 @@ public class ServerPlayersService
     private readonly ILogger<ServerPlayersService> _logger;
     private PersistentMessageBusService _messageBus;
     private GraniteDataContext _dbContext;
+    private SieveProcessor _sieveProcessor;
 
     public ServerPlayersService(
         ILogger<ServerPlayersService> logger,
         PersistentMessageBusService messageBus,
-        GraniteDataContext dbContext
+        GraniteDataContext dbContext,
+        SieveProcessor sieveProcessor
     )
     {
         _logger = logger;
         _messageBus = messageBus;
         _dbContext = dbContext;
+        _sieveProcessor = sieveProcessor;
     }
 
     public async Task<List<PlayerDTO>> GetPlayersAsync(Guid serverId)
@@ -234,5 +239,55 @@ public class ServerPlayersService
         );
 
         await _messageBus.PublishCommandAsync(removeCommand);
+    }
+
+    public async Task<(IList<PlayerSessionDTO> Data, int TotalCount)> GetPlayerSessionsAsync(
+        Guid serverId,
+        string? playerId,
+        SieveModel sieveModel
+    )
+    {
+        var query = _dbContext
+            .PlayerSessions.Include(ps => ps.Player)
+            .Where(ps => ps.ServerId == serverId);
+
+        // Filter by specific player if provided
+        if (!string.IsNullOrEmpty(playerId))
+        {
+            var player = await _dbContext.Players.FirstOrDefaultAsync(p =>
+                p.ServerId == serverId && p.PlayerUID == playerId
+            );
+
+            if (player != null)
+            {
+                query = query.Where(ps => ps.PlayerId == player.Id);
+            }
+        }
+
+        // Map to DTOs with calculated fields
+        var sessionsQuery = query.Select(ps => new PlayerSessionDTO
+        {
+            Id = ps.Id,
+            PlayerId = ps.Player != null ? ps.Player.PlayerUID : string.Empty,
+            ServerId = ps.ServerId,
+            ServerName = "", // Will be populated if needed
+            JoinDate = ps.JoinDate,
+            LeaveDate = ps.LeaveDate,
+            IpAddress = ps.IpAddress,
+            PlayerName = ps.PlayerName,
+            Duration = ps.LeaveDate.HasValue
+                ? (ps.LeaveDate.Value - ps.JoinDate).TotalSeconds
+                : null,
+            IsActive = !ps.LeaveDate.HasValue,
+        });
+
+        var totalCount = await sessionsQuery.CountAsync();
+
+        // Apply Sieve filtering/sorting/pagination
+        var sessionsList = await sessionsQuery.ToListAsync();
+        var pagedQuery = sessionsList.AsQueryable();
+        pagedQuery = _sieveProcessor.Apply(sieveModel, pagedQuery);
+
+        return (pagedQuery.ToList(), totalCount);
     }
 }

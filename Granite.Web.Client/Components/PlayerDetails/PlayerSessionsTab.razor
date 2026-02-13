@@ -1,0 +1,161 @@
+@using Granite.Common.Dto
+@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using Granite.Web.Client.Store.Features.Sessions
+@inherits FluxorComponent
+
+@inject IState<PlayerSessionsState> PlayerSessionsState
+@inject IDispatcher Dispatcher
+@inject NavigationManager Navigation
+
+<MudStack Spacing="2" Class="mb-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudButton StartIcon="@Icons.Material.Filled.Refresh" OnClick="@HandleRefresh"
+                   Disabled="@PlayerSessionsState.Value.IsLoading"                   Size="Size.Small">
+            Refresh
+        </MudButton>
+    </MudStack>
+
+    @if (!string.IsNullOrEmpty(PlayerSessionsState.Value.ErrorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Filled">
+            @PlayerSessionsState.Value.ErrorMessage
+        </MudAlert>
+    }
+</MudStack>
+
+<MudPaper Elevation="0" Style="height: 560px;">
+    <MudDataGrid T="PlayerSessionDTO"                 Items="@PlayerSessionsState.Value.Sessions"                 Dense="true"                 Hover="true"
+                 Loading="@PlayerSessionsState.Value.IsLoading"                 Height="520px">
+        <Columns>
+            <TemplateColumn Title="Player" Sortable="false">
+                <CellTemplate>
+                    @if (context.Item.PlayerId != Player.PlayerUID)
+                    {
+                        <MudLink Href="@GetPlayerLink(context.Item.PlayerId)" Underline="Underline.None">
+                            @context.Item.PlayerName
+                        </MudLink>
+                    }
+                    else
+                    {
+                        <MudText>@context.Item.PlayerName</MudText>
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+
+            <TemplateColumn Title="Join Date" Sortable="false">
+                <CellTemplate>
+                    <MudText Typo="Typo.body2">
+                        @context.Item.JoinDate.ToString("yyyy-MM-dd HH:mm:ss")
+                    </MudText>
+                </CellTemplate>
+            </TemplateColumn>
+
+            <TemplateColumn Title="Leave Date" Sortable="false">
+                <CellTemplate>
+                    @if (context.Item.LeaveDate.HasValue)
+                    {
+                        <MudText Typo="Typo.body2">
+                            @context.Item.LeaveDate.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                        </MudText>
+                    }
+                    else
+                    {
+                        <MudChip Size="Size.Small" Color="Color.Success">Active</MudChip>
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+
+            <TemplateColumn Title="Duration" Sortable="false">
+                <CellTemplate>
+                    <MudText Typo="Typo.body2">
+                        @FormatDuration(context.Item.Duration)
+                    </MudText>
+                </CellTemplate>
+            </TemplateColumn>
+
+            <PropertyColumn Property="s => s.IpAddress" Title="IP Address" />
+
+            <TemplateColumn Title="Status" Sortable="false">
+                <CellTemplate>
+                    <MudChip Size="Size.Small" Variant="Variant.Outlined"
+                             Color="@(context.Item.IsActive? Color.Success: Color.Default)">
+                        @(context.Item.IsActive ? "Active" : "Ended")
+                    </MudChip>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="PlayerSessionDTO" />
+        </PagerContent>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired]
+    public PlayerDetailsDTO Player { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadSessions();
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        LoadSessions();
+    }
+
+    private void LoadSessions()
+    {
+        if (Player?.ServerId != null && !string.IsNullOrEmpty(Player.PlayerUID))
+        {
+            Dispatcher.Dispatch(
+                new LoadPlayerSessionsAction(
+                    Player.ServerId.ToString(),
+                    Player.PlayerUID,
+                    PlayerSessionsState.Value.CurrentPage,
+                    PlayerSessionsState.Value.PageSize
+                )
+            );
+        }
+    }
+
+    private void HandleRefresh()
+    {
+        LoadSessions();
+    }
+
+    private string FormatDuration(double? durationSeconds)
+    {
+        if (!durationSeconds.HasValue)
+        {
+            return "N/A";
+        }
+
+        var duration = TimeSpan.FromSeconds(durationSeconds.Value);
+
+        if (duration.TotalHours >= 1)
+        {
+            return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+        }
+        else if (duration.TotalMinutes >= 1)
+        {
+            return $"{(int)duration.TotalMinutes}m {duration.Seconds}s";
+        }
+        else
+        {
+            return $"{duration.Seconds}s";
+        }
+    }
+
+    private string GetPlayerLink(string playerUid)
+    {
+        if (Player?.ServerId != null)
+        {
+            return $"/{Player.ServerId}/players/{playerUid}";
+        }
+        return "#";
+    }
+}

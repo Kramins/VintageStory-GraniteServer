@@ -142,7 +142,7 @@ else
         if (string.IsNullOrEmpty(ServerId))
             return;
 
-        var parameters = new DialogParameters<Components.FindPlayerDialog>
+        var parameters = new DialogParameters<FindPlayerDialog>
         {
             { x => x.SelectButtonText, "Add to Whitelist" },
             { x => x.SearchPlaceholder, "Search by player name or UID..." },
@@ -152,7 +152,7 @@ else
         };
 
         var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true };
-        var result = await DialogService.ShowAsync<Components.FindPlayerDialog>("Add Player to Whitelist", parameters, options);
+        var result = await DialogService.ShowAsync<FindPlayerDialog>("Add Player to Whitelist", parameters, options);
         var dialogResult = await result.Result;
 
         if (dialogResult is not null && !dialogResult.Canceled && dialogResult.Data is string selectedPlayerUid)

@@ -1,0 +1,46 @@
+@using Granite.Common.Dto
+
+@if (Player.Inventories != null && Player.Inventories.Any())
+{
+    @foreach (var inventory in Player.Inventories)
+    {
+        <MudText Typo="Typo.h6" Class="mb-2">@inventory.Key</MudText>
+        <MudPaper Elevation="0" Class="pa-2 mb-4" Style="background-color: var(--mud-palette-background-grey);">
+            @if (inventory.Value.Slots != null && inventory.Value.Slots.Any())
+            {
+                <MudSimpleTable Dense="true" Hover="true">
+                    <thead>
+                        <tr>
+                            <th>Slot</th>
+                            <th>Item</th>
+                            <th>Stack Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var slot in inventory.Value.Slots.Where(s => !string.IsNullOrEmpty(s.Name)))
+                        {
+                            <tr>
+                                <td>@slot.SlotIndex</td>
+                                <td>@slot.Name</td>
+                                <td>@slot.StackSize</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Empty</MudText>
+            }
+        </MudPaper>
+    }
+}
+else
+{
+    <MudAlert Severity="Severity.Info">No inventories found.</MudAlert>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public PlayerDetailsDTO Player { get; set; } = default!;
+}

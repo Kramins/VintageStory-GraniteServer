@@ -1,0 +1,10 @@
+@using Granite.Common.Dto
+
+<MudText Typo="Typo.body1" Color="Color.Secondary">
+    Permissions management coming soon...
+</MudText>
+
+@code {
+    [Parameter, EditorRequired]
+    public PlayerDetailsDTO Player { get; set; } = default!;
+}

@@ -1,0 +1,30 @@
+@using Granite.Common.Dto
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Remove from Whitelist</MudText>
+        <MudText>Are you sure you want to remove @PlayerName from the whitelist?</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Warning" Variant="Variant.Filled" OnClick="Confirm">Remove</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public string PlayerName { get; set; } = string.Empty;
+
+    private void Cancel()
+    {
+        MudDialog.Close(DialogResult.Cancel());
+    }
+
+    private void Confirm()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}
