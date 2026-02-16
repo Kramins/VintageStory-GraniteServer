@@ -8,7 +8,10 @@ namespace Granite.Web.Client.Services.Api;
 /// </summary>
 public class ServerPlayersApiClient : BaseApiClient, IServerPlayersApiClient
 {
-    public ServerPlayersApiClient(IHttpClientFactory httpClientFactory, ILogger<ServerPlayersApiClient> logger)
+    public ServerPlayersApiClient(
+        IHttpClientFactory httpClientFactory,
+        ILogger<ServerPlayersApiClient> logger
+    )
         : base(httpClientFactory, logger) { }
 
     private string GetBasePath(string serverId) => $"/api/{serverId}/players";
@@ -86,7 +89,42 @@ public class ServerPlayersApiClient : BaseApiClient, IServerPlayersApiClient
         }
     }
 
-   
+    public async Task<JsonApiDocument<List<PlayerSessionDTO>>> GetPlayerSessionsAsync(
+        string serverId,
+        string playerId,
+        int page = 1,
+        int pageSize = 20,
+        string? sorts = null,
+        string? filters = null
+    )
+    {
+        var url = $"{GetBasePath(serverId)}/{playerId}/sessions";
+
+        var queryParams = new List<string> { $"page={page}", $"pageSize={pageSize}" };
+
+        if (!string.IsNullOrEmpty(sorts))
+        {
+            queryParams.Add($"sorts={Uri.EscapeDataString(sorts)}");
+        }
+
+        if (!string.IsNullOrEmpty(filters))
+        {
+            queryParams.Add($"filters={Uri.EscapeDataString(filters)}");
+        }
+
+        url += "?" + string.Join("&", queryParams);
+
+        try
+        {
+            return await GetAsync<List<PlayerSessionDTO>>(url);
+        }
+        catch (ApiException ex)
+        {
+            Logger.LogError(ex, "Failed to fetch player sessions for server {ServerId}", serverId);
+            throw;
+        }
+    }
+
     public async Task<JsonApiDocument<object>> KickPlayerAsync(
         string serverId,
         string playerUid,

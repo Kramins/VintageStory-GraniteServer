@@ -44,6 +44,25 @@ public interface IServerPlayersApiClient
     );
 
     /// <summary>
+    /// Gets player sessions for a specific player on a server.
+    /// </summary>
+    /// <param name="serverId">The ID of the server.</param>
+    /// <param name="playerId">The player UID to get sessions for.</param>
+    /// <param name="page">Page number for pagination (default: 1).</param>
+    /// <param name="pageSize">Number of results per page (default: 20).</param>
+    /// <param name="sorts">Optional sorting specification.</param>
+    /// <param name="filters">Optional filters to apply.</param>
+    /// <returns>A paginated list of player sessions.</returns>
+    Task<JsonApiDocument<List<PlayerSessionDTO>>> GetPlayerSessionsAsync(
+        string serverId,
+        string playerId,
+        int page = 1,
+        int pageSize = 20,
+        string? sorts = null,
+        string? filters = null
+    );
+
+    /// <summary>
     /// Kicks a player from the server.
     /// </summary>
     /// <param name="serverId">The ID of the server.</param>

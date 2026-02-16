@@ -1,0 +1,133 @@
+@using Granite.Common.Dto
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="0">
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Connection State</MudText>
+                <MudText Typo="Typo.h6">@(Player.ConnectionState ?? "Offline")</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="0">
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Last Join Date</MudText>
+                <MudText Typo="Typo.h6">@FormatDate(Player.LastJoinDate)</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="0">
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">IP Address</MudText>
+                <MudText Typo="Typo.h6">@(Player.IpAddress ?? "N/A")</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="0">
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Ping</MudText>
+                <MudText Typo="Typo.h6">@Player.Ping.ToString("F3")ms</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="0">
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">First Join Date</MudText>
+                <MudText Typo="Typo.h6">@FormatDate(Player.FirstJoinDate)</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="0">
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Language</MudText>
+                <MudText Typo="Typo.h6">@(Player.LanguageCode ?? "N/A")</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="0">
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Role</MudText>
+                <MudText Typo="Typo.body1" Color="@(Player.IsAdmin ? Color.Error : Color.Default)">
+                    @(Player.IsAdmin ? "Admin" : "Player")
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="0">
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Status</MudText>
+                <MudStack Row="true" Spacing="1">
+                    @if (Player.IsBanned)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Error">Banned</MudText>
+                    }
+                    @if (Player.IsWhitelisted)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Success">Whitelisted</MudText>
+                    }
+                    @if (!Player.IsBanned && !Player.IsWhitelisted)
+                    {
+                        <MudText Typo="Typo.body2">Normal</MudText>
+                    }
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    @if (Player.Privileges != null && Player.Privileges.Any())
+    {
+        <MudItem xs="12">
+            <MudCard Elevation="0">
+                <MudCardContent>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Privileges</MudText>
+                    <MudText Typo="Typo.body2">@string.Join(", ", Player.Privileges)</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    }
+
+    @if (Player.IsBanned && !string.IsNullOrEmpty(Player.BanReason))
+    {
+        <MudItem xs="12">
+            <MudAlert Severity="Severity.Error">
+                <MudText Typo="Typo.body2"><strong>Ban Reason:</strong> @Player.BanReason</MudText>
+                @if (!string.IsNullOrEmpty(Player.BanBy))
+                {
+                    <MudText Typo="Typo.caption">Banned by: @Player.BanBy</MudText>
+                }
+            </MudAlert>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    [Parameter, EditorRequired]
+    public PlayerDetailsDTO Player { get; set; } = default!;
+
+    private string FormatDate(string? dateString)
+    {
+        if (string.IsNullOrEmpty(dateString))
+            return "N/A";
+
+        if (DateTime.TryParse(dateString, out var date))
+        {
+            return date.ToString("yyyy-MM-dd, hh:mm:ss tt");
+        }
+
+        return dateString;
+    }
+}

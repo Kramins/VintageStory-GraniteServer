@@ -84,18 +84,40 @@ public class ServerPlayersController : ControllerBase
         return Ok(new JsonApiDocument<PlayerDetailsDTO> { Data = playerDetails });
     }
 
-   
-
-    [HttpGet("sessions")]
-    public Task<ActionResult<JsonApiDocument<IList<PlayerSessionDTO>>>> GetPlayerSessions(
+    [HttpGet("{playerId}/sessions")]
+    public async Task<ActionResult<JsonApiDocument<IList<PlayerSessionDTO>>>> GetPlayerSessions(
         [FromRoute] Guid serverId,
+        [FromRoute] string playerId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         [FromQuery] string? sorts = null,
         [FromQuery] string? filters = null
     )
     {
-        throw new NotImplementedException("GetPlayerSessions endpoint not yet implemented");
+        var sieveModel = new SieveModel
+        {
+            Filters = filters,
+            Sorts = sorts,
+            Page = page,
+            PageSize = pageSize,
+        };
+
+        var sessions = await _playerService.GetPlayerSessionsAsync(serverId, playerId, sieveModel);
+
+        return new JsonApiDocument<IList<PlayerSessionDTO>>
+        {
+            Data = sessions.Data,
+            Meta = new JsonApiMeta
+            {
+                Pagination = new PaginationMeta
+                {
+                    Page = page,
+                    PageSize = pageSize,
+                    HasMore = sessions.Data?.Count >= pageSize,
+                    TotalCount = sessions.TotalCount,
+                },
+            },
+        };
     }
 
     [HttpPost("{playerId}/kick")]

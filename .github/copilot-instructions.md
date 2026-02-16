@@ -1,5 +1,6 @@
 Global Instructions
 ---
+- You don't need to create test verification docs unless asked to.
 - Linter will reformat code on save. don't worry about formatting or if the file looks different.
 - Use dotnet build to build the project.
 - Don't use the tasks in the .vscode/tasks.json file
