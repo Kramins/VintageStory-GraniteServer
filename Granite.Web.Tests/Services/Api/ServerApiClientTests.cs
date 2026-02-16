@@ -56,7 +56,7 @@ public class ServerApiClientTests
         // Assert
         Assert.NotNull(result);
         Assert.NotNull(result.Data);
-        _mockHttpHandler.VerifyRequest("/api/servers/server1/status", System.Net.Http.HttpMethod.Get);
+        _mockHttpHandler.VerifyRequest("/api/server1/server/status", System.Net.Http.HttpMethod.Get);
     }
 
     [Fact]

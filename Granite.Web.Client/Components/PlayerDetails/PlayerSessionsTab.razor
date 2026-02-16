@@ -11,7 +11,7 @@
 <MudStack Spacing="2" Class="mb-4">
     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
         <MudButton StartIcon="@Icons.Material.Filled.Refresh" OnClick="@HandleRefresh"
-                   Disabled="@PlayerSessionsState.Value.IsLoading"                   Size="Size.Small">
+                   Disabled="@PlayerSessionsState.Value.IsLoading" Size="Size.Small">
             Refresh
         </MudButton>
     </MudStack>
@@ -24,11 +24,39 @@
     }
 </MudStack>
 
-<MudPaper Elevation="0" Style="height: 560px;">
-    <MudDataGrid T="PlayerSessionDTO"                 Items="@PlayerSessionsState.Value.Sessions"                 Dense="true"                 Hover="true"
-                 Loading="@PlayerSessionsState.Value.IsLoading"                 Height="520px">
+@if (!PlayerSessionsState.Value.IsLoading && !PlayerSessionsState.Value.Sessions.Any())
+{
+    <MudPaper Class="pa-8 d-flex flex-column align-center justify-center" Style="min-height: 400px;" Elevation="0">
+        <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+        <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">
+            No Sessions Found
+        </MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            This player has no recorded sessions yet.
+        </MudText>
+    </MudPaper>
+}
+else
+{
+    <MudPaper Elevation="0" Style="height: 560px;">
+        <MudDataGrid T="PlayerSessionDTO" 
+                     Items="@PlayerSessionsState.Value.Sessions" 
+                     Dense="true" 
+                     Hover="true"
+                     SortMode="SortMode.None"
+                     Loading="@PlayerSessionsState.Value.IsLoading" 
+                     Height="520px">
         <Columns>
-            <TemplateColumn Title="Player" Sortable="false">
+            <TemplateColumn T="PlayerSessionDTO">
+                <HeaderTemplate>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" @onclick="@(() => OnSortChanged("PlayerName"))" Style="cursor: pointer;">
+                        <MudText Typo="Typo.body2">Player</MudText>
+                        @if (_currentSortField == "PlayerName")
+                        {
+                            <MudIcon Icon="@(_currentSortDescending ? Icons.Material.Filled.ArrowDownward : Icons.Material.Filled.ArrowUpward)" Size="Size.Small" />
+                        }
+                    </MudStack>
+                </HeaderTemplate>
                 <CellTemplate>
                     @if (context.Item.PlayerId != Player.PlayerUID)
                     {
@@ -43,7 +71,16 @@
                 </CellTemplate>
             </TemplateColumn>
 
-            <TemplateColumn Title="Join Date" Sortable="false">
+            <TemplateColumn T="PlayerSessionDTO">
+                <HeaderTemplate>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" @onclick="@(() => OnSortChanged("JoinDate"))" Style="cursor: pointer;">
+                        <MudText Typo="Typo.body2">Join Date</MudText>
+                        @if (_currentSortField == "JoinDate")
+                        {
+                            <MudIcon Icon="@(_currentSortDescending ? Icons.Material.Filled.ArrowDownward : Icons.Material.Filled.ArrowUpward)" Size="Size.Small" />
+                        }
+                    </MudStack>
+                </HeaderTemplate>
                 <CellTemplate>
                     <MudText Typo="Typo.body2">
                         @context.Item.JoinDate.ToString("yyyy-MM-dd HH:mm:ss")
@@ -51,7 +88,7 @@
                 </CellTemplate>
             </TemplateColumn>
 
-            <TemplateColumn Title="Leave Date" Sortable="false">
+            <TemplateColumn T="PlayerSessionDTO" Title="Leave Date">
                 <CellTemplate>
                     @if (context.Item.LeaveDate.HasValue)
                     {
@@ -66,17 +103,48 @@
                 </CellTemplate>
             </TemplateColumn>
 
-            <TemplateColumn Title="Duration" Sortable="false">
+            <TemplateColumn T="PlayerSessionDTO">
+                <HeaderTemplate>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" @onclick="@(() => OnSortChanged("Duration"))" Style="cursor: pointer;">
+                        <MudText Typo="Typo.body2">Duration</MudText>
+                        @if (_currentSortField == "Duration")
+                        {
+                            <MudIcon Icon="@(_currentSortDescending ? Icons.Material.Filled.ArrowDownward : Icons.Material.Filled.ArrowUpward)" Size="Size.Small" />
+                        }
+                    </MudStack>
+                </HeaderTemplate>
                 <CellTemplate>
                     <MudText Typo="Typo.body2">
-                        @FormatDuration(context.Item.Duration)
+                        @FormatDuration(context.Item.Duration, context.Item.JoinDate, context.Item.LeaveDate)
                     </MudText>
                 </CellTemplate>
             </TemplateColumn>
 
-            <PropertyColumn Property="s => s.IpAddress" Title="IP Address" />
+            <TemplateColumn T="PlayerSessionDTO">
+                <HeaderTemplate>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" @onclick="@(() => OnSortChanged("IpAddress"))" Style="cursor: pointer;">
+                        <MudText Typo="Typo.body2">IP Address</MudText>
+                        @if (_currentSortField == "IpAddress")
+                        {
+                            <MudIcon Icon="@(_currentSortDescending ? Icons.Material.Filled.ArrowDownward : Icons.Material.Filled.ArrowUpward)" Size="Size.Small" />
+                        }
+                    </MudStack>
+                </HeaderTemplate>
+                <CellTemplate>
+                    <MudText Typo="Typo.body2">@context.Item.IpAddress</MudText>
+                </CellTemplate>
+            </TemplateColumn>
 
-            <TemplateColumn Title="Status" Sortable="false">
+            <TemplateColumn T="PlayerSessionDTO">
+                <HeaderTemplate>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" @onclick="@(() => OnSortChanged("IsActive"))" Style="cursor: pointer;">
+                        <MudText Typo="Typo.body2">Status</MudText>
+                        @if (_currentSortField == "IsActive")
+                        {
+                            <MudIcon Icon="@(_currentSortDescending ? Icons.Material.Filled.ArrowDownward : Icons.Material.Filled.ArrowUpward)" Size="Size.Small" />
+                        }
+                    </MudStack>
+                </HeaderTemplate>
                 <CellTemplate>
                     <MudChip Size="Size.Small" Variant="Variant.Outlined"
                              Color="@(context.Item.IsActive? Color.Success: Color.Default)">
@@ -86,25 +154,62 @@
             </TemplateColumn>
         </Columns>
         <PagerContent>
-            <MudDataGridPager T="PlayerSessionDTO" />
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="pa-2">
+                <MudText Typo="Typo.body2">
+                    Page @PlayerSessionsState.Value.CurrentPage of @GetTotalPages()
+                </MudText>
+                <MudSpacer />
+                <MudButtonGroup Size="Size.Small" Variant="Variant.Outlined">
+                    <MudButton Disabled="@(PlayerSessionsState.Value.CurrentPage <= 1 || PlayerSessionsState.Value.IsLoading)"
+                               OnClick="@(() => ChangePage(1))">
+                        <MudIcon Icon="@Icons.Material.Filled.FirstPage" />
+                    </MudButton>
+                    <MudButton Disabled="@(PlayerSessionsState.Value.CurrentPage <= 1 || PlayerSessionsState.Value.IsLoading)"
+                               OnClick="@(() => ChangePage(PlayerSessionsState.Value.CurrentPage - 1))">
+                        <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" />
+                    </MudButton>
+                    <MudButton Disabled="@(PlayerSessionsState.Value.CurrentPage >= GetTotalPages() || PlayerSessionsState.Value.IsLoading)"
+                               OnClick="@(() => ChangePage(PlayerSessionsState.Value.CurrentPage + 1))">
+                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" />
+                    </MudButton>
+                    <MudButton Disabled="@(PlayerSessionsState.Value.CurrentPage >= GetTotalPages() || PlayerSessionsState.Value.IsLoading)"
+                               OnClick="@(() => ChangePage(GetTotalPages()))">
+                        <MudIcon Icon="@Icons.Material.Filled.LastPage" />
+                    </MudButton>
+                </MudButtonGroup>
+                <MudText Typo="Typo.body2">
+                    @GetItemRangeText()
+                </MudText>
+            </MudStack>
         </PagerContent>
-    </MudDataGrid>
-</MudPaper>
+        </MudDataGrid>
+    </MudPaper>
+}
 
 @code {
     [Parameter, EditorRequired]
     public PlayerDetailsDTO Player { get; set; } = default!;
 
+    private string? _lastLoadedPlayerId;
+    private string _currentSortField = "JoinDate";
+    private bool _currentSortDescending = true;
+
     protected override void OnInitialized()
     {
         base.OnInitialized();
+        _lastLoadedPlayerId = Player?.PlayerUID;
         LoadSessions();
     }
 
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
-        LoadSessions();
+        // Only reload if player changed
+        if (_lastLoadedPlayerId != Player?.PlayerUID)
+        {
+            _lastLoadedPlayerId = Player?.PlayerUID;
+            LoadSessions();
+        }
     }
 
     private void LoadSessions()
@@ -116,10 +221,47 @@
                     Player.ServerId.ToString(),
                     Player.PlayerUID,
                     PlayerSessionsState.Value.CurrentPage,
-                    PlayerSessionsState.Value.PageSize
+                    PlayerSessionsState.Value.PageSize,
+                    GetCurrentSortString(),
+                    null
                 )
             );
         }
+    }
+
+    private void OnSortChanged(string fieldName)
+    {
+        // Toggle direction if same field, otherwise default to descending for new field
+        if (_currentSortField == fieldName)
+        {
+            _currentSortDescending = !_currentSortDescending;
+        }
+        else
+        {
+            _currentSortField = fieldName;
+            _currentSortDescending = true;
+        }
+
+        // Reset to page 1 when sort changes
+        if (Player?.ServerId != null && !string.IsNullOrEmpty(Player.PlayerUID))
+        {
+            Dispatcher.Dispatch(
+                new LoadPlayerSessionsAction(
+                    Player.ServerId.ToString(),
+                    Player.PlayerUID,
+                    1,
+                    PlayerSessionsState.Value.PageSize,
+                    GetCurrentSortString(),
+                    null
+                )
+            );
+        }
+    }
+
+    private string GetCurrentSortString()
+    {
+        var prefix = _currentSortDescending ? "-" : "";
+        return $"{prefix}{_currentSortField}";
     }
 
     private void HandleRefresh()
@@ -127,16 +269,62 @@
         LoadSessions();
     }
 
-    private string FormatDuration(double? durationSeconds)
+    private void ChangePage(int newPage)
     {
+        if (Player?.ServerId != null && !string.IsNullOrEmpty(Player.PlayerUID))
+        {
+            Dispatcher.Dispatch(
+                new LoadPlayerSessionsAction(
+                    Player.ServerId.ToString(),
+                    Player.PlayerUID,
+                    newPage,
+                    PlayerSessionsState.Value.PageSize,
+                    GetCurrentSortString(),
+                    null
+                )
+            );
+        }
+    }
+
+    private int GetTotalPages()
+    {
+        if (PlayerSessionsState.Value.TotalItems == 0)
+            return 1;
+        return (int)Math.Ceiling((double)PlayerSessionsState.Value.TotalItems / PlayerSessionsState.Value.PageSize);
+    }
+
+    private string GetItemRangeText()
+    {
+        var start = (PlayerSessionsState.Value.CurrentPage - 1) * PlayerSessionsState.Value.PageSize + 1;
+        var end = Math.Min(PlayerSessionsState.Value.CurrentPage * PlayerSessionsState.Value.PageSize, PlayerSessionsState.Value.TotalItems);
+        return $"{start}-{end} of {PlayerSessionsState.Value.TotalItems}";
+    }
+
+    private string FormatDuration(double? durationSeconds, DateTime joinDate, DateTime? leaveDate)
+    {
+        // If no duration is provided and session is active, calculate current duration
+        if (!durationSeconds.HasValue && !leaveDate.HasValue)
+        {
+            var activeDuration = DateTime.UtcNow - joinDate;
+            return FormatTimeSpan(activeDuration) + " (active)";
+        }
+        
         if (!durationSeconds.HasValue)
         {
             return "N/A";
         }
 
         var duration = TimeSpan.FromSeconds(durationSeconds.Value);
+        return FormatTimeSpan(duration);
+    }
 
-        if (duration.TotalHours >= 1)
+    private string FormatTimeSpan(TimeSpan duration)
+    {
+        if (duration.TotalDays >= 1)
+        {
+            return $"{(int)duration.TotalDays}d {duration.Hours}h";
+        }
+        else if (duration.TotalHours >= 1)
         {
             return $"{(int)duration.TotalHours}h {duration.Minutes}m";
         }
