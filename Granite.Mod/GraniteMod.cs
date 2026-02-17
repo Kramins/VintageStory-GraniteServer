@@ -1,10 +1,6 @@
 using System.Reflection;
 using Granite.Mod.Services.Map;
 using GraniteServer.HostedServices;
-using GraniteServer.Messaging.Commands;
-using GraniteServer.Messaging.Handlers.Commands;
-using GraniteServer.Messaging.Handlers.Events;
-using GraniteServer.Mod.Handlers.Commands;
 using GraniteServer.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -54,89 +50,21 @@ public class GraniteMod : ModSystem
 
                 services.AddSingleton<Vintagestory.API.Common.Mod>(Mod);
 
-                // Register command handlers
-                services.AddScoped<ICommandHandler<KickPlayerCommand>, PlayerCommandHandlers>();
-
-                // Register event handlers
-                AutoDiscoverAndRegisterEventHandlers(services, api.Logger);
-
                 // Register hosted services
                 services.AddHostedService<PlayerSessionHostedService>();
-                services.AddHostedService<MessageBridgeHostedService>();
                 services.AddHostedService<SignalRClientHostedService>();
                 services.AddHostedService<ServerMetricsHostedService>();
                 services.AddHostedService<ServerReadyHostedService>();
                 services.AddHostedService<WorldMapHostedService>();
+                services.AddHostedService<PlayerModerationHostedService>();
+                services.AddHostedService<PlayerInventoryHostedService>();
+                services.AddHostedService<ServerManagementHostedService>();
+                services.AddHostedService<CollectiblesHostedService>();
             })
             .Build();
 
         // Start the host so hosted services run
         _ = _host.StartAsync();
-    }
-
-    private void AutoDiscoverAndRegisterEventHandlers(
-        IServiceCollection services,
-        Vintagestory.API.Common.ILogger logger
-    )
-    {
-        var assembly = Assembly.GetExecutingAssembly();
-        var eventHandlerType = typeof(IEventHandler<>);
-        var commandHandlerType = typeof(ICommandHandler<>);
-
-        logger?.Notification(
-            $"[Handlers] Scanning assembly {assembly.GetName().Name} for event and command handlers..."
-        );
-
-        // Find all types that implement IEventHandler<> or ICommandHandler<>
-        var handlerTypes = assembly
-            .GetTypes()
-            .Where(t =>
-                !t.IsAbstract
-                && !t.IsInterface
-                && t.GetInterfaces()
-                    .Any(i =>
-                        (i.IsGenericType && i.GetGenericTypeDefinition() == eventHandlerType)
-                        || (i.IsGenericType && i.GetGenericTypeDefinition() == commandHandlerType)
-                    )
-            )
-            .ToList();
-
-        logger?.Notification($"[Handlers] Found {handlerTypes.Count} handler type(s).");
-
-        foreach (var handlerType in handlerTypes)
-        {
-            logger?.Notification($"[Handlers] Processing handler type: {handlerType.FullName}");
-
-            // Get all event and command handler interfaces
-            var handlerInterfaces = handlerType
-                .GetInterfaces()
-                .Where(i =>
-                    i.IsGenericType
-                    && (
-                        i.GetGenericTypeDefinition() == eventHandlerType
-                        || i.GetGenericTypeDefinition() == commandHandlerType
-                    )
-                )
-                .ToList();
-
-            foreach (var handlerInterface in handlerInterfaces)
-            {
-                try
-                {
-                    services.AddScoped(handlerInterface, handlerType);
-                    var interfaceName = handlerInterface.GetGenericTypeDefinition().Name;
-                    logger?.Notification(
-                        $"[Handlers] Registered {interfaceName}<{string.Join(", ", handlerInterface.GetGenericArguments().Select(t => t.Name))}> -> {handlerType.FullName}"
-                    );
-                }
-                catch (Exception ex)
-                {
-                    logger?.Warning(
-                        $"[Handlers] Failed to register handler {handlerType.FullName} for interface {handlerInterface.FullName}: {ex.Message}"
-                    );
-                }
-            }
-        }
     }
 
     private void OverrideConfigWithEnvironmentVariables(GraniteModConfig config, ICoreServerAPI api)

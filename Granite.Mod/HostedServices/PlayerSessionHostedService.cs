@@ -7,7 +7,7 @@ using Vintagestory.API.Server;
 
 namespace GraniteServer.HostedServices;
 
-public class PlayerSessionHostedService : IHostedService, IDisposable
+public class PlayerSessionHostedService : GraniteHostedServiceBase
 {
     private readonly ICoreServerAPI _api;
     private readonly ClientMessageBusService _messageBus;
@@ -16,7 +16,6 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
 
     // private readonly List<Task> _pending = new();
     private bool _isShuttingDown;
-    private readonly ILogger _logger;
 
     public PlayerSessionHostedService(
         ICoreServerAPI api,
@@ -24,15 +23,16 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
         GraniteModConfig config,
         ILogger logger
     )
+        : base(messageBus, logger)
     {
         _api = api;
         _messageBus = messageBus;
         _config = config;
-        _logger = logger;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public override Task StartAsync(CancellationToken cancellationToken)
     {
+        LogNotification("Starting player session tracking service...");
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         _api.Event.PlayerJoin += OnPlayerJoin;
@@ -67,7 +67,7 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
         _messageBus.Publish(joinEvent);
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public override Task StopAsync(CancellationToken cancellationToken)
     {
         _isShuttingDown = true;
         _api.Event.PlayerJoin -= OnPlayerJoin;
@@ -85,7 +85,7 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.Error($"Failed to flush active player sessions on shutdown: {ex}");
+            LogError($"Failed to flush active player sessions on shutdown: {ex}");
         }
 
         try
@@ -94,7 +94,7 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
             // {
             //     if (_pending.Count > 0)
             //     {
-            //         _logger.Notification("Waiting for {0} pending tasks", _pending.Count);
+            //         LogNotification("Waiting for {0} pending tasks", _pending.Count);
             //     }
             // }
 
@@ -102,14 +102,14 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
         }
         catch (OperationCanceledException)
         {
-            _logger.Notification("Player session hosted service shutdown cancelled");
+            LogNotification("Player session hosted service shutdown cancelled");
         }
         catch (Exception ex)
         {
-            _logger.Error($"Error awaiting pending tasks during shutdown: {ex}");
+            LogError($"Error awaiting pending tasks during shutdown: {ex}");
         }
 
-        return Task.CompletedTask;
+        return base.StopAsync(cancellationToken);
     }
 
     private void PublishLeaveFromPlayer(IServerPlayer player)
@@ -142,7 +142,7 @@ public class PlayerSessionHostedService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.Error($"Failed to publish leave event for {player.PlayerUID}: {ex}");
+            LogError($"Failed to publish leave event for {player.PlayerUID}: {ex}");
         }
     }
 

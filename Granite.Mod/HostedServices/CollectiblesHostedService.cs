@@ -1,56 +1,70 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using GraniteServer.Messaging.Commands;
 using GraniteServer.Messaging.Events;
-using GraniteServer.Messaging.Handlers.Commands;
+using GraniteServer.Mod;
 using GraniteServer.Services;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Server;
 
-namespace GraniteServer.Mod.Handlers.Commands;
+namespace GraniteServer.HostedServices;
 
-public class SyncCollectiblesCommandHandler : ICommandHandler<SyncCollectiblesCommand>
+/// <summary>
+/// Hosted service that handles collectibles synchronization commands.
+/// Subscribes directly to the message bus for collectibles-related commands.
+/// </summary>
+public class CollectiblesHostedService : GraniteHostedServiceBase
 {
-    private ICoreServerAPI _api;
-    private ClientMessageBusService _messageBus;
-    private GraniteModConfig _config;
+    private readonly ICoreServerAPI _api;
+    private readonly GraniteModConfig _config;
 
-    public SyncCollectiblesCommandHandler(
+    public CollectiblesHostedService(
         ICoreServerAPI api,
         ClientMessageBusService messageBus,
-        GraniteModConfig config
+        GraniteModConfig config,
+        ILogger logger
     )
+        : base(messageBus, logger)
     {
-        _api = api;
-        _messageBus = messageBus;
-        _config = config;
+        _api = api ?? throw new ArgumentNullException(nameof(api));
+        _config = config ?? throw new ArgumentNullException(nameof(config));
     }
 
-    public Task Handle(SyncCollectiblesCommand command)
+    public override Task StartAsync(CancellationToken cancellationToken)
     {
-        var collectibles = _api.World.Collectibles
-            .Select(c => MapCollectibleToEventData(c))
+        LogNotification("Starting service...");
+
+        SubscribeToCommand<SyncCollectiblesCommand>(HandleSyncCollectiblesCommand);
+
+        LogNotification("Service started");
+        return Task.CompletedTask;
+    }
+
+    private void HandleSyncCollectiblesCommand(SyncCollectiblesCommand command)
+    {
+        LogNotification("Syncing collectibles from game world");
+
+        var collectibles = _api
+            .World.Collectibles.Select(c => MapCollectibleToEventData(c))
             .ToList();
 
-        var collectiblesEvent = _messageBus.CreateEvent<CollectiblesLoadedEvent>(
+        LogNotification("Found {collectibles.Count} collectibles");
+
+        var collectiblesEvent = MessageBus.CreateEvent<CollectiblesLoadedEvent>(
             _config.ServerId,
             e =>
             {
                 e.Data!.Collectibles = collectibles;
             }
         );
-        _messageBus.Publish(collectiblesEvent);
+        MessageBus.Publish(collectiblesEvent);
 
-        return Task.CompletedTask;
+        LogNotification("Collectibles synced successfully");
     }
 
     private CollectibleEventData MapCollectibleToEventData(CollectibleObject collectible)
     {
         var text = collectible.ItemClass.Name();
-        
+
         var itemName = Lang.GetMatching(
             collectible.Code?.Domain + ":" + text + "-" + collectible.Code?.Path,
             new[] { "" }
@@ -77,7 +91,7 @@ public class SyncCollectiblesCommandHandler : ICommandHandler<SyncCollectiblesCo
             BlockMaterial = blockMaterial,
             MaxStackSize = collectible.MaxStackSize,
             Type = type,
-            MapColorCode = mapColorCode
+            MapColorCode = mapColorCode,
         };
     }
 }

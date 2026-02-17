@@ -11,11 +11,10 @@ using Vintagestory.API.Server;
 
 namespace GraniteServer.HostedServices;
 
-public class ServerMetricsHostedService : IHostedService, IDisposable
+public class ServerMetricsHostedService : GraniteHostedServiceBase
 {
     private readonly ICoreServerAPI _api;
     private readonly ClientMessageBusService _messageBus;
-    private readonly ILogger _logger;
     private readonly SignalRConnectionState _connectionState;
     private readonly GraniteModConfig _config;
 
@@ -37,10 +36,10 @@ public class ServerMetricsHostedService : IHostedService, IDisposable
         SignalRConnectionState connectionState,
         GraniteModConfig config
     )
+        : base(messageBus, logger)
     {
         _api = api;
         _messageBus = messageBus;
-        _logger = logger;
         _connectionState = connectionState;
         _config = config;
         _process = Process.GetCurrentProcess();
@@ -50,9 +49,9 @@ public class ServerMetricsHostedService : IHostedService, IDisposable
         _serverStartTime = DateTime.UtcNow;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public override Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.Notification("[Metrics] Starting server metrics publisher...");
+        LogNotification("Starting server metrics publisher...");
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _timer = new PeriodicTimer(TimeSpan.FromSeconds(IntervalSeconds));
 
@@ -68,7 +67,7 @@ public class ServerMetricsHostedService : IHostedService, IDisposable
             {
                 if (!_connectionState.IsConnected)
                 {
-                    _logger.Debug("[Metrics] SignalR not connected; skipping publish.");
+                    LogDebug("SignalR not connected; skipping publish.");
                     continue;
                 }
 
@@ -81,7 +80,7 @@ public class ServerMetricsHostedService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.Error($"[Metrics] Error in metrics loop: {ex.Message}");
+            LogError($"Error in metrics loop: {ex.Message}");
         }
     }
 
@@ -98,7 +97,8 @@ public class ServerMetricsHostedService : IHostedService, IDisposable
             if (elapsedMs > 0 && _processorCount > 0)
             {
                 cpuPercent = (float)(cpuDeltaMs / (elapsedMs * _processorCount) * 100.0);
-                if (cpuPercent < 0) cpuPercent = 0f;
+                if (cpuPercent < 0)
+                    cpuPercent = 0f;
             }
 
             _prevCpu = nowCpu;
@@ -122,22 +122,21 @@ public class ServerMetricsHostedService : IHostedService, IDisposable
             );
             _messageBus.Publish(metricsEvent);
 
-            _logger.Debug(
-                $"[Metrics] Published metrics: CPU={cpuPercent:F1}% MEM={memMb:F1}MB Players={activePlayers}"
+            LogDebug(
+                $"Published metrics: CPU={cpuPercent:F1}% MEM={memMb:F1}MB Players={activePlayers}"
             );
         }
         catch (Exception ex)
         {
-            _logger.Error($"[Metrics] Failed to publish metrics: {ex.Message}");
+            LogError($"Failed to publish metrics: {ex.Message}");
         }
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public override Task StopAsync(CancellationToken cancellationToken)
     {
-        _logger.Notification("[Metrics] Stopping server metrics publisher...");
         _cts?.Cancel();
         _timer?.Dispose();
-        return Task.CompletedTask;
+        return base.StopAsync(cancellationToken);
     }
 
     public void Dispose()

@@ -21,9 +21,8 @@ namespace GraniteServer.HostedServices;
 /// Hosted service that maintains a SignalR connection to the Granite.Server hub.
 /// Routes incoming messages from the hub to the local ClientMessageBusService.
 /// </summary>
-public class SignalRClientHostedService : IHostedService, IDisposable
+public class SignalRClientHostedService : GraniteHostedServiceBase
 {
-    private readonly ILogger _logger;
     private readonly ClientMessageBusService _messageBus;
     private readonly GraniteModConfig _config;
     private readonly SignalRConnectionState _connectionState;
@@ -39,8 +38,8 @@ public class SignalRClientHostedService : IHostedService, IDisposable
         GraniteModConfig config,
         SignalRConnectionState connectionState
     )
+        : base(messageBus, logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _messageBus = messageBus ?? throw new ArgumentNullException(nameof(messageBus));
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _connectionState =
@@ -52,15 +51,13 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     /// Starts the SignalR client service. Validates configuration and initiates connection to the server.
     /// If connection fails, starts the reconnection loop in the background.
     /// </summary>
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.Notification("[SignalR] Starting SignalR client service...");
+        LogNotification("Starting SignalR client service...");
 
         if (string.IsNullOrWhiteSpace(_config.AccessToken))
         {
-            _logger.Warning(
-                "[SignalR] AccessToken is not configured. SignalR client will not connect."
-            );
+            LogWarning("AccessToken is not configured. SignalR client will not connect.");
             _connectionState.SetConnected(false);
             return;
         }
@@ -71,9 +68,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.Error(
-                $"[SignalR] Failed to start SignalR connection. Details: {FormatException(ex)}"
-            );
+            LogError($"Failed to start SignalR connection. Details: {FormatException(ex)}");
             // Start reconnection loop
             _ = ReconnectLoopAsync();
         }
@@ -82,10 +77,8 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     /// <summary>
     /// Stops the SignalR client service. Cancels reconnection attempts, disposes subscriptions, and closes the connection.
     /// </summary>
-    public async Task StopAsync(CancellationToken cancellationToken)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        _logger.Notification("[SignalR] Stopping SignalR client service...");
-
         _reconnectCts?.Cancel();
         _reconnectCts?.Dispose();
         _reconnectCts = null;
@@ -98,13 +91,15 @@ public class SignalRClientHostedService : IHostedService, IDisposable
             try
             {
                 await _hubConnection.StopAsync(cancellationToken);
-                _logger.Notification("[SignalR] Connection stopped.");
+                LogNotification("Connection stopped.");
             }
             catch (Exception ex)
             {
-                _logger.Warning($"[SignalR] Error stopping connection: {ex.Message}");
+                LogWarning($"Error stopping connection: {ex.Message}");
             }
         }
+
+        await base.StopAsync(cancellationToken);
     }
 
     private async Task ConnectAsync(CancellationToken cancellationToken)
@@ -123,7 +118,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     {
         try
         {
-            _logger.Notification("[SignalR] Exchanging access token for JWT...");
+            LogNotification("Exchanging access token for JWT...");
             var tokenUrl = $"{_config.GraniteServerHost.TrimEnd('/')}/api/auth/token";
 
             var response = await _httpClient.PostAsJsonAsync(
@@ -151,21 +146,19 @@ public class SignalRClientHostedService : IHostedService, IDisposable
             }
 
             _jwtToken = tokenDto.AccessToken;
-            _logger.Notification("[SignalR] JWT token obtained successfully.");
+            LogNotification("JWT token obtained successfully.");
         }
         catch (HttpRequestException ex)
         {
             var statusCode = ex.StatusCode.HasValue
                 ? $"Status={(int)ex.StatusCode} {ex.StatusCode}"
                 : "Status=unknown";
-            _logger.Error(
-                $"[SignalR] Failed to obtain JWT token. {statusCode}. Details: {FormatException(ex)}"
-            );
+            LogError($"Failed to obtain JWT token. {statusCode}. Details: {FormatException(ex)}");
             throw;
         }
         catch (Exception ex)
         {
-            _logger.Error($"[SignalR] Failed to obtain JWT token: {FormatException(ex)}");
+            LogError($"Failed to obtain JWT token: {FormatException(ex)}");
             throw;
         }
     }
@@ -176,7 +169,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     private void BuildHubConnection()
     {
         var hubUrl = $"{_config.GraniteServerHost.TrimEnd('/')}{_config.HubPath}";
-        _logger.Notification($"[SignalR] Connecting to hub at {hubUrl}");
+        LogNotification($"Connecting to hub at {hubUrl}");
 
         _hubConnection = new HubConnectionBuilder()
             .WithUrl(
@@ -227,16 +220,14 @@ public class SignalRClientHostedService : IHostedService, IDisposable
         try
         {
             await _hubConnection!.StartAsync(cancellationToken);
-            _logger.Notification(
-                $"[SignalR] Connected successfully. ConnectionId: {_hubConnection.ConnectionId}"
-            );
+            LogNotification($"Connected successfully. ConnectionId: {_hubConnection.ConnectionId}");
             _connectionState.SetConnected(true);
         }
         catch (Exception ex)
         {
             var hubUrl = $"{_config.GraniteServerHost.TrimEnd('/')}{_config.HubPath}";
-            _logger.Error(
-                $"[SignalR] Hub connection failed. Url={hubUrl}, State={_hubConnection?.State}. Details: {FormatException(ex)}"
+            LogError(
+                $"Hub connection failed. Url={hubUrl}, State={_hubConnection?.State}. Details: {FormatException(ex)}"
             );
             throw;
         }
@@ -259,13 +250,11 @@ public class SignalRClientHostedService : IHostedService, IDisposable
                 message => _ = HandleMessageAsync(message),
                 error =>
                 {
-                    _logger.Error(
-                        $"[SignalR] Fatal error in MessageBus subscription: {error.Message}"
-                    );
+                    LogError($"Fatal error in MessageBus subscription: {error.Message}");
                 },
                 () =>
                 {
-                    _logger.Warning("[SignalR] MessageBus subscription completed");
+                    LogWarning("MessageBus subscription completed");
                 }
             );
     }
@@ -275,9 +264,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     /// </summary>
     private Task OnHubReconnecting(Exception? error)
     {
-        _logger.Warning(
-            $"[SignalR] Connection lost. Reconnecting... Details: {FormatException(error)}"
-        );
+        LogWarning($"Connection lost. Reconnecting... Details: {FormatException(error)}");
         _connectionState.SetConnected(false);
         return Task.CompletedTask;
     }
@@ -287,7 +274,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     /// </summary>
     private Task OnHubReconnected(string? connectionId)
     {
-        _logger.Notification($"[SignalR] Reconnected successfully. ConnectionId: {connectionId}");
+        LogNotification($"Reconnected successfully. ConnectionId: {connectionId}");
         _connectionState.SetConnected(true);
         return Task.CompletedTask;
     }
@@ -297,7 +284,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     /// </summary>
     private async Task OnHubClosed(Exception? error, CancellationToken cancellationToken)
     {
-        _logger.Error($"[SignalR] Connection closed: {FormatException(error)}");
+        LogError($"Connection closed: {FormatException(error)}");
         _connectionState.SetConnected(false);
         await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
         _ = ReconnectLoopAsync();
@@ -314,7 +301,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
             var type = FindMessageTypeByName(messageType);
             if (type == null)
             {
-                _logger.Error($"[SignalR] Could not find message type: {messageType}");
+                LogError($"Could not find message type: {messageType}");
                 return;
             }
 
@@ -330,11 +317,11 @@ public class SignalRClientHostedService : IHostedService, IDisposable
 
             if (message.OriginServerId == _config.ServerId)
             {
-                _logger.Debug($"[SignalR] Ignoring own message: {message.MessageType}");
+                LogDebug($"Ignoring own message: {message.MessageType}");
                 return;
             }
 
-            _logger.Debug($"[SignalR] Received event: {message.MessageType}");
+            LogDebug($"Received event: {message.MessageType}");
             _messageBus.Publish(message);
 
             if (message is CommandMessage commandMessage)
@@ -348,9 +335,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.Error(
-                $"[SignalR] Error processing received event: {FormatException(ex)}"
-            );
+            LogError($"Error processing received event: {FormatException(ex)}");
         }
     }
 
@@ -380,7 +365,6 @@ public class SignalRClientHostedService : IHostedService, IDisposable
     /// <summary>
     /// Processes messages that were queued while the connection was inactive.
     /// Attempts to send all queued messages in order after reconnection.
-    
     /// <summary>
     /// Handles a message from the local message bus and sends it to the server via SignalR.
     /// Drops the message if the connection is not currently active.
@@ -392,20 +376,18 @@ public class SignalRClientHostedService : IHostedService, IDisposable
             // If not connected, drop the message (don't queue)
             if (_hubConnection?.State != HubConnectionState.Connected)
             {
-                _logger.Debug(
-                    $"[SignalR] Connection not active. Dropping event: {message.MessageType}"
-                );
+                LogDebug($"Connection not active. Dropping event: {message.MessageType}");
                 return;
             }
 
             // Log message size for debugging
             var json = JsonSerializer.Serialize(message);
             var sizeKB = json.Length / 1024.0;
-            _logger.Debug($"[SignalR] Sending event to server: {message.MessageType} (Size: {sizeKB:F2} KB)");
-            
+            LogDebug($"Sending event to server: {message.MessageType} (Size: {sizeKB:F2} KB)");
+
             if (sizeKB > 100)
             {
-                _logger.Warning($"[SignalR] Large message detected: {message.MessageType} is {sizeKB:F2} KB");
+                LogWarning($"Large message detected: {message.MessageType} is {sizeKB:F2} KB");
             }
 
             await _hubConnection.InvokeAsync(
@@ -416,7 +398,7 @@ public class SignalRClientHostedService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.Error($"[SignalR] Error sending event to server: {FormatException(ex)}");
+            LogError($"Error sending event to server: {FormatException(ex)}");
             // Drop the message on error instead of queuing
         }
     }
@@ -441,18 +423,16 @@ public class SignalRClientHostedService : IHostedService, IDisposable
                         ? _config.ReconnectDelaysSeconds[delayIndex]
                         : _config.ReconnectDelaysSeconds[^1];
 
-                _logger.Notification($"[SignalR] Attempting reconnect in {delay} seconds...");
+                LogNotification($"Attempting reconnect in {delay} seconds...");
                 await Task.Delay(TimeSpan.FromSeconds(delay), cancellationToken);
 
                 await ConnectAsync(cancellationToken);
-                _logger.Notification("[SignalR] Reconnection successful.");
+                LogNotification("Reconnection successful.");
                 return; // Success, exit loop
             }
             catch (Exception ex)
             {
-                _logger.Error(
-                    $"[SignalR] Reconnection attempt failed: {FormatException(ex)}"
-                );
+                LogError($"Reconnection attempt failed: {FormatException(ex)}");
                 delayIndex = Math.Min(delayIndex + 1, _config.ReconnectDelaysSeconds.Length - 1);
             }
         }
