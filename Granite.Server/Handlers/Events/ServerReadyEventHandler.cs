@@ -17,18 +17,21 @@ public class ServerReadyEventHandler : IEventHandler<ServerReadyEvent>
     private readonly PersistentMessageBusService _messageBus;
     private readonly IServerWorldMapService _mapService;
     private readonly ServerConfigService _configService;
+    private readonly ServerPlayersService _playerService;
     private readonly ILogger<ServerReadyEventHandler> _logger;
 
     public ServerReadyEventHandler(
         PersistentMessageBusService messageBus,
         IServerWorldMapService mapService,
         ServerConfigService configService,
+        ServerPlayersService playerService,
         ILogger<ServerReadyEventHandler> logger
     )
     {
         _messageBus = messageBus;
         _mapService = mapService;
         _configService = configService;
+        _playerService = playerService;
         _logger = logger;
     }
 
@@ -45,8 +48,10 @@ public class ServerReadyEventHandler : IEventHandler<ServerReadyEvent>
             // Issue sync map command to synchronize map chunk data (one-time on server startup)
             await IssueSyncMapCommandAsync(@event.OriginServerId);
 
+            // Sync player moderation data (bans and whitelists) from database to game server
+            await IssueSyncPlayerModerationDataCommandAsync(@event.OriginServerId);
+
             // TODO: Add more sync commands as needed:
-            // - Player data sync
             // - World data sync
             // - Mod list sync
         }
@@ -150,6 +155,54 @@ public class ServerReadyEventHandler : IEventHandler<ServerReadyEvent>
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to issue SyncMapCommand to server {ServerId}", serverId);
+        }
+    }
+
+    private async Task IssueSyncPlayerModerationDataCommandAsync(Guid serverId)
+    {
+        try
+        {
+            // Get all players from database via service
+            var allPlayers = await _playerService.GetPlayersAsync(serverId);
+
+            // Filter to only banned/whitelisted players and exclude expired bans
+            var players = allPlayers
+                .Where(p => p.IsBanned || p.IsWhitelisted)
+                .Where(p => !p.IsBanned || p.BanUntil == null || p.BanUntil > DateTime.UtcNow)
+                .Select(p => new PlayerModerationRecord
+                {
+                    PlayerUID = p.PlayerUID,
+                    Name = p.Name,
+                    IsBanned = p.IsBanned,
+                    BanReason = p.BanReason,
+                    BanBy = p.BanBy,
+                    BanUntil = p.BanUntil,
+                    IsWhitelisted = p.IsWhitelisted,
+                    WhitelistedReason = p.WhitelistedReason,
+                    WhitelistedBy = p.WhitelistedBy,
+                })
+                .ToList();
+
+            var syncCommand = _messageBus.CreateCommand<SyncPlayerModerationDataCommand>(
+                serverId,
+                cmd => { cmd.Data.Players = players; }
+            );
+
+            await _messageBus.PublishCommandAsync(syncCommand);
+
+            _logger.LogInformation(
+                "Issued SyncPlayerModerationDataCommand to server {ServerId} with {PlayerCount} player moderation records",
+                serverId,
+                players.Count
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to issue SyncPlayerModerationDataCommand to server {ServerId}",
+                serverId
+            );
         }
     }
 }
