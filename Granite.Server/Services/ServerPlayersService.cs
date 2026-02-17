@@ -31,7 +31,7 @@ public class ServerPlayersService
         _sieveProcessor = sieveProcessor;
     }
 
-    public async Task<List<PlayerDTO>> GetPlayersAsync(Guid serverId)
+    public virtual async Task<List<PlayerDTO>> GetPlayersAsync(Guid serverId)
     {
         var serverPlayers =
             from player in _dbContext.Players

@@ -43,6 +43,7 @@ public class PlayerModerationHostedService : GraniteHostedServiceBase
         SubscribeToCommand<UnbanPlayerCommand>(HandleUnbanPlayerCommand);
         SubscribeToCommand<WhitelistPlayerCommand>(HandleWhitelistPlayerCommand);
         SubscribeToCommand<UnwhitelistPlayerCommand>(HandleUnwhitelistPlayerCommand);
+        SubscribeToCommand<SyncPlayerModerationDataCommand>(HandleSyncPlayerModerationDataCommand);
 
         LogNotification("Service started");
         return Task.CompletedTask;
@@ -200,5 +201,57 @@ public class PlayerModerationHostedService : GraniteHostedServiceBase
             }
         );
         MessageBus.Publish(unwhitelistedEvent);
+    }
+
+    private void HandleSyncPlayerModerationDataCommand(SyncPlayerModerationDataCommand command)
+    {
+        LogNotification("Received player moderation data sync from control plane");
+
+        var players = command.Data.Players;
+
+        // Full replace strategy - clear existing lists
+        PlayerDataManager.BannedPlayers.Clear();
+        PlayerDataManager.WhitelistedPlayers.Clear();
+
+        int bannedCount = 0;
+        int whitelistedCount = 0;
+
+        foreach (var player in players)
+        {
+            // Add banned players
+            if (player.IsBanned)
+            {
+                PlayerDataManager.BannedPlayers.Add(
+                    new PlayerEntry
+                    {
+                        PlayerUID = player.PlayerUID,
+                        PlayerName = player.Name,
+                        Reason = player.BanReason ?? string.Empty,
+                        IssuedByPlayerName = player.BanBy ?? "System",
+                        UntilDate = player.BanUntil ?? DateTime.MaxValue,
+                    }
+                );
+                bannedCount++;
+            }
+
+            // Add whitelisted players
+            if (player.IsWhitelisted)
+            {
+                PlayerDataManager.WhitelistedPlayers.Add(
+                    new PlayerEntry
+                    {
+                        PlayerUID = player.PlayerUID,
+                        Reason = player.WhitelistedReason ?? string.Empty,
+                    }
+                );
+                whitelistedCount++;
+            }
+        }
+
+        // Mark both lists dirty to trigger persistence
+        PlayerDataManager.bannedListDirty = true;
+        PlayerDataManager.whiteListDirty = true;
+
+        LogNotification($"Synced {bannedCount} bans and {whitelistedCount} whitelists from control plane");
     }
 }
