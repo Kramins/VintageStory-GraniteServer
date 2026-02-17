@@ -1,0 +1,146 @@
+@page "/register"
+@layout LoginLayout
+@inject IAuthApiClient AuthClient
+@inject NavigationManager Navigation
+@inject ILogger<Register> Logger
+@inject ISnackbar Snackbar
+
+<PageTitle>Register - Granite Server Manager</PageTitle>
+
+<MudPaper Elevation="8" Class="pa-8" Style="width: 100%; max-width: 450px;">
+    <MudText Typo="Typo.h4" Align="Align.Center" GutterBottom="true">
+        <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Large" Class="mr-2" />
+        Create Account
+    </MudText>
+    <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary" Class="mb-6">
+        Register a new user account
+    </MudText>
+
+    <EditForm Model="@_model" OnValidSubmit="HandleRegister">
+        <DataAnnotationsValidator />
+        
+        <MudTextField @bind-Value="_model.Username"
+                      Label="Username"
+                      Variant="Variant.Outlined"
+                      Required="true"
+                      Disabled="@_loading"
+                      Margin="Margin.Normal"
+                      FullWidth="true"
+                      AutoFocus="true"
+                      HelperText="Username must be at least 3 characters" />
+        
+        <MudTextField @bind-Value="_model.Email"
+                      Label="Email (Optional)"
+                      Variant="Variant.Outlined"
+                      InputType="InputType.Email"
+                      Disabled="@_loading"
+                      Margin="Margin.Normal"
+                      FullWidth="true" />
+        
+        <MudTextField @bind-Value="_model.Password"
+                      Label="Password"
+                      Variant="Variant.Outlined"
+                      InputType="InputType.Password"
+                      Required="true"
+                      Disabled="@_loading"
+                      Margin="Margin.Normal"
+                      FullWidth="true"
+                      HelperText="Password must be at least 8 characters" />
+        
+        <MudTextField @bind-Value="_model.ConfirmPassword"
+                      Label="Confirm Password"
+                      Variant="Variant.Outlined"
+                      InputType="InputType.Password"
+                      Required="true"
+                      Disabled="@_loading"
+                      Margin="Margin.Normal"
+                      FullWidth="true" />
+        
+        <MudButton ButtonType="ButtonType.Submit"
+                   Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Size="Size.Large"
+                   FullWidth="true"
+                   Disabled="@_loading"
+                   Class="mt-6">
+            @if (_loading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Creating account...</span>
+            }
+            else
+            {
+                <span>Create Account</span>
+            }
+        </MudButton>
+    </EditForm>
+
+    <MudDivider Class="my-4" />
+
+    <MudText Typo="Typo.body2" Align="Align.Center">
+        Already have an account?
+        <MudLink Href="/login" Color="Color.Primary">Sign in</MudLink>
+    </MudText>
+</MudPaper>
+
+@code {
+    private RegisterModel _model = new();
+    private bool _loading = false;
+
+    private async Task HandleRegister()
+    {
+        // Validate passwords match
+        if (_model.Password != _model.ConfirmPassword)
+        {
+            Snackbar.Add("Passwords do not match", Severity.Error);
+            return;
+        }
+
+        _loading = true;
+        
+        try
+        {
+            Logger.LogInformation("Attempting registration for user: {Username}", _model.Username);
+            await AuthClient.RegisterAsync(_model.Username, _model.Password, _model.Email);
+            
+            Snackbar.Add("Registration successful! Please log in.", Severity.Success);
+            
+            // Redirect to login page
+            Navigation.NavigateTo("/login", replace: true);
+        }
+        catch (ApiException ex)
+        {
+            Logger.LogError(ex, "Registration failed");
+            
+            // Try to parse error message from API response
+            var errorMessage = "Registration failed. Please try again.";
+            if (ex.Message.Contains("already exists"))
+            {
+                errorMessage = "Username already exists";
+            }
+            else if (ex.Message.Contains("password"))
+            {
+                errorMessage = "Password does not meet requirements";
+            }
+            
+            Snackbar.Add(errorMessage, Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Registration failed unexpectedly");
+            Snackbar.Add("Registration failed. Please try again.", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private class RegisterModel
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+}

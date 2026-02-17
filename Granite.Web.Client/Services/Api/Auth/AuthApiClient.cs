@@ -83,6 +83,20 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
         }
     }
 
+    public async Task<JsonApiDocument<object>> RegisterAsync(string username, string password, string? email = null)
+    {
+        try
+        {
+            var request = new RegisterDTO { Username = username, Password = password, Email = email };
+            return await PostAsync<object>($"{BasePath}/register", request);
+        }
+        catch (ApiException ex)
+        {
+            Logger.LogError(ex, "Registration failed for user {Username}", username);
+            throw;
+        }
+    }
+
     public async Task<JsonApiDocument<AuthSettingsDTO>> GetAuthSettingsAsync()
     {
         try

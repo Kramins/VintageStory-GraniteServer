@@ -65,6 +65,13 @@
             </MudButton>
         </EditForm>
 
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.body2" Align="Align.Center">
+            Don't have an account?
+            <MudLink Href="/register" Color="Color.Primary">Create one</MudLink>
+        </MudText>
+
         @if (!string.IsNullOrEmpty(_authType))
         {
             <MudText Typo="Typo.caption" Align="Align.Center" Color="Color.Secondary" Class="mt-4">

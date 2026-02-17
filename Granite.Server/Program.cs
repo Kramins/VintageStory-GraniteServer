@@ -7,9 +7,12 @@ using Granite.Server.HostedServices;
 using Granite.Server.Hubs;
 using Granite.Server.Services;
 using Granite.Server.Services.Map;
+using GraniteServer.Data;
+using GraniteServer.Data.Entities;
 using GraniteServer.Server.HostedServices;
 using GraniteServer.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
@@ -41,8 +44,33 @@ builder.Services.AddGraniteDatabase(builder.Configuration, logger);
 // Add memory cache for player name resolution caching
 builder.Services.AddMemoryCache();
 
-// Add authentication services
-builder.Services.AddScoped<BasicAuthService>();
+// Add HttpContextAccessor (required by SignInManager)
+builder.Services.AddHttpContextAccessor();
+
+// Configure ASP.NET Core Identity for user management
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+{
+    // Password settings
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 8;
+    
+    // User settings
+    options.User.RequireUniqueEmail = false; // Username is primary identifier
+    
+    // Sign-in settings
+    options.SignIn.RequireConfirmedEmail = false;
+    options.SignIn.RequireConfirmedAccount = false;
+})
+.AddEntityFrameworkStores<GraniteDataContext>()
+.AddDefaultTokenProviders();
+
+// Add SignInManager for password sign-in validation
+builder.Services.AddScoped<SignInManager<ApplicationUser>>();
+
+// Add JWT token service (custom JWT generation with full claim control)
 builder.Services.AddScoped<JwtTokenService>();
 
 // Add business services

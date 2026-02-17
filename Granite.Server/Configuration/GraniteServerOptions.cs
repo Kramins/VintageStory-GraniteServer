@@ -6,10 +6,29 @@ public class GraniteServerOptions
 {
     public string JwtSecret { get; set; } = string.Empty;
     public int JwtExpiryMinutes { get; set; } = 60;
+    
+    /// <summary>
+    /// Admin username for seeding the initial admin user account on startup.
+    /// This is only used for initial seeding - after the admin user is created,
+    /// additional users can be registered via the API.
+    /// </summary>
     public string Username { get; set; } = "admin";
-    public string Password { get; set; } = Guid.NewGuid().ToString();
+    
+    /// <summary>
+    /// Admin password for seeding the initial admin user account on startup.
+    /// This is only used for initial seeding - after the admin user is created,
+    /// additional users can be registered via the API.
+    /// Defaults to a strong password if not configured.
+    /// </summary>
+    public string Password { get; set; } = $"Admin{Guid.NewGuid():N}1!";
+    
     public int Port { get; set; } = 5000;
-    public string AuthenticationType { get; set; } = "basic";
+    
+    /// <summary>
+    /// Authentication type identifier returned to clients.
+    /// With ASP.NET Identity integration, this defaults to "identity".
+    /// </summary>
+    public string AuthenticationType { get; set; } = "identity";
 
     // Database configuration
     public string DatabaseType { get; set; } = "Sqlite";

@@ -2,6 +2,8 @@ using Granite.Common.Dto;
 using Granite.Server.Configuration;
 using Granite.Server.Services;
 using GraniteServer.Data;
+using GraniteServer.Data.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -13,21 +15,24 @@ namespace Granite.Server.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly ILogger<AuthController> _logger;
-    private readonly BasicAuthService _basicAuthService;
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly JwtTokenService _jwtTokenService;
     private readonly GraniteServerOptions _options;
     private readonly GraniteDataContext _dbContext;
 
     public AuthController(
         ILogger<AuthController> logger,
-        BasicAuthService basicAuthService,
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
         JwtTokenService jwtTokenService,
         IOptions<GraniteServerOptions> options,
         GraniteDataContext dbContext
     )
     {
         _logger = logger;
-        _basicAuthService = basicAuthService;
+        _userManager = userManager;
+        _signInManager = signInManager;
         _jwtTokenService = jwtTokenService;
         _options = options.Value;
         _dbContext = dbContext;
@@ -39,15 +44,60 @@ public class AuthController : ControllerBase
     /// <param name="credentials">Basic authentication credentials</param>
     /// <returns>JWT token if authentication successful</returns>
     [HttpPost("login")]
-    public ActionResult<TokenDTO> Login([FromBody] BasicAuthCredentialsDTO credentials)
+    public async Task<ActionResult<TokenDTO>> Login([FromBody] BasicAuthCredentialsDTO credentials)
     {
-        if (!_basicAuthService.ValidateCredentials(credentials.Username, credentials.Password))
+        var user = await _userManager.FindByNameAsync(credentials.Username);
+        if (user == null)
+        {
+            return Unauthorized(new { message = "Invalid username or password" });
+        }
+
+        var result = await _signInManager.CheckPasswordSignInAsync(
+            user,
+            credentials.Password,
+            lockoutOnFailure: false
+        );
+
+        if (!result.Succeeded)
         {
             return Unauthorized(new { message = "Invalid username or password" });
         }
 
         var token = _jwtTokenService.GenerateUserToken(credentials.Username, "Admin");
         return Ok(token);
+    }
+
+    /// <summary>
+    /// Registers a new user account.
+    /// </summary>
+    /// <param name="registerDto">Registration details</param>
+    /// <returns>Success message or validation errors</returns>
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterDTO registerDto)
+    {
+        var existingUser = await _userManager.FindByNameAsync(registerDto.Username);
+        if (existingUser != null)
+        {
+            return BadRequest(new { message = "Username already exists" });
+        }
+
+        var user = new ApplicationUser
+        {
+            UserName = registerDto.Username,
+            Email = registerDto.Email,
+        };
+
+        var result = await _userManager.CreateAsync(user, registerDto.Password);
+
+        if (!result.Succeeded)
+        {
+            return BadRequest(
+                new { message = "Registration failed", errors = result.Errors.Select(e => e.Description) }
+            );
+        }
+
+        _logger.LogInformation("User {Username} registered successfully", registerDto.Username);
+        return Ok(new { message = "User registered successfully" });
     }
 
     /// <summary>

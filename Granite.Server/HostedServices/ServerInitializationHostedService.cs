@@ -1,6 +1,7 @@
 using Granite.Server.Configuration;
 using GraniteServer.Data;
 using GraniteServer.Data.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -32,9 +33,13 @@ public class ServerInitializationHostedService : IHostedService
 
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<GraniteDataContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
         try
         {
+            // Seed admin user
+            await SeedAdminUserAsync(userManager, cancellationToken);
+
             // Check if server entity exists
             var serverEntity = await dbContext.Servers.FirstOrDefaultAsync(
                 s => s.Id == _options.GraniteModServerId,
@@ -92,6 +97,66 @@ public class ServerInitializationHostedService : IHostedService
                 _options.GraniteModServerId
             );
             throw;
+        }
+    }
+
+    private async Task SeedAdminUserAsync(
+        UserManager<ApplicationUser> userManager,
+        CancellationToken cancellationToken
+    )
+    {
+        var adminUsername = _options.Username;
+        var adminPassword = _options.Password;
+
+        if (string.IsNullOrWhiteSpace(adminUsername) || string.IsNullOrWhiteSpace(adminPassword))
+        {
+            _logger.LogWarning(
+                "Admin username or password not configured. Skipping admin user seeding."
+            );
+            return;
+        }
+
+        var existingAdmin = await userManager.FindByNameAsync(adminUsername);
+        if (existingAdmin != null)
+        {
+            _logger.LogInformation(
+                "Admin user '{Username}' already exists. Skipping seeding.",
+                adminUsername
+            );
+            return;
+        }
+
+        var adminUser = new ApplicationUser
+        {
+            UserName = adminUsername,
+            Email = null, // Email is optional
+        };
+
+        var result = await userManager.CreateAsync(adminUser, adminPassword);
+
+        if (result.Succeeded)
+        {
+            _logger.LogInformation(
+                "Admin user '{Username}' created successfully.",
+                adminUsername
+            );
+
+            // Log a warning if using the default random password
+            if (adminPassword.Length == 36 && Guid.TryParse(adminPassword, out _))
+            {
+                _logger.LogWarning(
+                    "Admin user created with auto-generated password. Please change this password in production!"
+                );
+            }
+        }
+        else
+        {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            _logger.LogError(
+                "Failed to create admin user '{Username}': {Errors}",
+                adminUsername,
+                errors
+            );
         }
     }
 
