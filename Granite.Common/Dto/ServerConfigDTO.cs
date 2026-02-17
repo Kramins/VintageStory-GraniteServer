@@ -8,7 +8,7 @@ public record ServerConfigDTO
     public int? MaxClients { get; init; }
     public string? Password { get; init; }
     public int? MaxChunkRadius { get; init; }
-    public string? WhitelistMode { get; init; }
+    public bool? WhitelistMode { get; init; }
     public bool? AllowPvP { get; init; }
     public bool? AllowFireSpread { get; init; }
     public bool? AllowFallingBlocks { get; init; }

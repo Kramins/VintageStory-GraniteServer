@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Granite.Data.Migrations.Sqlite
 {
     [DbContext(typeof(GraniteDataContextSqlite))]
-    [Migration("20260209202705_v100")]
+    [Migration("20260217023632_v100")]
     partial class v100
     {
         /// <inheritdoc />
@@ -536,8 +536,8 @@ namespace Granite.Data.Migrations.Sqlite
                     b.Property<string>("WelcomeMessage")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("WhitelistMode")
-                        .HasColumnType("TEXT");
+                    b.Property<bool?>("WhitelistMode")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

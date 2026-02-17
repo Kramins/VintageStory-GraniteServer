@@ -96,13 +96,10 @@
                                      Min="1"
                                      HelperText="Server chunk render distance" />
                     
-                    <MudSelect T="string" @bind-Value="_configModel.WhitelistMode" 
-                               Label="Whitelist Mode" 
-                               Variant="Variant.Outlined" 
-                               HelperText="Enable or disable whitelist">
-                        <MudSelectItem T="string" Value="@("false")">Disabled</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("true")">Enabled</MudSelectItem>
-                    </MudSelect>
+                    <MudSwitch @bind-Value="_configModel.WhitelistMode" 
+                               Label="Enable Whitelist Mode"
+                               Color="Color.Primary"
+                               Class="my-2" />
 
                     <MudDivider Class="my-2" />
                     <MudText Typo="Typo.h6">Game Rules</MudText>
@@ -233,7 +230,7 @@
                     MaxClients = configResponse.Data.MaxClients,
                     Password = configResponse.Data.Password,
                     MaxChunkRadius = configResponse.Data.MaxChunkRadius,
-                    WhitelistMode = configResponse.Data.WhitelistMode,
+                    WhitelistMode = configResponse.Data.WhitelistMode ?? false,
                     AllowPvP = configResponse.Data.AllowPvP ?? false,
                     AllowFireSpread = configResponse.Data.AllowFireSpread ?? false,
                     AllowFallingBlocks = configResponse.Data.AllowFallingBlocks ?? false

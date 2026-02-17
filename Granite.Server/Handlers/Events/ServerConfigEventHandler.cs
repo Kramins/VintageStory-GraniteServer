@@ -46,7 +46,7 @@ public class ServerConfigEventHandler : IEventHandler<ServerConfigSyncedEvent>
             if (config.MaxChunkRadius.HasValue)
                 serverEntity.MaxChunkRadius = config.MaxChunkRadius;
             
-            if (config.WhitelistMode != null)
+            if (config.WhitelistMode.HasValue)
                 serverEntity.WhitelistMode = config.WhitelistMode;
             
             if (config.AllowPvP.HasValue)

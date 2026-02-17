@@ -133,7 +133,7 @@ public class ServersServiceTests : IDisposable
         dbServer.MaxClients.Should().Be(20);
         dbServer.Password.Should().Be("secret123");
         dbServer.MaxChunkRadius.Should().Be(8);
-        dbServer.WhitelistMode.Should().Be("True");
+        dbServer.WhitelistMode.Should().Be(true);
         dbServer.AllowPvP.Should().Be(false);
         dbServer.AllowFireSpread.Should().Be(true);
         dbServer.AllowFallingBlocks.Should().Be(false);

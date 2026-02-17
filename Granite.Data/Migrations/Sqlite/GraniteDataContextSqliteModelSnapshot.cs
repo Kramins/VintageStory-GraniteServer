@@ -533,8 +533,8 @@ namespace Granite.Data.Migrations.Sqlite
                     b.Property<string>("WelcomeMessage")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("WhitelistMode")
-                        .HasColumnType("TEXT");
+                    b.Property<bool?>("WhitelistMode")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
