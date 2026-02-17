@@ -540,8 +540,8 @@ namespace Granite.Data.Migrations.Postgres
                     b.Property<string>("WelcomeMessage")
                         .HasColumnType("text");
 
-                    b.Property<string>("WhitelistMode")
-                        .HasColumnType("text");
+                    b.Property<bool?>("WhitelistMode")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 

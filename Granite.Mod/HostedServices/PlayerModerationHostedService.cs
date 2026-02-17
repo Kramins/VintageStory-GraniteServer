@@ -1,56 +1,73 @@
 using GraniteServer.Messaging.Commands;
 using GraniteServer.Messaging.Events;
-using GraniteServer.Messaging.Handlers.Commands;
 using GraniteServer.Mod;
 using GraniteServer.Services;
+using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 using Vintagestory.Server;
 
-namespace GraniteServer.Mod.Handlers.Commands;
+namespace GraniteServer.HostedServices;
 
-public class PlayerCommandHandlers
-    : ICommandHandler<KickPlayerCommand>,
-        ICommandHandler<BanPlayerCommand>,
-        ICommandHandler<UnbanPlayerCommand>,
-        ICommandHandler<WhitelistPlayerCommand>,
-        ICommandHandler<UnwhitelistPlayerCommand>
+/// <summary>
+/// Hosted service that handles player moderation commands such as kick, ban, whitelist operations.
+/// Subscribes directly to the message bus for player moderation commands.
+/// </summary>
+public class PlayerModerationHostedService : GraniteHostedServiceBase
 {
-    private ICoreServerAPI _api;
-    private ServerCommandService _commandService;
-    private ClientMessageBusService _messageBus;
-    private GraniteModConfig _config;
+    private readonly ICoreServerAPI _api;
+    private readonly ServerCommandService _commandService;
+    private readonly GraniteModConfig _config;
 
     private PlayerDataManager PlayerDataManager => (PlayerDataManager)_api.PlayerData;
 
-    public PlayerCommandHandlers(
+    public PlayerModerationHostedService(
         ICoreServerAPI api,
         ServerCommandService commandService,
         ClientMessageBusService messageBus,
-        GraniteModConfig config
+        GraniteModConfig config,
+        ILogger logger
     )
+        : base(messageBus, logger)
     {
-        _api = api;
-        _commandService = commandService;
-        _messageBus = messageBus;
-        _config = config;
+        _api = api ?? throw new ArgumentNullException(nameof(api));
+        _commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
+        _config = config ?? throw new ArgumentNullException(nameof(config));
     }
 
-    async Task ICommandHandler<KickPlayerCommand>.Handle(KickPlayerCommand command)
+    public override Task StartAsync(CancellationToken cancellationToken)
+    {
+        LogNotification("Starting service...");
+
+        SubscribeToCommand<KickPlayerCommand>(HandleKickPlayerCommand);
+        SubscribeToCommand<BanPlayerCommand>(HandleBanPlayerCommand);
+        SubscribeToCommand<UnbanPlayerCommand>(HandleUnbanPlayerCommand);
+        SubscribeToCommand<WhitelistPlayerCommand>(HandleWhitelistPlayerCommand);
+        SubscribeToCommand<UnwhitelistPlayerCommand>(HandleUnwhitelistPlayerCommand);
+
+        LogNotification("Service started");
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleKickPlayerCommand(KickPlayerCommand command)
     {
         var player = _api
             .Server.Players.Where(p => p.PlayerUID == command.Data!.PlayerId)
             .FirstOrDefault();
+
         if (player != null)
         {
             try
             {
-                // player.Disconnect(reason);
+                LogNotification(
+                    "Kicking player {player.PlayerName} (UID: {command.Data!.PlayerId})"
+                );
+
                 var result = await _commandService.KickUserAsync(
                     player.PlayerName,
                     command.Data!.Reason
                 );
 
-                var kickedEvent = _messageBus.CreateEvent<PlayerKickedEvent>(
+                var kickedEvent = MessageBus.CreateEvent<PlayerKickedEvent>(
                     _config.ServerId,
                     e =>
                     {
@@ -60,22 +77,28 @@ public class PlayerCommandHandlers
                         e.Data!.IssuedBy = "System";
                     }
                 );
-                _messageBus.Publish(kickedEvent);
+                MessageBus.Publish(kickedEvent);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Handle exception
+                LogError("Failed to kick player {player.PlayerName}: {ex.Message}");
             }
+        }
+        else
+        {
+            LogWarning("Player with UID {command.Data!.PlayerId} not found for kick command");
         }
     }
 
-    Task ICommandHandler<BanPlayerCommand>.Handle(BanPlayerCommand command)
+    private void HandleBanPlayerCommand(BanPlayerCommand command)
     {
         var playerId = command.Data!.PlayerId;
         var playerName = command.Data.PlayerName;
         var reason = command.Data.Reason;
         var untilDate = command.Data.ExpirationDate;
         var issuedBy = command.Data.IssuedBy;
+
+        LogNotification("Banning player {playerName} (UID: {playerId})");
 
         var isBanned = PlayerDataManager.BannedPlayers.Any(bp => bp.PlayerUID == playerId);
         if (isBanned)
@@ -96,7 +119,7 @@ public class PlayerCommandHandlers
 
         PlayerDataManager.bannedListDirty = true;
 
-        var bannedEvent = _messageBus.CreateEvent<PlayerBannedEvent>(
+        var bannedEvent = MessageBus.CreateEvent<PlayerBannedEvent>(
             _config.ServerId,
             e =>
             {
@@ -107,39 +130,34 @@ public class PlayerCommandHandlers
                 e.Data!.IssuedBy = issuedBy;
             }
         );
-        _messageBus.Publish(bannedEvent);
-
-        return Task.CompletedTask;
+        MessageBus.Publish(bannedEvent);
     }
 
-    Task ICommandHandler.Handle(object command)
-    {
-        throw new NotImplementedException();
-    }
-
-    Task ICommandHandler<UnbanPlayerCommand>.Handle(UnbanPlayerCommand command)
+    private void HandleUnbanPlayerCommand(UnbanPlayerCommand command)
     {
         var playerId = command.Data!.PlayerId;
+
+        LogNotification("Unbanning player with UID: {playerId}");
 
         PlayerDataManager.BannedPlayers.RemoveAll(pe => pe.PlayerUID == playerId);
         PlayerDataManager.bannedListDirty = true;
 
-        var unbannedEvent = _messageBus.CreateEvent<PlayerUnbannedEvent>(
+        var unbannedEvent = MessageBus.CreateEvent<PlayerUnbannedEvent>(
             _config.ServerId,
             e =>
             {
                 e.Data!.PlayerUID = playerId;
             }
         );
-        _messageBus.Publish(unbannedEvent);
-
-        return Task.CompletedTask;
+        MessageBus.Publish(unbannedEvent);
     }
 
-    Task ICommandHandler<WhitelistPlayerCommand>.Handle(WhitelistPlayerCommand command)
+    private void HandleWhitelistPlayerCommand(WhitelistPlayerCommand command)
     {
         var playerId = command.Data!.PlayerId;
         var reason = command.Data.Reason;
+
+        LogNotification("Whitelisting player with UID: {playerId}");
 
         var isWhitelisted = PlayerDataManager.WhitelistedPlayers.Any(wp =>
             wp.PlayerUID == playerId
@@ -155,35 +173,32 @@ public class PlayerCommandHandlers
 
         PlayerDataManager.whiteListDirty = true;
 
-        var whitelistedEvent = _messageBus.CreateEvent<PlayerWhitelistedEvent>(
+        var whitelistedEvent = MessageBus.CreateEvent<PlayerWhitelistedEvent>(
             _config.ServerId,
             e =>
             {
                 e.Data!.PlayerUID = playerId;
-                // e.Data!.Reason = reason;
             }
         );
-        _messageBus.Publish(whitelistedEvent);
-
-        return Task.CompletedTask;
+        MessageBus.Publish(whitelistedEvent);
     }
 
-    Task ICommandHandler<UnwhitelistPlayerCommand>.Handle(UnwhitelistPlayerCommand command)
+    private void HandleUnwhitelistPlayerCommand(UnwhitelistPlayerCommand command)
     {
         var playerId = command.Data!.PlayerId;
+
+        LogNotification("Removing player from whitelist with UID: {playerId}");
 
         PlayerDataManager.WhitelistedPlayers.RemoveAll(pe => pe.PlayerUID == playerId);
         PlayerDataManager.whiteListDirty = true;
 
-        var unwhitelistedEvent = _messageBus.CreateEvent<PlayerUnwhitelistedEvent>(
+        var unwhitelistedEvent = MessageBus.CreateEvent<PlayerUnwhitelistedEvent>(
             _config.ServerId,
             e =>
             {
                 e.Data!.PlayerUID = playerId;
             }
         );
-        _messageBus.Publish(unwhitelistedEvent);
-
-        return Task.CompletedTask;
+        MessageBus.Publish(unwhitelistedEvent);
     }
 }

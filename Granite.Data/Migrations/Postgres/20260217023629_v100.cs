@@ -64,7 +64,7 @@ namespace Granite.Data.Migrations.Postgres
                     MaxClients = table.Column<int>(type: "integer", nullable: true),
                     Password = table.Column<string>(type: "text", nullable: true),
                     MaxChunkRadius = table.Column<int>(type: "integer", nullable: true),
-                    WhitelistMode = table.Column<string>(type: "text", nullable: true),
+                    WhitelistMode = table.Column<bool>(type: "boolean", nullable: true),
                     AllowPvP = table.Column<bool>(type: "boolean", nullable: true),
                     AllowFireSpread = table.Column<bool>(type: "boolean", nullable: true),
                     AllowFallingBlocks = table.Column<bool>(type: "boolean", nullable: true)

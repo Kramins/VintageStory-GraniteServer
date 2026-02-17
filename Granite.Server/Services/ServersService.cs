@@ -158,7 +158,7 @@ public class ServersService
             MaxClients = request.MaxClients ?? 16,
             Password = request.Password ?? string.Empty,
             MaxChunkRadius = request.MaxChunkRadius ?? 8,
-            WhitelistMode = request.WhitelistMode?.ToString() ?? "None",
+            WhitelistMode = request.WhitelistMode ?? false,
             AllowPvP = request.AllowPvP ?? true,
             AllowFireSpread = request.AllowFireSpread ?? true,
             AllowFallingBlocks = request.AllowFallingBlocks ?? true,
@@ -237,7 +237,7 @@ public class ServersService
         server.MaxClients = request.MaxClients;
         server.Password = request.Password;
         server.MaxChunkRadius = request.MaxChunkRadius;
-        server.WhitelistMode = request.WhitelistMode?.ToString();
+        server.WhitelistMode = request.WhitelistMode;
         server.AllowPvP = request.AllowPvP;
         server.AllowFireSpread = request.AllowFireSpread;
         server.AllowFallingBlocks = request.AllowFallingBlocks;

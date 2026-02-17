@@ -14,7 +14,9 @@ using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.API.Util;
 
-public class WorldMapHostedService : IHostedService, IDisposable
+namespace GraniteServer.HostedServices;
+
+public class WorldMapHostedService : GraniteHostedServiceBase
 {
     const int chunksize = GlobalConstants.ChunkSize;
     private int _regionSize;
@@ -22,7 +24,6 @@ public class WorldMapHostedService : IHostedService, IDisposable
     private readonly IMapDataExtractionService _mapDataExtractionService;
     private ClientMessageBusService _messageBus;
     private GraniteModConfig _config;
-    private readonly ILogger _logger;
     private readonly ConcurrentDictionary<(int ChunkX, int ChunkZ), string> _chunkHashes =
         new ConcurrentDictionary<(int, int), string>();
     private readonly Channel<(int chunkX, int chunkZ)> _chunkQueue;
@@ -44,12 +45,12 @@ public class WorldMapHostedService : IHostedService, IDisposable
         GraniteModConfig config,
         ILogger logger
     )
+        : base(messageBus, logger)
     {
         _api = api;
         _mapDataExtractionService = mapDataExtractionService;
         _messageBus = messageBus;
         _config = config;
-        _logger = logger;
         _regionSize = _api.WorldManager.RegionSize;
 
         // Channel with bounded capacity for backpressure
@@ -61,7 +62,7 @@ public class WorldMapHostedService : IHostedService, IDisposable
         );
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public override Task StartAsync(CancellationToken cancellationToken)
     {
         _cts = new CancellationTokenSource();
         _api.Event.ChunkColumnLoaded += OnChunkColumnLoaded;
@@ -99,7 +100,7 @@ public class WorldMapHostedService : IHostedService, IDisposable
         _processingTask = ProcessChunkQueueAsync(_cts.Token);
         _processingPlayerPositionsTask = ProcessPlayerPositionsAsync(_cts.Token);
 
-        _logger.Notification("WorldMapHostedService started");
+        LogNotification("WorldMapHostedService started");
         return Task.CompletedTask;
     }
 
@@ -151,7 +152,7 @@ public class WorldMapHostedService : IHostedService, IDisposable
                     }
                     catch (Exception ex)
                     {
-                        _logger.Warning(
+                        LogWarning(
                             $"Error processing position for player {player?.PlayerName}: {ex.Message}"
                         );
                     }
@@ -167,13 +168,13 @@ public class WorldMapHostedService : IHostedService, IDisposable
             }
             catch (Exception ex)
             {
-                _logger.Error($"Error in player position processing loop: {ex}");
+                LogError($"Error in player position processing loop: {ex}");
                 // Continue running despite errors
                 await Task.Delay(_playerPositionUpdateInterval, cancellationToken);
             }
         }
 
-        _logger.Debug("Player position processing stopped");
+        LogDebug("Player position processing stopped");
     }
 
     private void OnChunkDirty(Vec3i chunkCoord, IWorldChunk chunk, EnumChunkDirtyReason reason)
@@ -227,7 +228,7 @@ public class WorldMapHostedService : IHostedService, IDisposable
 
                 if (chunkHash != null && !ShouldProcessChunk(chunkX, chunkZ, chunkHash))
                 {
-                    _logger.Debug($"Skipped chunk ({chunkX}, {chunkZ}) - no changes detected");
+                    LogDebug($"Skipped chunk ({chunkX}, {chunkZ}) - no changes detected");
                     continue;
                 }
 
@@ -260,24 +261,22 @@ public class WorldMapHostedService : IHostedService, IDisposable
                         UpdateChunkHash(chunkX, chunkZ, chunkData.ContentHash);
 
                         _messageBus.Publish(mapChunkEvent);
-                        _logger.Debug($"Published chunk data for ({chunkX}, {chunkZ})");
+                        LogDebug($"Published chunk data for ({chunkX}, {chunkZ})");
                     }
                     else
                     {
-                        _logger.Debug($"Skipped chunk ({chunkX}, {chunkZ}) - no changes detected");
+                        LogDebug($"Skipped chunk ({chunkX}, {chunkZ}) - no changes detected");
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.Error(
-                    $"Error extracting/sending chunk data for ({chunkX}, {chunkZ}): {ex}"
-                );
+                LogError($"Error extracting/sending chunk data for ({chunkX}, {chunkZ}): {ex}");
             }
         }
     }
 
-    public async Task StopAsync(CancellationToken cancellationToken)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _api.Event.ChunkColumnLoaded -= OnChunkColumnLoaded;
 
@@ -290,7 +289,7 @@ public class WorldMapHostedService : IHostedService, IDisposable
             await _processingTask;
         }
 
-        _logger.Notification("WorldMapHostedService stopped");
+        await base.StopAsync(cancellationToken);
     }
 
     public void Dispose()
@@ -307,7 +306,7 @@ public class WorldMapHostedService : IHostedService, IDisposable
             var player = _api.World.PlayerByUid(playerUID);
             if (player?.Entity?.Pos == null)
             {
-                _logger.Debug($"Player {playerUID} entity not loaded yet, cannot send position");
+                LogDebug($"Player {playerUID} entity not loaded yet, cannot send position");
                 return;
             }
 
@@ -323,11 +322,11 @@ public class WorldMapHostedService : IHostedService, IDisposable
             );
 
             _messageBus.Publish(playerPositionChangedEvent);
-            _logger.Debug($"Sent initial position for player {player.PlayerName}");
+            LogDebug($"Sent initial position for player {player.PlayerName}");
         }
         catch (Exception ex)
         {
-            _logger.Error($"Failed to send initial position for player {playerUID}: {ex.Message}");
+            LogError($"Failed to send initial position for player {playerUID}: {ex.Message}");
         }
     }
 }

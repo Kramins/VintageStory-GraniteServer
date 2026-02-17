@@ -63,7 +63,7 @@ namespace Granite.Data.Migrations.Sqlite
                     MaxClients = table.Column<int>(type: "INTEGER", nullable: true),
                     Password = table.Column<string>(type: "TEXT", nullable: true),
                     MaxChunkRadius = table.Column<int>(type: "INTEGER", nullable: true),
-                    WhitelistMode = table.Column<string>(type: "TEXT", nullable: true),
+                    WhitelistMode = table.Column<bool>(type: "INTEGER", nullable: true),
                     AllowPvP = table.Column<bool>(type: "INTEGER", nullable: true),
                     AllowFireSpread = table.Column<bool>(type: "INTEGER", nullable: true),
                     AllowFallingBlocks = table.Column<bool>(type: "INTEGER", nullable: true)

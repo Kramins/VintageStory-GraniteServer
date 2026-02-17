@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Granite.Data.Migrations.Postgres
 {
     [DbContext(typeof(GraniteDataContextPostgres))]
-    [Migration("20260209202703_v100")]
+    [Migration("20260217023629_v100")]
     partial class v100
     {
         /// <inheritdoc />
@@ -543,8 +543,8 @@ namespace Granite.Data.Migrations.Postgres
                     b.Property<string>("WelcomeMessage")
                         .HasColumnType("text");
 
-                    b.Property<string>("WhitelistMode")
-                        .HasColumnType("text");
+                    b.Property<bool?>("WhitelistMode")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 

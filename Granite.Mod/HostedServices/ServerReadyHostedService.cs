@@ -16,11 +16,10 @@ namespace GraniteServer.HostedServices;
 /// Sends ServerReadyEvent to the control plane once the server reaches RunGame phase
 /// and SignalR connection is established.
 /// </summary>
-public class ServerReadyHostedService : IHostedService, IDisposable
+public class ServerReadyHostedService : GraniteHostedServiceBase
 {
     private readonly ICoreServerAPI _api;
     private readonly ClientMessageBusService _messageBus;
-    private readonly ILogger _logger;
     private readonly SignalRConnectionState _connectionState;
     private readonly GraniteModConfig _config;
     private CancellationTokenSource? _cts;
@@ -33,17 +32,17 @@ public class ServerReadyHostedService : IHostedService, IDisposable
         SignalRConnectionState connectionState,
         GraniteModConfig config
     )
+        : base(messageBus, logger)
     {
         _api = api;
         _messageBus = messageBus;
-        _logger = logger;
         _connectionState = connectionState;
         _config = config;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public override Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.Notification("[ServerReady] Starting server ready notification service...");
+        LogNotification("Starting server ready notification service...");
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         // Register event handler for server run phase
@@ -52,19 +51,17 @@ public class ServerReadyHostedService : IHostedService, IDisposable
         return Task.CompletedTask;
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public override Task StopAsync(CancellationToken cancellationToken)
     {
-        _logger.Notification("[ServerReady] Stopping server ready notification service...");
         _cts?.Cancel();
         _cts?.Dispose();
-        return Task.CompletedTask;
+        return base.StopAsync(cancellationToken);
     }
-
 
     private void OnServerRunning()
     {
-        _logger.Notification("[ServerReady] Server has reached RunGame phase, waiting for SignalR connection...");
-        
+        LogNotification("Server has reached RunGame phase, waiting for SignalR connection...");
+
         // Start background task to wait for connection before announcing ready
         _ = WaitForConnectionAndAnnounceReadyAsync(_cts?.Token ?? CancellationToken.None);
     }
@@ -95,7 +92,7 @@ public class ServerReadyHostedService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.Error($"[ServerReady] Error waiting for connection: {ex.Message}");
+            LogError($"Error waiting for connection: {ex.Message}");
         }
     }
 
@@ -103,7 +100,7 @@ public class ServerReadyHostedService : IHostedService, IDisposable
     {
         try
         {
-            _logger.Notification("[ServerReady] Announcing server ready to control plane...");
+            LogNotification("Announcing server ready to control plane...");
 
             var readyEvent = _messageBus.CreateEvent<ServerReadyEvent>(
                 _config.ServerId,
@@ -115,11 +112,11 @@ public class ServerReadyHostedService : IHostedService, IDisposable
             );
 
             _messageBus.Publish(readyEvent);
-            _logger.Notification("[ServerReady] Server ready event sent successfully.");
+            LogNotification("Server ready event sent successfully.");
         }
         catch (Exception ex)
         {
-            _logger.Error($"[ServerReady] Failed to announce server ready: {ex.Message}");
+            LogError($"Failed to announce server ready: {ex.Message}");
         }
     }
 
