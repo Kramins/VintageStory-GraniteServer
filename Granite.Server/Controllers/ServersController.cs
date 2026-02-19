@@ -53,6 +53,7 @@ public class ServersController : ControllerBase
         return Ok(new JsonApiDocument<ServerDTO>(server));
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<ActionResult<JsonApiDocument<ServerCreatedResponseDTO>>> CreateServer(
         [FromBody] CreateServerRequestDTO request
@@ -99,6 +100,7 @@ public class ServersController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPut("{id}")]
     public async Task<ActionResult<JsonApiDocument<ServerDTO>>> UpdateServer(
         Guid id,
@@ -159,6 +161,7 @@ public class ServersController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteServer(Guid id)
     {
@@ -183,6 +186,7 @@ public class ServersController : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("{id}/regenerate-token")]
     public async Task<
         ActionResult<JsonApiDocument<TokenRegeneratedResponseDTO>>

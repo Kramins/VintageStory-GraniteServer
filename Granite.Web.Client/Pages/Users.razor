@@ -1,0 +1,224 @@
+@page "/admin/users"
+@attribute [Authorize(Roles = "Admin")]
+@inject IUserAdminApiClient UserAdminClient
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject ILogger<Users> Logger
+
+<PageTitle>User Management - Granite Server Manager</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Class="mr-2" />
+    User Management
+</MudText>
+
+@if (_loading)
+{
+    <div class="d-flex justify-center pa-8">
+        <MudProgressCircular Indeterminate="true" />
+    </div>
+}
+else if (_error != null)
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else
+{
+    <MudTable Items="@_users" Hover="true" Striped="true" Dense="true" Class="mt-2">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Registered Users</MudText>
+            <MudSpacer />
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="LoadUsersAsync" Title="Refresh" />
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Username</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Roles</MudTh>
+            <MudTh>Registered</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Username">@context.Username</MudTd>
+            <MudTd DataLabel="Email">@(context.Email ?? "—")</MudTd>
+            <MudTd DataLabel="Roles">
+                @foreach (var role in context.Roles)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="@(role == "Admin" ? Color.Warning : Color.Default)">@role</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Registered">@context.RegisteredAt.ToLocalTime().ToString("g")</MudTd>
+            <MudTd DataLabel="Status">
+                @if (context.IsApproved)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">Approved</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.HourglassEmpty">Pending</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                @if (!context.IsApproved)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.CheckCircle"
+                                   Color="Color.Success"
+                                   Size="Size.Small"
+                                   Title="Approve"
+                                   OnClick="@(() => ApproveUserAsync(context))" />
+                }
+                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               Title="Edit"
+                               OnClick="@(() => EditUserAsync(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.LockReset"
+                               Color="Color.Warning"
+                               Size="Size.Small"
+                               Title="Reset Password"
+                               OnClick="@(() => ResetUserPasswordAsync(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                               Color="Color.Error"
+                               Size="Size.Small"
+                               Title="Delete"
+                               OnClick="@(() => DeleteUserAsync(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No users found.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+}
+
+@code {
+    private IList<UserDTO>? _users;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            var response = await UserAdminClient.GetAllUsersAsync();
+            _users = response.Data ?? [];
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load users");
+            _error = "Failed to load users. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task EditUserAsync(UserDTO user)
+    {
+        var parameters = new DialogParameters<EditUserDialog>
+        {
+            { x => x.User, user }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<EditUserDialog>("Edit User", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled || result.Data is not UpdateUserDTO dto)
+            return;
+
+        try
+        {
+            await UserAdminClient.UpdateUserAsync(user.Id, dto);
+            Snackbar.Add($"User '{user.Username}' updated.", Severity.Success);
+            await LoadUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to update user {Id}", user.Id);
+            Snackbar.Add("Failed to update user.", Severity.Error);
+        }
+    }
+
+    private async Task ResetUserPasswordAsync(UserDTO user)
+    {
+        var parameters = new DialogParameters<ResetPasswordDialog>
+        {
+            { x => x.Username, user.Username }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<ResetPasswordDialog>("Reset Password", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled || result.Data is not string newPassword)
+            return;
+
+        try
+        {
+            await UserAdminClient.ResetPasswordAsync(user.Id, newPassword);
+            Snackbar.Add($"Password reset for '{user.Username}'.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to reset password for user {Id}", user.Id);
+            Snackbar.Add("Failed to reset password.", Severity.Error);
+        }
+    }
+
+    private async Task ApproveUserAsync(UserDTO user)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Approve User",
+            $"Approve account for '{user.Username}'?",
+            yesText: "Approve",
+            cancelText: "Cancel"
+        );
+
+        if (confirmed != true)
+            return;
+
+        try
+        {
+            await UserAdminClient.ApproveUserAsync(user.Id);
+            Snackbar.Add($"User '{user.Username}' approved.", Severity.Success);
+            await LoadUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to approve user {Id}", user.Id);
+            Snackbar.Add("Failed to approve user.", Severity.Error);
+        }
+    }
+
+    private async Task DeleteUserAsync(UserDTO user)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Delete User",
+            $"Permanently delete account for '{user.Username}'? This cannot be undone.",
+            yesText: "Delete",
+            cancelText: "Cancel"
+        );
+
+        if (confirmed != true)
+            return;
+
+        try
+        {
+            await UserAdminClient.DeleteUserAsync(user.Id);
+            Snackbar.Add($"User '{user.Username}' deleted.", Severity.Success);
+            await LoadUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete user {Id}", user.Id);
+            Snackbar.Add("Failed to delete user.", Severity.Error);
+        }
+    }
+}

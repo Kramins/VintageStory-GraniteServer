@@ -6,10 +6,41 @@ public class GraniteServerOptions
 {
     public string JwtSecret { get; set; } = string.Empty;
     public int JwtExpiryMinutes { get; set; } = 60;
+    
+    /// <summary>
+    /// Admin username for seeding the initial admin user account on startup.
+    /// This is only used for initial seeding - after the admin user is created,
+    /// additional users can be registered via the API.
+    /// </summary>
     public string Username { get; set; } = "admin";
-    public string Password { get; set; } = Guid.NewGuid().ToString();
+    
+    /// <summary>
+    /// Admin password for seeding the initial admin user account on startup.
+    /// This is only used for initial seeding - after the admin user is created,
+    /// additional users can be registered via the API.
+    /// Defaults to a strong password if not configured.
+    /// </summary>
+    public string Password { get; set; } = $"Admin{Guid.NewGuid():N}1!";
+    
     public int Port { get; set; } = 5000;
-    public string AuthenticationType { get; set; } = "basic";
+    
+    /// <summary>
+    /// Authentication type identifier returned to clients.
+    /// With ASP.NET Identity integration, this defaults to "identity".
+    /// </summary>
+    public string AuthenticationType { get; set; } = "identity";
+
+    /// <summary>
+    /// Whether the public registration endpoint is enabled.
+    /// When false, only admin-seeded users can access the server.
+    /// </summary>
+    public bool RegistrationEnabled { get; set; } = true;
+
+    /// <summary>
+    /// When true, newly registered users must be approved by an admin before they can log in.
+    /// Admin-seeded users are always approved automatically.
+    /// </summary>
+    public bool RequireApproval { get; set; } = false;
 
     // Database configuration
     public string DatabaseType { get; set; } = "Sqlite";
@@ -58,6 +89,11 @@ public class GraniteServerOptions
                 {
                     if (int.TryParse(envValue, out var intValue))
                         property.SetValue(this, intValue);
+                }
+                else if (property.PropertyType == typeof(bool))
+                {
+                    if (bool.TryParse(envValue, out var boolValue))
+                        property.SetValue(this, boolValue);
                 }
                 else if (property.PropertyType == typeof(Guid))
                 {

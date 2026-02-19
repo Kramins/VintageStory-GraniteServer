@@ -6,16 +6,20 @@ using Microsoft.Extensions.Options;
 
 namespace GraniteServer.Server.HostedServices;
 
-public class ServerInitializationHostedService : IHostedService
+/// <summary>
+/// Ensures the Vintage Story game server entity exists in the database on startup,
+/// and keeps the mod access token in sync with configuration.
+/// </summary>
+public class VintageStoryServerInitializationHostedService : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly GraniteServerOptions _options;
-    private readonly ILogger<ServerInitializationHostedService> _logger;
+    private readonly ILogger<VintageStoryServerInitializationHostedService> _logger;
 
-    public ServerInitializationHostedService(
+    public VintageStoryServerInitializationHostedService(
         IServiceProvider serviceProvider,
         IOptions<GraniteServerOptions> options,
-        ILogger<ServerInitializationHostedService> logger
+        ILogger<VintageStoryServerInitializationHostedService> logger
     )
     {
         _serviceProvider = serviceProvider;
@@ -26,7 +30,7 @@ public class ServerInitializationHostedService : IHostedService
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Initializing server configuration with ServerId: {ServerId}",
+            "Initializing Vintage Story server configuration with ServerId: {ServerId}",
             _options.GraniteModServerId
         );
 
@@ -35,7 +39,6 @@ public class ServerInitializationHostedService : IHostedService
 
         try
         {
-            // Check if server entity exists
             var serverEntity = await dbContext.Servers.FirstOrDefaultAsync(
                 s => s.Id == _options.GraniteModServerId,
                 cancellationToken
@@ -43,7 +46,6 @@ public class ServerInitializationHostedService : IHostedService
 
             if (serverEntity == null)
             {
-                // Create new server entity
                 serverEntity = new ServerEntity
                 {
                     Id = _options.GraniteModServerId,
@@ -64,7 +66,6 @@ public class ServerInitializationHostedService : IHostedService
             }
             else
             {
-                // Update access token if changed
                 if (serverEntity.AccessToken != _options.GraniteModToken)
                 {
                     _logger.LogInformation(
@@ -95,8 +96,5 @@ public class ServerInitializationHostedService : IHostedService
         }
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

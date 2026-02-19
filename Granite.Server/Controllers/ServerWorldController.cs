@@ -24,6 +24,7 @@ public class ServerWorldController : ControllerBase
         throw new NotImplementedException("GetCollectibles endpoint not yet implemented");
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("save")]
     public Task<ActionResult<string>> SaveWorld([FromRoute] Guid serverid)
     {

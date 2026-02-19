@@ -188,19 +188,49 @@ public abstract class BaseApiClient
                 using var doc = JsonDocument.Parse(content);
                 var root = doc.RootElement;
 
-                var errorCode = root.TryGetProperty("code", out var codeElement)
-                    ? codeElement.GetString()
-                    : null;
+                // Handle JsonApiDocument errors array format: {"errors":[{"code":"..","message":".."}]}
+                if (root.TryGetProperty("errors", out var errorsElement) &&
+                    errorsElement.ValueKind == JsonValueKind.Array)
+                {
+                    var first = errorsElement.EnumerateArray().FirstOrDefault();
+                    var errorCode = first.TryGetProperty("code", out var c) ? c.GetString() : null;
+                    var errorMessage = first.TryGetProperty("message", out var m) ? m.GetString() : null;
+                    throw new ApiException(
+                        $"API returned {response.StatusCode}: {errorMessage ?? "Unknown error"}",
+                        (int)response.StatusCode,
+                        errorCode,
+                        errorMessage
+                    );
+                }
 
-                var errorMessage = root.TryGetProperty("message", out var messageElement)
-                    ? messageElement.GetString()
-                    : null;
+                // Handle ASP.NET ProblemDetails format (model validation errors): {"errors":{"Field":["msg"]}}
+                if (root.TryGetProperty("errors", out var validationErrors) &&
+                    validationErrors.ValueKind == JsonValueKind.Object)
+                {
+                    var fieldErrors = new List<string>();
+                    foreach (var field in validationErrors.EnumerateObject())
+                        foreach (var msg in field.Value.EnumerateArray())
+                            fieldErrors.Add(msg.GetString() ?? string.Empty);
+                    var combinedMessage = string.Join(" ", fieldErrors);
+                    throw new ApiException(
+                        $"API returned {response.StatusCode}: {combinedMessage}",
+                        (int)response.StatusCode,
+                        null,
+                        combinedMessage
+                    );
+                }
+
+                // Handle simple {code, message} or ProblemDetails {title} format
+                var code = root.TryGetProperty("code", out var codeEl) ? codeEl.GetString() : null;
+                var message = root.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : null;
+                if (message == null)
+                    message = root.TryGetProperty("title", out var titleEl) ? titleEl.GetString() : null;
 
                 throw new ApiException(
-                    $"API returned {response.StatusCode}: {errorMessage ?? "Unknown error"}",
+                    $"API returned {response.StatusCode}: {message ?? "Unknown error"}",
                     (int)response.StatusCode,
-                    errorCode,
-                    errorMessage
+                    code,
+                    message
                 );
             }
         }

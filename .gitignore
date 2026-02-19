@@ -685,3 +685,5 @@ Granite.Server/graniteserver.db-wal
 Granite.Server/ClientApp/dist/
 
 Granite.Server/wwwroot/
+ref/
+scripts/pentest-auth.sh

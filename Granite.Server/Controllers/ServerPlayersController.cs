@@ -120,6 +120,7 @@ public class ServerPlayersController : ControllerBase
         };
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("{playerId}/kick")]
     public async Task<ActionResult<JsonApiDocument<string>>> KickPlayer(
         [FromRoute] Guid serverId,
@@ -132,6 +133,7 @@ public class ServerPlayersController : ControllerBase
         return new JsonApiDocument<string> { Data = "Player kicked successfully" };
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("{playerId}/ban")]
     public async Task<ActionResult<JsonApiDocument<string>>> BanPlayer(
         [FromRoute] Guid serverId,
@@ -150,6 +152,7 @@ public class ServerPlayersController : ControllerBase
         return new JsonApiDocument<string> { Data = "Player banned successfully" };
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{playerId}/ban")]
     public async Task<ActionResult<JsonApiDocument<string>>> UnbanPlayer(
         [FromRoute] Guid serverId,
@@ -161,6 +164,7 @@ public class ServerPlayersController : ControllerBase
         return new JsonApiDocument<string> { Data = "Player unbanned successfully" };
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("{playerId}/whitelist")]
     public async Task<ActionResult<JsonApiDocument<string>>> WhitelistPlayer(
         [FromRoute] Guid serverId,
@@ -173,6 +177,7 @@ public class ServerPlayersController : ControllerBase
         return new JsonApiDocument<string> { Data = "Player whitelisted successfully" };
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{playerId}/whitelist")]
     public async Task<ActionResult<JsonApiDocument<string>>> UnwhitelistPlayer(
         [FromRoute] Guid serverId,
@@ -184,6 +189,7 @@ public class ServerPlayersController : ControllerBase
         return new JsonApiDocument<string> { Data = "Player unwhitelisted successfully" };
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("{playerId}/inventory/{inventoryName}/{slotIndex}")]
     public async Task<ActionResult<JsonApiDocument<string>>> UpdateInventorySlot(
         [FromRoute] Guid serverId,
@@ -204,6 +210,7 @@ public class ServerPlayersController : ControllerBase
         return new JsonApiDocument<string> { Data = "Inventory slot updated successfully" };
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{playerId}/inventory/{inventoryName}/{slotIndex}")]
     public async Task<ActionResult<JsonApiDocument<string>>> RemoveInventorySlot(
         [FromRoute] Guid serverId,

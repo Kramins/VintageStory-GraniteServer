@@ -1,12 +1,13 @@
 using System;
 using System.Linq;
 using GraniteServer.Data.Entities;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace GraniteServer.Data;
 
-public class GraniteDataContext : DbContext
+public class GraniteDataContext : IdentityDbContext<ApplicationUser>
 {
     public DbSet<ServerEntity> Servers { get; set; } = null!;
     public DbSet<PlayerEntity> Players { get; set; } = null!;

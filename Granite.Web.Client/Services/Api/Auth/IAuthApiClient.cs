@@ -34,6 +34,11 @@ public interface IAuthApiClient
     Task<JsonApiDocument<object>> LogoutAsync();
 
     /// <summary>
+    /// Registers a new user account.
+    /// </summary>
+    Task<JsonApiDocument<RegisterResponseDTO>> RegisterAsync(string username, string password, string? email = null);
+
+    /// <summary>
     /// Gets the current authentication settings.
     /// </summary>
     Task<JsonApiDocument<AuthSettingsDTO>> GetAuthSettingsAsync();

@@ -39,7 +39,7 @@ public class JwtTokenService
     /// <summary>
     /// Generates a JWT token for a user with specified roles.
     /// </summary>
-    public TokenDTO GenerateUserToken(string username, params string[] roles)
+    public TokenDTO GenerateUserToken(string username, IList<string>? roles = null)
     {
         if (string.IsNullOrWhiteSpace(username))
             throw new ArgumentException("Username cannot be empty.", nameof(username));
@@ -50,7 +50,7 @@ public class JwtTokenService
             new Claim(ClaimTypes.Name, username),
         };
 
-        foreach (var role in roles ?? Array.Empty<string>())
+        foreach (var role in roles ?? [])
         {
             claims.Add(new Claim(ClaimTypes.Role, role));
         }
