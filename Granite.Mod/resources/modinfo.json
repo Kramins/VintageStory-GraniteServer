@@ -3,7 +3,7 @@
   "name": "Granite Server Mod",
   "modid": "graniteserver",
   "version": "vNext",
-  "description": "Server Administration Tools and feature",
+  "description": "Connects your Vintage Story server to Granite.Server for web-based administration. Provides real-time server monitoring, player management, interactive world maps, mod management, and comprehensive admin tools accessible through a modern Blazor interface. Requires Granite.Server backend to function.",
   "authors": [
     "kramins"
   ],

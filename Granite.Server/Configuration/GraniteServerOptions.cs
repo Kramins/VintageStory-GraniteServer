@@ -23,12 +23,6 @@ public class GraniteServerOptions
     public string Password { get; set; } = $"Admin{Guid.NewGuid():N}1!";
     
     public int Port { get; set; } = 5000;
-    
-    /// <summary>
-    /// Authentication type identifier returned to clients.
-    /// With ASP.NET Identity integration, this defaults to "identity".
-    /// </summary>
-    public string AuthenticationType { get; set; } = "identity";
 
     /// <summary>
     /// Whether the public registration endpoint is enabled.
