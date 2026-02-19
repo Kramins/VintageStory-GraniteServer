@@ -16,7 +16,22 @@
         Register a new user account
     </MudText>
 
-    <EditForm Model="@_model" OnValidSubmit="HandleRegister">
+    @if (_pendingApproval)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            <MudText Typo="Typo.body1"><strong>Almost there!</strong></MudText>
+            <MudText Typo="Typo.body2">
+                Your account has been created and is pending approval by an administrator.
+                You will be able to log in once your account has been approved.
+            </MudText>
+        </MudAlert>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Href="/login">
+            Back to Sign In
+        </MudButton>
+    }
+    else
+    {
+        <EditForm Model="@_model" OnValidSubmit="HandleRegister">
         <DataAnnotationsValidator />
         
         <MudTextField @bind-Value="_model.Username"
@@ -73,19 +88,21 @@
                 <span>Create Account</span>
             }
         </MudButton>
-    </EditForm>
+        </EditForm>
 
-    <MudDivider Class="my-4" />
+        <MudDivider Class="my-4" />
 
-    <MudText Typo="Typo.body2" Align="Align.Center">
-        Already have an account?
-        <MudLink Href="/login" Color="Color.Primary">Sign in</MudLink>
-    </MudText>
+        <MudText Typo="Typo.body2" Align="Align.Center">
+            Already have an account?
+            <MudLink Href="/login" Color="Color.Primary">Sign in</MudLink>
+        </MudText>
+    }
 </MudPaper>
 
 @code {
     private RegisterModel _model = new();
     private bool _loading = false;
+    private bool _pendingApproval = false;
 
     private async Task HandleRegister()
     {
@@ -101,29 +118,32 @@
         try
         {
             Logger.LogInformation("Attempting registration for user: {Username}", _model.Username);
-            await AuthClient.RegisterAsync(_model.Username, _model.Password, _model.Email);
+            var email = string.IsNullOrWhiteSpace(_model.Email) ? null : _model.Email;
+            var response = await AuthClient.RegisterAsync(_model.Username, _model.Password, email);
             
+            var isPendingApproval = response.Data?.Message?.Contains("pending approval", StringComparison.OrdinalIgnoreCase) ?? false;
+
+            if (isPendingApproval)
+            {
+                _pendingApproval = true;
+                return;
+            }
+
             Snackbar.Add("Registration successful! Please log in.", Severity.Success);
-            
-            // Redirect to login page
             Navigation.NavigateTo("/login", replace: true);
         }
         catch (ApiException ex)
         {
             Logger.LogError(ex, "Registration failed");
-            
-            // Try to parse error message from API response
-            var errorMessage = "Registration failed. Please try again.";
-            if (ex.Message.Contains("already exists"))
+
+            var errorMessage = ex.ErrorCode switch
             {
-                errorMessage = "Username already exists";
-            }
-            else if (ex.Message.Contains("password"))
-            {
-                errorMessage = "Password does not meet requirements";
-            }
-            
-            Snackbar.Add(errorMessage, Severity.Error);
+                "REGISTRATION_DISABLED" => "Registration is currently disabled by the server administrator.",
+                "USERNAME_TAKEN" => "That username is already taken.",
+                _ => ex.ErrorMessage ?? "Registration failed. Please try again."
+            };
+
+            Snackbar.Add(errorMessage, ex.StatusCode == 403 ? Severity.Warning : Severity.Error);
         }
         catch (Exception ex)
         {

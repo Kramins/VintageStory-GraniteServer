@@ -8,6 +8,14 @@ namespace GraniteServer.Data.Entities;
 /// </summary>
 public class ApplicationUser : IdentityUser
 {
-    // Additional properties can be added here in the future
-    // Identity provides: UserName, Email, PasswordHash, PhoneNumber, etc.
+    /// <summary>
+    /// Whether an admin has approved this account. Accounts pending approval cannot log in.
+    /// Admin-seeded accounts are automatically approved.
+    /// </summary>
+    public bool IsApproved { get; set; } = false;
+
+    /// <summary>
+    /// UTC timestamp of when the user registered.
+    /// </summary>
+    public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
 }

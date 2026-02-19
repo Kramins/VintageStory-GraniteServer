@@ -1,6 +1,7 @@
 ﻿@using Fluxor
 @using Fluxor.Blazor.Web.Components
 @using Granite.Web.Client.Store.Features.Server
+@using Microsoft.AspNetCore.Components.Authorization
 @inherits FluxorComponent
 
 @inject IState<ServerState> ServerState
@@ -35,6 +36,13 @@
     </MudNavGroup>
 
     <MudDivider Class="my-3" />
+
+    <AuthorizeView Roles="Admin">
+        <MudNavGroup Title="Administration" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="false">
+            <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.ManageAccounts">Users</MudNavLink>
+        </MudNavGroup>
+        <MudDivider Class="my-3" />
+    </AuthorizeView>
 
     <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
     <MudNavLink Href="/help" Icon="@Icons.Material.Filled.Help">Help & Support</MudNavLink>

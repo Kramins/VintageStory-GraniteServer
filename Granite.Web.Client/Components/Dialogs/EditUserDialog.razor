@@ -1,0 +1,58 @@
+@using Granite.Common.Dto
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Edit User: @User.Username</MudText>
+
+        <MudTextField @bind-Value="_email"
+                      Label="Email (Optional)"
+                      Variant="Variant.Outlined"
+                      InputType="InputType.Email"
+                      FullWidth="true"
+                      Class="mb-4" />
+
+        <MudText Typo="Typo.body2" Class="mb-2">Roles</MudText>
+        <MudSelect T="string"
+                   MultiSelection="true"
+                   @bind-SelectedValues="_selectedRoles"
+                   Label="Roles"
+                   Variant="Variant.Outlined"
+                   FullWidth="true">
+            <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
+            <MudSelectItem Value="@("User")">User</MudSelectItem>
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Confirm">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public UserDTO User { get; set; } = null!;
+
+    private string? _email;
+    private IEnumerable<string> _selectedRoles = [];
+
+    protected override void OnParametersSet()
+    {
+        _email = User.Email;
+        _selectedRoles = User.Roles.ToList();
+    }
+
+    private void Cancel() => MudDialog.Close(DialogResult.Cancel());
+
+    private void Confirm()
+    {
+        var dto = new UpdateUserDTO
+        {
+            Email = string.IsNullOrWhiteSpace(_email) ? null : _email,
+            Roles = _selectedRoles.ToList()
+        };
+        MudDialog.Close(DialogResult.Ok(dto));
+    }
+}

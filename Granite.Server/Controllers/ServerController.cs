@@ -49,6 +49,7 @@ public class ServerController : ControllerBase
         return new JsonApiDocument<ServerDetailsDTO> { Data = status };
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("announce")]
     public async Task<ActionResult<JsonApiDocument<string>>> AnnounceMessage(
         [FromRoute] Guid serverid,

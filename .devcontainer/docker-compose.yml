@@ -22,13 +22,15 @@ services:
       - GS_AUTHENTICATIONTYPE=identity
       - GS_USERNAME=admin
       - GS_PASSWORD=Admin123!
+      - GS_REGISTRATIONENABLED=true
+      - GS_REQUIREAPPROVAL=true
 
       - GS_DATABASETYPE=PostgreSQL
       - GS_DATABASEHOST=postgres
       - GS_DATABASEUSERNAME=postgres
       - GS_DATABASEPASSWORD=postgres
       - GS_DATABASEPORT=5432
-      - GS_DATABASENAME=Granite
+      - GS_DATABASENAME=graniteserver
     # Granite Server Auto Configuration
       - GS_GRANITEMODSERVERID=d3cd8403ebd34cbaa88b7cc63eb2c0c6
       - GS_GRANITEMODTOKEN=devtoken
@@ -36,7 +38,6 @@ services:
       - "42425:42425"
       - "42420:42420"
       - "5000:5000"
-      - "3000:3000"
     # user: vintagestory
     depends_on:
       - postgres

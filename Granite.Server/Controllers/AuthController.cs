@@ -1,8 +1,10 @@
 using Granite.Common.Dto;
+using Granite.Common.Dto.JsonApi;
 using Granite.Server.Configuration;
 using Granite.Server.Services;
 using GraniteServer.Data;
 using GraniteServer.Data.Entities;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -41,15 +43,18 @@ public class AuthController : ControllerBase
     /// <summary>
     /// Authenticates a user with basic auth credentials and returns a JWT token.
     /// </summary>
-    /// <param name="credentials">Basic authentication credentials</param>
-    /// <returns>JWT token if authentication successful</returns>
     [HttpPost("login")]
-    public async Task<ActionResult<TokenDTO>> Login([FromBody] BasicAuthCredentialsDTO credentials)
+    public async Task<ActionResult<JsonApiDocument<TokenDTO>>> Login(
+        [FromBody] BasicAuthCredentialsDTO credentials
+    )
     {
         var user = await _userManager.FindByNameAsync(credentials.Username);
         if (user == null)
         {
-            return Unauthorized(new { message = "Invalid username or password" });
+            return Unauthorized(new JsonApiDocument<TokenDTO>
+            {
+                Errors = { new JsonApiError { Code = "INVALID_CREDENTIALS", Message = "Invalid username or password" } }
+            });
         }
 
         var result = await _signInManager.CheckPasswordSignInAsync(
@@ -60,62 +65,93 @@ public class AuthController : ControllerBase
 
         if (!result.Succeeded)
         {
-            return Unauthorized(new { message = "Invalid username or password" });
+            return Unauthorized(new JsonApiDocument<TokenDTO>
+            {
+                Errors = { new JsonApiError { Code = "INVALID_CREDENTIALS", Message = "Invalid username or password" } }
+            });
         }
 
-        var token = _jwtTokenService.GenerateUserToken(credentials.Username, "Admin");
-        return Ok(token);
+        if (!user.IsApproved)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new JsonApiDocument<TokenDTO>
+            {
+                Errors = { new JsonApiError { Code = "ACCOUNT_PENDING_APPROVAL", Message = "Your account is pending approval by an administrator" } }
+            });
+        }
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var token = _jwtTokenService.GenerateUserToken(credentials.Username, roles);
+        return Ok(new JsonApiDocument<TokenDTO>(token));
     }
 
     /// <summary>
     /// Registers a new user account.
     /// </summary>
-    /// <param name="registerDto">Registration details</param>
-    /// <returns>Success message or validation errors</returns>
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterDTO registerDto)
+    public async Task<ActionResult<JsonApiDocument<RegisterResponseDTO>>> Register(
+        [FromBody] RegisterDTO registerDto
+    )
     {
+        if (!_options.RegistrationEnabled)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new JsonApiDocument<RegisterResponseDTO>
+            {
+                Errors = { new JsonApiError { Code = "REGISTRATION_DISABLED", Message = "Registration is currently disabled" } }
+            });
+        }
+
         var existingUser = await _userManager.FindByNameAsync(registerDto.Username);
         if (existingUser != null)
         {
-            return BadRequest(new { message = "Username already exists" });
+            return BadRequest(new JsonApiDocument<RegisterResponseDTO>
+            {
+                Errors = { new JsonApiError { Code = "USERNAME_TAKEN", Message = "Username already exists" } }
+            });
         }
 
         var user = new ApplicationUser
         {
             UserName = registerDto.Username,
             Email = registerDto.Email,
+            IsApproved = !_options.RequireApproval,
+            RegisteredAt = DateTime.UtcNow,
         };
 
-        var result = await _userManager.CreateAsync(user, registerDto.Password);
+        var createResult = await _userManager.CreateAsync(user, registerDto.Password);
 
-        if (!result.Succeeded)
+        if (!createResult.Succeeded)
         {
-            return BadRequest(
-                new { message = "Registration failed", errors = result.Errors.Select(e => e.Description) }
-            );
+            var doc = new JsonApiDocument<RegisterResponseDTO>();
+            foreach (var error in createResult.Errors)
+                doc.Errors.Add(new JsonApiError { Code = error.Code, Message = error.Description });
+            return BadRequest(doc);
         }
 
+        await _userManager.AddToRoleAsync(user, "User");
         _logger.LogInformation("User {Username} registered successfully", registerDto.Username);
-        return Ok(new { message = "User registered successfully" });
+
+        var message = _options.RequireApproval
+            ? "Registration successful. Your account is pending approval by an administrator."
+            : "User registered successfully";
+
+        return Ok(new JsonApiDocument<RegisterResponseDTO>(new RegisterResponseDTO(message)));
     }
 
     /// <summary>
     /// Authenticates a mod with an access token and returns a JWT token.
     /// </summary>
-    /// <param name="request">Access token request</param>
-    /// <returns>JWT token if access token is valid</returns>
     [HttpPost("token")]
-    public async Task<ActionResult<TokenDTO>> ExchangeAccessToken(
+    public async Task<ActionResult<JsonApiDocument<TokenDTO>>> ExchangeAccessToken(
         [FromBody] AccessTokenRequestDTO request
     )
     {
         if (string.IsNullOrWhiteSpace(request.AccessToken))
         {
-            return BadRequest(new { message = "Access token is required" });
+            return BadRequest(new JsonApiDocument<TokenDTO>
+            {
+                Errors = { new JsonApiError { Code = "INVALID_REQUEST", Message = "Access token is required" } }
+            });
         }
-
-        // Validate token and server id against database
 
         var serverEntity = await _dbContext.Servers.FirstOrDefaultAsync(s =>
             s.Id == request.ServerId && s.AccessToken == request.AccessToken
@@ -123,20 +159,24 @@ public class AuthController : ControllerBase
 
         if (serverEntity == null)
         {
-            return Unauthorized(new { message = "Invalid server or access token" });
+            return Unauthorized(new JsonApiDocument<TokenDTO>
+            {
+                Errors = { new JsonApiError { Code = "INVALID_TOKEN", Message = "Invalid server or access token" } }
+            });
         }
 
         var token = _jwtTokenService.GenerateModToken(serverEntity.Id, serverEntity.Name);
-        return Ok(token);
+        return Ok(new JsonApiDocument<TokenDTO>(token));
     }
 
     /// <summary>
     /// Gets the authentication settings for the server.
     /// </summary>
-    /// <returns>Authentication type configured for the server</returns>
     [HttpGet("settings")]
-    public ActionResult<AuthSettingsDTO> GetSettings()
+    public ActionResult<JsonApiDocument<AuthSettingsDTO>> GetSettings()
     {
-        return Ok(new AuthSettingsDTO(_options.AuthenticationType));
+        return Ok(new JsonApiDocument<AuthSettingsDTO>(
+            new AuthSettingsDTO(_options.AuthenticationType, _options.RegistrationEnabled)
+        ));
     }
 }

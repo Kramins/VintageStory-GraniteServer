@@ -56,6 +56,7 @@ public class ServerConfigController : ControllerBase
     /// Request the game server to sync its current configuration to the control plane.
     /// This will trigger a ServerConfigSyncedEvent from the mod.
     /// </summary>
+    [Authorize(Roles = "Admin")]
     [HttpPost("sync")]
     public async Task<ActionResult<JsonApiDocument<object>>> SyncServerConfig(
         [FromRoute] Guid serverId
@@ -74,6 +75,7 @@ public class ServerConfigController : ControllerBase
     /// The configuration is persisted to the database first, then pushed to the game server.
     /// All fields are required and will replace the existing configuration.
     /// </summary>
+    [Authorize(Roles = "Admin")]
     [HttpPut]
     public async Task<ActionResult<JsonApiDocument<object>>> UpdateServerConfig(
         [FromRoute] Guid serverId,

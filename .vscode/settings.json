@@ -18,6 +18,7 @@
     ],
     "chat.tools.terminal.autoApprove": {
       "mv": true,
-      "mkdir": true
+      "mkdir": true,
+      "dotnet tool": true
     }
 }

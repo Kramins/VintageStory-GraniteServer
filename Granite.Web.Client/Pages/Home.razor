@@ -67,10 +67,13 @@
 
         <MudDivider Class="my-4" />
 
-        <MudText Typo="Typo.body2" Align="Align.Center">
-            Don't have an account?
-            <MudLink Href="/register" Color="Color.Primary">Create one</MudLink>
-        </MudText>
+        @if (_registrationEnabled)
+        {
+            <MudText Typo="Typo.body2" Align="Align.Center">
+                Don't have an account?
+                <MudLink Href="/register" Color="Color.Primary">Create one</MudLink>
+            </MudText>
+        }
 
         @if (!string.IsNullOrEmpty(_authType))
         {
@@ -86,6 +89,7 @@
     private bool _loading = false;
     private bool _checkingAuth = true;
     private string? _authType;
+    private bool _registrationEnabled = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -97,6 +101,7 @@
             if (response.Data != null)
             {
                 _authType = response.Data.AuthenticationType;
+                _registrationEnabled = response.Data.RegistrationEnabled;
                 
                 // If auth is disabled, redirect to main app
                 if (string.IsNullOrEmpty(_authType) || _authType == "None")
@@ -151,9 +156,19 @@
                 Snackbar.Add("Invalid response from server", Severity.Error);
             }
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             Logger.LogError(ex, "Login failed");
+            var message = ex.ErrorCode switch
+            {
+                "ACCOUNT_PENDING_APPROVAL" => "Your account is pending approval by an administrator.",
+                _ => "Invalid username or password"
+            };
+            Snackbar.Add(message, ex.ErrorCode == "ACCOUNT_PENDING_APPROVAL" ? Severity.Warning : Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Login failed unexpectedly");
             Snackbar.Add("Invalid username or password", Severity.Error);
         }
         finally

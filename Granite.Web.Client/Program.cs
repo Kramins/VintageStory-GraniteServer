@@ -65,6 +65,7 @@ builder.Services.AddSingleton<IModsApiClient, ModsApiClient>();
 builder.Services.AddSingleton<IServerApiClient, ServerApiClient>();
 builder.Services.AddSingleton<IAuthApiClient, AuthApiClient>();
 builder.Services.AddSingleton<IWorldApiClient, WorldApiClient>();
+builder.Services.AddSingleton<IUserAdminApiClient, UserAdminApiClient>();
 
 builder.Services.AddScoped<WorldMapService>();
 builder.Services.AddScoped<MapCoordinateService>();

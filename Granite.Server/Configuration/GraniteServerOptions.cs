@@ -30,6 +30,18 @@ public class GraniteServerOptions
     /// </summary>
     public string AuthenticationType { get; set; } = "identity";
 
+    /// <summary>
+    /// Whether the public registration endpoint is enabled.
+    /// When false, only admin-seeded users can access the server.
+    /// </summary>
+    public bool RegistrationEnabled { get; set; } = true;
+
+    /// <summary>
+    /// When true, newly registered users must be approved by an admin before they can log in.
+    /// Admin-seeded users are always approved automatically.
+    /// </summary>
+    public bool RequireApproval { get; set; } = false;
+
     // Database configuration
     public string DatabaseType { get; set; } = "Sqlite";
     public string? DatabaseHost { get; set; }
@@ -77,6 +89,11 @@ public class GraniteServerOptions
                 {
                     if (int.TryParse(envValue, out var intValue))
                         property.SetValue(this, intValue);
+                }
+                else if (property.PropertyType == typeof(bool))
+                {
+                    if (bool.TryParse(envValue, out var boolValue))
+                        property.SetValue(this, boolValue);
                 }
                 else if (property.PropertyType == typeof(Guid))
                 {

@@ -64,6 +64,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     options.SignIn.RequireConfirmedEmail = false;
     options.SignIn.RequireConfirmedAccount = false;
 })
+.AddRoles<IdentityRole>()
 .AddEntityFrameworkStores<GraniteDataContext>()
 .AddDefaultTokenProviders();
 
@@ -74,6 +75,7 @@ builder.Services.AddScoped<SignInManager<ApplicationUser>>();
 builder.Services.AddScoped<JwtTokenService>();
 
 // Add business services
+builder.Services.AddScoped<UserAdminService>();
 builder.Services.AddScoped<ServersService>();
 builder.Services.AddScoped<ServerPlayersService>();
 builder.Services.AddScoped<ServerConfigService>();
@@ -95,8 +97,11 @@ builder.Services.AddSingleton<PersistentMessageBusService>();
 // Add MessageBridgeHostedService to process events from the message bus
 builder.Services.AddHostedService<MessageBridgeHostedService>();
 
-// Add ServerInitializationHostedService to ensure server entity exists on startup
-builder.Services.AddHostedService<ServerInitializationHostedService>();
+// Add VintageStoryServerInitializationHostedService to ensure server entity exists on startup
+builder.Services.AddHostedService<VintageStoryServerInitializationHostedService>();
+
+// Add IdentityInitializationHostedService to seed roles and admin user
+builder.Services.AddHostedService<IdentityInitializationHostedService>();
 
 // Add ServerWorldMapHostedService to subscribe to world map events
 builder.Services.AddHostedService<ServerWorldMapHostedService>();
