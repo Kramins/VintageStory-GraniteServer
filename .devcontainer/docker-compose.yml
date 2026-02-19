@@ -19,7 +19,6 @@ services:
 
     # Environment variables for Granite Server
       - GS_JWTSECRET=eb37028ebf434c858f4cd4bff6d799df
-      - GS_AUTHENTICATIONTYPE=identity
       - GS_USERNAME=admin
       - GS_PASSWORD=Admin123!
       - GS_REGISTRATIONENABLED=true

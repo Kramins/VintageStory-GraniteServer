@@ -176,7 +176,7 @@ public class AuthController : ControllerBase
     public ActionResult<JsonApiDocument<AuthSettingsDTO>> GetSettings()
     {
         return Ok(new JsonApiDocument<AuthSettingsDTO>(
-            new AuthSettingsDTO(_options.AuthenticationType, _options.RegistrationEnabled)
+            new AuthSettingsDTO(_options.RegistrationEnabled)
         ));
     }
 }

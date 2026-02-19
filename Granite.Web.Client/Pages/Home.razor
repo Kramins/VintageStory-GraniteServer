@@ -75,12 +75,6 @@
             </MudText>
         }
 
-        @if (!string.IsNullOrEmpty(_authType))
-        {
-            <MudText Typo="Typo.caption" Align="Align.Center" Color="Color.Secondary" Class="mt-4">
-                Authentication: @_authType
-            </MudText>
-        }
     }
 </MudPaper>
 
@@ -88,7 +82,6 @@
     private LoginModel _model = new();
     private bool _loading = false;
     private bool _checkingAuth = true;
-    private string? _authType;
     private bool _registrationEnabled = false;
 
     protected override async Task OnInitializedAsync()
@@ -100,15 +93,7 @@
             
             if (response.Data != null)
             {
-                _authType = response.Data.AuthenticationType;
                 _registrationEnabled = response.Data.RegistrationEnabled;
-                
-                // If auth is disabled, redirect to main app
-                if (string.IsNullOrEmpty(_authType) || _authType == "None")
-                {
-                    Navigation.NavigateTo("/", replace: true);
-                    return;
-                }
             }
         }
         catch (Exception ex)

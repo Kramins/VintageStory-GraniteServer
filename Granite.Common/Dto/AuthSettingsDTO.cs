@@ -1,3 +1,3 @@
 namespace Granite.Common.Dto;
 
-public record AuthSettingsDTO(string AuthenticationType, bool RegistrationEnabled);
+public record AuthSettingsDTO(bool RegistrationEnabled);
